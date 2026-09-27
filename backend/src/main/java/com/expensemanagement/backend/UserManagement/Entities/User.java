@@ -2,17 +2,16 @@ package com.expensemanagement.backend.UserManagement.Entities;
 
 import com.expensemanagement.backend.UserManagement.Enums.UserAccountState;
 import jakarta.persistence.*;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 public class User
 {
     @Id
