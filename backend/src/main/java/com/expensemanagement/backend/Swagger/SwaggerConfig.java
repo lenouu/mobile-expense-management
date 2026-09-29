@@ -63,13 +63,19 @@ public class SwaggerConfig
                                 REST API for the mobile expense management app.
 
                                 **How to authenticate**
-                                1. `POST /api/auth/register` to create an account. It starts as
-                                   `PENDING`, so it cannot log in yet.
-                                2. An admin must move it to `ACTIVE` (`PATCH` status, or directly
-                                   in the database while `PATCH` has no controller).
-                                3. `POST /api/auth/login` and copy the `accessToken`.
-                                4. Click **Authorize** above and paste the token (no `Bearer `
+                                1. `POST /api/auth/login` with a username *or* email and copy the
+                                   `accessToken` from the response.
+                                   Use a seeded login below - in particular an ADMIN, since a
+                                   freshly registered account is only a USER.
+                                2. Click **Authorize** above and paste the token (no `Bearer `
                                    prefix needed - Swagger adds it).
+
+                                New accounts can also be created with `POST /api/auth/register`;
+                                they are ACTIVE immediately.
+
+                                **Seeded development logins** (password `Password123!`):
+                                `admin.amina` and `admin.youssef` are ADMIN;
+                                `sara.mansouri`, `ahmed.benali` and 18 others are USER.
 
                                 Tokens are signed JWTs valid for 60 minutes. There is no refresh
                                 token, so after expiry you log in again.

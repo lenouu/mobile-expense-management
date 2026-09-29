@@ -18,14 +18,39 @@ import java.util.List;
 /**
  * Development seed data: 2 admins and 20 ordinary users.
  *
+ * <h2>Login credentials - read this first</h2>
+ * <pre>
+ *   PASSWORD FOR EVERY SEEDED ACCOUNT:  Password123!
+ *
+ *   ADMINS (can manage other users):
+ *     admin.amina        admin.amina@example.com
+ *     admin.youssef      admin.youssef@example.com
+ *
+ *   NORMAL USERS (self-service only), e.g.:
+ *     sara.mansouri      sara.mansouri@example.com
+ *     ahmed.benali       ahmed.benali@example.com
+ *     ... 18 more, all firstname.lastname@example.com
+ * </pre>
+ *
+ * <p>The password is a single constant, {@link #DEFAULT_PASSWORD}, shared by every seeded
+ * account rather than repeated on each row of the table below - which is also why you will
+ * not find a password column in that table. Change the constant to change all of them.
+ *
+ * <p>Login at {@code POST /api/auth/login} with either the username or the email:
+ * <pre>
+ *   { "usernameOrEmail": "admin.amina", "password": "Password123!" }
+ * </pre>
+ * The response contains {@code accessToken}; paste that into Swagger UI's Authorize button.
+ * The same password is printed to the application log when seeding runs.
+ *
  * <p>Runs once on startup, and only when {@code app.seed.enabled=true}. It is switched off by
  * default in code ({@code matchIfMissing} is false), so forgetting the property fails safe -
  * seeding known credentials into a real database would be a serious hole.
  *
- * <p>Every account is created {@code ACTIVE} with the password
- * {@value #DEFAULT_PASSWORD}, so they can be used in Swagger UI immediately - unlike
- * accounts created through {@code POST /api/auth/register}, which start {@code PENDING} and
- * cannot log in until an admin activates them.
+ * <p>Every account is created {@code ACTIVE}. Accounts registered through
+ * {@code POST /api/auth/register} are {@code ACTIVE} too, so these seeds are not needed to get
+ * a working login - their real purpose is to guarantee at least one <strong>ADMIN</strong>
+ * exists, which registration alone can never produce.
  *
  * <p>Each account also stores the same BCrypt hash, because hashing once instead of 22 times
  * keeps startup fast (BCrypt is deliberately slow). Real registration hashes per user, so

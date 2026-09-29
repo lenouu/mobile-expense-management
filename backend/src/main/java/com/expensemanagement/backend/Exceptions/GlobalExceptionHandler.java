@@ -1,13 +1,19 @@
 package com.expensemanagement.backend.Exceptions;
 
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,6 +25,7 @@ import java.util.Map;
  * a wrong password look like a server bug.
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler
 {
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -102,5 +109,75 @@ public class GlobalExceptionHandler
     {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiError.of(404, "not_found", "No endpoint " + ex.getHttpMethod() + " " + ex.getResourcePath()));
+    }
+
+    /**
+     * A parameter that could not be converted to its declared type - for example
+     * {@code ?status=INVALID} against the {@code UserAccountState} enum, or
+     * {@code /api/admin/users/abc} against a {@code Long} id.
+     *
+     * <p>Spring raises this before the controller is invoked, so without a handler it forwards
+     * to {@code /error} and the client gets a different error shape from every other failure.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex)
+    {
+        String value = ex.getValue() == null ? "null" : ex.getValue().toString();
+        String expected = ex.getRequiredType() == null
+                ? "the expected type"
+                : ex.getRequiredType().getSimpleName();
+
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "invalid_parameter",
+                        "Parameter '" + ex.getName() + "' has invalid value '" + value
+                                + "'; expected " + expected));
+    }
+
+    /** A required query parameter was omitted, e.g. {@code /search} without {@code name}. */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException ex)
+    {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "missing_parameter",
+                        "Required parameter '" + ex.getParameterName() + "' is missing"));
+    }
+
+    /**
+     * An unknown field in {@code ?sort=...}, e.g. {@code ?sort=noSuchField}.
+     *
+     * <p>Spring Data resolves the sort property against the entity and throws this. Left
+     * unhandled it surfaces as a 500, which is both wrong - the request is at fault, not the
+     * server - and noisy: a client typo shows up in monitoring as a server error.
+     */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiError> handleInvalidSort(PropertyReferenceException ex)
+    {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "invalid_sort",
+                        "Unknown sort field '" + ex.getPropertyName() + "'"));
+    }
+
+    /**
+     * Malformed values that reach the persistence layer - most often a {@code ?sort=} that
+     * Spring Data accepts as a {@code Sort.Order} but JPA later rejects as not being a real
+     * property reference.
+     *
+     * <p>Concretely this is how Swagger UI's {@code pageable} object used to arrive: a JSON
+     * array literal, {@code ?sort=["userName,asc"]}, whose first comma-separated token parses
+     * as the property name {@code ["userName}. It is a client mistake, so it must be a 400 -
+     * left unhandled it was a 500.
+     *
+     * <p>Logged at WARN because the same exception would also be raised by a genuine misuse in
+     * our own code, and that should be visible rather than silently reported as a bad request.
+     */
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ApiError> handleInvalidDataAccess(InvalidDataAccessApiUsageException ex)
+    {
+        log.warn("Rejecting request with a malformed query parameter", ex);
+
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "invalid_query",
+                        "A query parameter is malformed. For 'sort' use 'property,direction', "
+                                + "e.g. sort=userName,asc - not a JSON array."));
     }
 }

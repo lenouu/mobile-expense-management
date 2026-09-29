@@ -46,16 +46,17 @@ public class AuthController
     /**
      * Registers an account.
      *
-     * <p>Returns the created profile, not a token: the account starts as {@code PENDING} and
-     * must not be able to authenticate until it is activated. When you add email verification,
-     * this is where the mail is sent from.
+     * <p>The account is created {@code ACTIVE} and can log in immediately. The status is set
+     * server-side and never taken from the request, so a client cannot choose its own lifecycle
+     * state. When you add email verification, this is where the mail is sent from - and the
+     * point at which you would switch registration back to {@code PENDING}.
      */
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Register a new account",
             description = """
-                    Creates the account as PENDING with the USER role. Both are forced by the
-                    server, so a request cannot self-activate or self-promote.
+                    Creates the account ACTIVE with the USER role. Both are set by the server,
+                    so a request cannot choose its own status or privilege.
 
                     The response never contains the password or its hash.""")
     @ApiResponse(responseCode = "201", description = "Account created")

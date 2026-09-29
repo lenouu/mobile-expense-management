@@ -2,31 +2,22 @@ package com.expensemanagement.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.web.config.EnableSpringDataWebSupport;
-import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode;
 
 /**
- * The {@code PageSerializationMode.VIA_DTO} setting matters for the paged admin endpoints.
+ * Note on paged responses: this class deliberately does <em>not</em> carry
+ * {@code @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)}.
  *
- * <p>By default Spring Data serialises a {@code PageImpl} directly, and it warns at runtime
- * that the resulting JSON shape is not guaranteed to be stable - the flat
- * {@code {"content":[...],"totalElements":22,"size":20}} form is an implementation detail
- * that has changed between versions. {@code VIA_DTO} makes it emit Spring Data's official
- * {@code PagedModel} instead, where the metadata sits under a {@code page} object:
+ * <p>That annotation looks like the obvious way to stop Spring Data warning about the unstable
+ * {@code PageImpl} JSON shape, but it replaces Boot's {@code Pageable} argument resolver with
+ * its own - and that resolver is what applies
+ * {@code spring.data.web.pageable.max-page-size}. Adding it silently removes the {@code ?size=}
+ * cap, so a client can request the whole table again.
  *
- * <pre>
- * {
- *   "content": [ ... ],
- *   "page": { "size": 20, "number": 0, "totalElements": 22, "totalPages": 2 }
- * }
- * </pre>
- *
- * <p>Worth pinning down now rather than later: mobile clients parse this, and a Spring
- * upgrade silently changing the envelope is the kind of breakage that only shows up in
- * production.
+ * <p>Instead the two paged endpoints wrap their result in {@code PagedModel} explicitly,
+ * which produces the same stable {@code {"content":[...],"page":{...}}} envelope while leaving
+ * Boot's resolver (and therefore the configured cap) in place.
  */
 @SpringBootApplication
-@EnableSpringDataWebSupport(pageSerializationMode = PageSerializationMode.VIA_DTO)
 public class ExpenseManagementBackendApplication {
 
 	public static void main(String[] args) {

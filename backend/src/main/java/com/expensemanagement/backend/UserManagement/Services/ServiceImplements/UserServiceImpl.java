@@ -71,8 +71,21 @@ public class UserServiceImpl implements UserService
         // this is the only place with an encoder. Forgetting this line fails loudly on insert.
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
 
-        // status and type are left unset: @PrePersist defaults them to PENDING and USER, so a
-        // client cannot self-activate or self-promote.
+        // Registration policy: a new account is usable straight away, so it is created ACTIVE.
+        //
+        // The entity's @PrePersist backstop still defaults to PENDING, and that stays on
+        // purpose - it fails closed for any future creation path that forgets to state its
+        // intent, whereas this path states it explicitly right here.
+        //
+        // Trade-off: with no email-verification step, anyone who can reach this endpoint gets a
+        // working account immediately. To go back to admin approval, change this to PENDING and
+        // activate accounts via PATCH /api/admin/users/{id}/status.
+        //
+        // type is deliberately still left unset, so @PrePersist assigns USER. CreateAccount has
+        // no status or type field, so a client can neither pick its own privilege nor reach this
+        // line with request data.
+        user.setStatus(UserAccountState.ACTIVE);
+
         User saved = userRepository.save(user);
 
         log.info("Registered account id={} username={}", saved.getId(), saved.getUserName());

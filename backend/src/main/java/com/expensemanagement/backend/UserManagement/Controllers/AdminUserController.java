@@ -12,7 +12,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -75,16 +77,20 @@ public class AdminUserController
     @ApiResponse(responseCode = "200", description = "Page of user summaries")
     @ApiResponse(responseCode = "403", description = "Caller is not an ADMIN",
             content = @io.swagger.v3.oas.annotations.media.Content)
-    public Page<UserResponses.Summary> list(
+    public PagedModel<UserResponses.Summary> list(
             @Parameter(description = "Filter by lifecycle state; omit for all")
             @RequestParam(required = false) UserAccountState status,
-            @PageableDefault(size = 20, sort = "userName") Pageable pageable)
+            @ParameterObject @PageableDefault(size = 20, sort = "userName") Pageable pageable)
     {
         // The service exposes these as two methods rather than one nullable-status method,
         // so the choice is made here rather than pushing null handling into the repository.
-        return status == null
+        Page<UserResponses.Summary> page = status == null
                 ? userService.findAll(pageable)
                 : userService.findAllByStatus(status, pageable);
+
+        // Wrapped explicitly so the JSON envelope is Spring Data's stable PagedModel rather
+        // than a raw PageImpl, without the global annotation that would disable the ?size= cap.
+        return new PagedModel<>(page);
     }
 
     @GetMapping("/search")
@@ -95,12 +101,12 @@ public class AdminUserController
 
                     Example: `?name=man&page=0&size=20`""")
     @ApiResponse(responseCode = "200", description = "Page of matching user summaries")
-    public Page<UserResponses.Summary> search(
+    public PagedModel<UserResponses.Summary> search(
             @Parameter(description = "Substring to match against first or last name")
             @RequestParam String name,
-            @PageableDefault(size = 20, sort = "userName") Pageable pageable)
+            @ParameterObject @PageableDefault(size = 20, sort = "userName") Pageable pageable)
     {
-        return userService.searchByName(name, pageable);
+        return new PagedModel<>(userService.searchByName(name, pageable));
     }
 
     /**
@@ -133,8 +139,8 @@ public class AdminUserController
     /**
      * Lifecycle transition: PENDING / ACTIVE / SUSPENDED / DELETED.
      *
-     * <p>This is how you activate an account created through {@code /api/auth/register},
-     * which is otherwise stuck at PENDING and unable to sign in. The request's
+     * <p>Used to suspend an abusive account or reactivate a suspended one. Registered accounts
+     * are created ACTIVE, so this is not needed to let someone in. The request's
      * {@code reason} has no column on the entity and is written to the application log.
      */
     @PatchMapping("/{id}/status")
@@ -142,8 +148,8 @@ public class AdminUserController
             description = """
                     Moves an account between PENDING, ACTIVE, SUSPENDED and DELETED.
 
-                    Use this to activate a freshly registered account, which starts PENDING
-                    and cannot log in until then. The optional `reason` is logged, not stored.""")
+                    Registered accounts already start ACTIVE, so use this to suspend or
+                    reinstate one. The optional `reason` is logged, not stored.""")
     @ApiResponse(responseCode = "200", description = "Status changed")
     @ApiResponse(responseCode = "404", description = "No such id",
             content = @io.swagger.v3.oas.annotations.media.Content)
