@@ -2,6 +2,7 @@ package com.expensemanagement.backend.UserManagement.Repositories;
 
 import com.expensemanagement.backend.UserManagement.Entities.User;
 import com.expensemanagement.backend.UserManagement.Enums.UserAccountState;
+import com.expensemanagement.backend.UserManagement.Enums.UserType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -66,6 +67,9 @@ public interface UserRepository extends JpaRepository<User, Long>
     Page<User> findAllByStatusNot(UserAccountState status, Pageable pageable);
 
     long countByStatus(UserAccountState status);
+
+    /** Used to refuse demoting the last remaining admin. */
+    long countByType(UserType type);
 
     /** Guard for acting on a live user, e.g. suspend/activate. */
     Optional<User> findByIdAndStatus(Long id, UserAccountState status);

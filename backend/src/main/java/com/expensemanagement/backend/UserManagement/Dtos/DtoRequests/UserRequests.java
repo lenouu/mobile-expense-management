@@ -1,6 +1,7 @@
 package com.expensemanagement.backend.UserManagement.Dtos.DtoRequests;
 
 import com.expensemanagement.backend.UserManagement.Enums.UserAccountState;
+import com.expensemanagement.backend.UserManagement.Enums.UserType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -103,6 +104,19 @@ public class UserRequests {
 
         @NotNull(message = "Status is required")
         private UserAccountState status;
+
+        private String reason;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UpdateAccountType {
+
+        @NotNull(message = "Type is required")
+        private UserType type;
 
         private String reason;
     }
