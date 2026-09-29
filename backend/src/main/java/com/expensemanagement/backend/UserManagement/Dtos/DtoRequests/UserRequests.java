@@ -20,7 +20,6 @@ public class UserRequests {
     public static class CreateAccount {
 
         @NotBlank(message = "Username is required")
-        @Size(min = 3, max = 30)
         private String userName;
 
         @NotBlank(message = "Email is required")

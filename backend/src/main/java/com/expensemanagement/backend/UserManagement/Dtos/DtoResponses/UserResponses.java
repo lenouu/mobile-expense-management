@@ -1,6 +1,7 @@
 package com.expensemanagement.backend.UserManagement.Dtos.DtoResponses;
 
 import com.expensemanagement.backend.UserManagement.Enums.UserAccountState;
+import com.expensemanagement.backend.UserManagement.Enums.UserType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class UserResponses {
         private final String lastName;
         private final String profilePictureReference;
         private final UserAccountState status;
+        private final UserType type;
     }
 
     @Getter
@@ -34,6 +36,7 @@ public class UserResponses {
         private final LocalDate dateOfBirth;
         private final String profilePictureReference;
         private final UserAccountState status;
+        private final UserType type;
         private final LocalDateTime createdAt;
         private final LocalDateTime updatedAt;
     }

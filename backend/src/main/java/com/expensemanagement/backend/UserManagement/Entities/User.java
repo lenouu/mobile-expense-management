@@ -1,6 +1,7 @@
 package com.expensemanagement.backend.UserManagement.Entities;
 
 import com.expensemanagement.backend.UserManagement.Enums.UserAccountState;
+import com.expensemanagement.backend.UserManagement.Enums.UserType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,6 +42,13 @@ public class User
     @Column(nullable = false)
     private UserAccountState status;
 
+    /**
+     * Privilege level. Never populated from a client request - see {@link #onCreate()}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserType type;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -53,6 +61,13 @@ public class User
         this.updatedAt = this.createdAt;
         if (this.status == null) {
             this.status = UserAccountState.PENDING;
+        }
+        // Default to the least privileged type. This is the backstop that makes
+        // privilege escalation impossible even if a request DTO ever grows a
+        // "type" field: a self-registering account is always USER, and only an
+        // admin-only service operation may change it afterwards.
+        if (this.type == null) {
+            this.type = UserType.USER;
         }
     }
     @PreUpdate
