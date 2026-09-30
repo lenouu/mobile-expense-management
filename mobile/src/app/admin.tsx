@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Button, Chip, DANGER_COLOR, describeError, SUCCESS_COLOR } from '@/components/admin/admin-ui';
+import { DefaultCategoriesManager } from '@/components/admin/default-categories';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -28,7 +30,14 @@ import {
 
 const PAGE_SIZE = 20;
 
-const STATUS_COLORS: Record<HealthStatus, string> = { UP: '#1F9D55', DOWN: '#D93025' };
+const STATUS_COLORS: Record<HealthStatus, string> = { UP: SUCCESS_COLOR, DOWN: DANGER_COLOR };
+
+type Section = 'monitoring' | 'categories';
+
+const SECTIONS: { key: Section; label: string }[] = [
+  { key: 'monitoring', label: 'Health & errors' },
+  { key: 'categories', label: 'Default categories' },
+];
 
 type RangeKey = 'all' | '24h' | '7d';
 
@@ -39,10 +48,11 @@ const RANGES: { key: RangeKey; label: string; hours?: number }[] = [
 ];
 
 /**
- * US10: lets an administrator monitor platform health and recent errors.
+ * Admin area: platform health and errors (US10) and default expense categories (US09).
  */
 export default function AdminScreen() {
   const [session, setSession] = useState<AdminSession | null>(null);
+  const [section, setSection] = useState<Section>('monitoring');
   // Why the admin was sent back to sign in (e.g. account no longer allowed).
   const [signInMessage, setSignInMessage] = useState<string | null>(null);
   const signOut = useCallback((message?: string) => {
@@ -61,15 +71,33 @@ export default function AdminScreen() {
     web: { paddingTop: Spacing.six + Spacing.four, paddingBottom: Spacing.four },
   });
 
+  const sectionSwitcher = (
+    <View style={styles.headerActions}>
+      {SECTIONS.map((s) => (
+        <Chip key={s.key} label={s.label} selected={section === s.key} onPress={() => setSection(s.key)} />
+      ))}
+    </View>
+  );
+
   return (
     <ThemedView style={styles.screen}>
-      {session ? (
+      {session && section === 'monitoring' && (
         <MonitoringDashboard
           session={session}
           contentStyle={contentPlatformStyle}
           onSignOut={signOut}
+          header={sectionSwitcher}
         />
-      ) : (
+      )}
+      {session && section === 'categories' && (
+        <DefaultCategoriesManager
+          session={session}
+          contentStyle={contentPlatformStyle}
+          onSignOut={signOut}
+          header={sectionSwitcher}
+        />
+      )}
+      {!session && (
         <ScrollView
           style={{ backgroundColor: theme.background }}
           contentInsetAdjustmentBehavior="automatic"
@@ -123,7 +151,9 @@ function AdminSignIn({
   return (
     <View style={styles.signIn}>
       <ThemedText type="subtitle">Admin</ThemedText>
-      <ThemedText themeColor="textSecondary">Sign in to monitor platform health and errors.</ThemedText>
+      <ThemedText themeColor="textSecondary">
+        Sign in to monitor the platform and manage default categories.
+      </ThemedText>
 
       <TextInput
         style={inputStyle}
@@ -155,10 +185,12 @@ function MonitoringDashboard({
   session,
   contentStyle,
   onSignOut,
+  header,
 }: {
   session: AdminSession;
   contentStyle: object | undefined;
   onSignOut: (message?: string) => void;
+  header: ReactNode;
 }) {
   const theme = useTheme();
   const [health, setHealth] = useState<PlatformHealth | null>(null);
@@ -249,6 +281,7 @@ function MonitoringDashboard({
       contentContainerStyle={[styles.contentContainer, contentStyle]}
       refreshControl={<RefreshControl refreshing={loading && health !== null} onRefresh={load} />}>
       <View style={styles.dashboard}>
+        {header}
         <View style={styles.headerRow}>
           <View>
             <ThemedText type="subtitle">Platform health</ThemedText>
@@ -427,54 +460,6 @@ function StatusBadge({ status, large }: { status: HealthStatus; large?: boolean 
   );
 }
 
-function Button({
-  label,
-  onPress,
-  disabled,
-  secondary,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  secondary?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [(pressed || disabled) && styles.pressed]}>
-      <ThemedView
-        type={secondary ? 'backgroundElement' : 'text'}
-        style={[styles.button, secondary && styles.buttonSecondary]}>
-        <ThemedText type="smallBold" themeColor={secondary ? 'text' : 'background'}>
-          {label}
-        </ThemedText>
-      </ThemedView>
-    </Pressable>
-  );
-}
-
-function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type={selected ? 'backgroundSelected' : 'backgroundElement'} style={styles.chip}>
-        <ThemedText type="small" themeColor={selected ? 'text' : 'textSecondary'}>
-          {label}
-        </ThemedText>
-      </ThemedView>
-    </Pressable>
-  );
-}
-
-function describeError(e: unknown): string {
-  if (e instanceof ApiRequestError) {
-    if (e.status === 401) return 'Please sign in again.';
-    if (e.status === 403) return 'This account is not an administrator.';
-    return e.message;
-  }
-  return 'Something went wrong.';
-}
-
 function formatBytes(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let value = bytes;
@@ -592,21 +577,6 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#ffffff',
-  },
-  button: {
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two + Spacing.one,
-    alignItems: 'center',
-  },
-  buttonSecondary: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  chip: {
-    borderRadius: Spacing.four,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
   },
   pressed: {
     opacity: 0.6,

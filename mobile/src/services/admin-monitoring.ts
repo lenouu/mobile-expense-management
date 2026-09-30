@@ -40,6 +40,8 @@ export class ApiRequestError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Per-field messages when the backend rejected a request body (400 validation_failed). */
+    readonly fieldErrors: Record<string, string> = {},
   ) {
     super(message);
   }
@@ -59,7 +61,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     // Backend errors are { status, error, message, ... } (see backend Exceptions/ApiError).
     const body = await response.json().catch(() => null);
-    throw new ApiRequestError(response.status, body?.message ?? `Request failed (${response.status})`);
+    throw new ApiRequestError(
+      response.status,
+      body?.message ?? `Request failed (${response.status})`,
+      body?.fieldErrors ?? {},
+    );
   }
   return response.json();
 }
@@ -85,8 +91,25 @@ export async function adminLogin(usernameOrEmail: string, password: string): Pro
   return { accessToken: result.accessToken, userName: result.user.userName };
 }
 
+/** Authenticated call to an /admin endpoint; a JSON `body` is serialized for you. */
+export function adminRequest<T>(
+  path: string,
+  session: AdminSession,
+  options: { method?: string; body?: unknown } = {},
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${session.accessToken}` };
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+  return request<T>(path, {
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  });
+}
+
 function adminGet<T>(path: string, session: AdminSession) {
-  return request<T>(path, { headers: { Authorization: `Bearer ${session.accessToken}` } });
+  return adminRequest<T>(path, session);
 }
 
 export function fetchPlatformHealth(session: AdminSession) {
