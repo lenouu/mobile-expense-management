@@ -25,6 +25,17 @@ def load_data(path="data/issues.json"):
         return json.load(f)
 
 
+def load_assignees(path="data/assignees.json"):
+    """Maps a suggested owner's plain name (as used in issues.json) to
+    their real GitHub username. Returns {} if the file is missing, so
+    everything still works (just unassigned) before it's filled in."""
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+    return {k: v for k, v in raw.items() if not k.startswith("_") and v}
+
+
 def get_repo(data):
     env_repo = os.environ.get("GITHUB_REPOSITORY")
     if env_repo and "/" in env_repo:
@@ -104,13 +115,25 @@ def create_issue(owner, repo, title, body, labels, milestone_number=None, assign
     if assignee_username:
         payload["assignees"] = [assignee_username]
     r = requests.post(url, headers=_headers(), json=payload)
+    if r.status_code >= 400 and assignee_username:
+        # Most likely cause: that username isn't a collaborator on the repo
+        # yet, so GitHub refused the whole request. Retry unassigned rather
+        # than losing the issue entirely, and say so.
+        print(f"  WARNING: could not assign '{assignee_username}' on '{title}' "
+              f"(are they added as a collaborator on the repo?). Creating it unassigned instead.")
+        payload.pop("assignees", None)
+        r = requests.post(url, headers=_headers(), json=payload)
     r.raise_for_status()
     return r.json()
 
 
-def create_issues_for_sprint(data, sprint_num, verbose=True):
+def create_issues_for_sprint(data, sprint_num, assignees=None, verbose=True):
     """Create every not-yet-created issue for one sprint number.
+    `assignees` maps a suggested owner's plain name to their GitHub
+    username (see load_assignees) — pass {} or omit to leave everyone
+    unassigned on GitHub for now.
     Returns (created_count, skipped_count)."""
+    assignees = assignees or {}
     owner, repo = get_repo(data)
     sprint_info = data["sprints"][str(sprint_num)]
     milestone_number = get_or_create_milestone(
@@ -127,13 +150,15 @@ def create_issues_for_sprint(data, sprint_num, verbose=True):
                 print(f"  SKIP (already exists): {issue['title']}")
             skipped += 1
             continue
+        assignee_username = assignees.get(issue.get("suggested_assignee_name", ""), "")
         result = create_issue(
             owner, repo,
             issue["title"], issue["body"], issue["labels"],
             milestone_number=milestone_number,
-            assignee_username=issue.get("assignee_username", ""),
+            assignee_username=assignee_username,
         )
         if verbose:
-            print(f"  CREATED #{result['number']}: {issue['title']}")
+            who = f" -> {assignee_username}" if assignee_username else " (unassigned)"
+            print(f"  CREATED #{result['number']}: {issue['title']}{who}")
         created += 1
     return created, skipped

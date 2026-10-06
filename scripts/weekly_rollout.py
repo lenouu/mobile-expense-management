@@ -2,7 +2,13 @@
 """
 Creates ONE sprint's worth of GitHub issues per run, tracking progress in
 automation/state.json so each sprint is only uploaded once, even if the
-workflow runs again later.
+workflow runs again later. automation/state.json ships in this package
+already set to "last_sprint_uploaded": 1 (Sprint 0 and Sprint 1 marked as
+already done), so the very next run starts at Sprint 2, not Sprint 0.
+
+Assignment: each issue's suggested owner (in data/issues.json) is looked
+up in data/assignees.json to find their real GitHub username. Fill that
+file in before running so issues come out actually assigned on GitHub.
 
 This is the script the scheduled GitHub Actions workflow calls every week.
 You normally never need to run it by hand — but you can, to test:
@@ -14,7 +20,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from github_issues_lib import load_data, create_issues_for_sprint
+from github_issues_lib import load_data, load_assignees, create_issues_for_sprint
 
 STATE_PATH = "automation/state.json"
 
@@ -34,6 +40,7 @@ def save_state(state):
 
 def main():
     data = load_data()
+    assignees = load_assignees()
     state = load_state()
     next_sprint = state["last_sprint_uploaded"] + 1
     max_sprint = max(int(k) for k in data["sprints"].keys())
@@ -45,7 +52,9 @@ def main():
 
     sprint_title = data["sprints"][str(next_sprint)]["title"]
     print(f"Rolling out issues for {sprint_title} (sprint {next_sprint})...")
-    created, skipped = create_issues_for_sprint(data, next_sprint)
+    if not assignees:
+        print("  (data/assignees.json has no usernames filled in yet - these issues will be created unassigned)")
+    created, skipped = create_issues_for_sprint(data, next_sprint, assignees=assignees)
     print(f"Done: {created} issue(s) created, {skipped} already existed.")
 
     state["last_sprint_uploaded"] = next_sprint
