@@ -28,6 +28,11 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="finances">
+        <NativeTabs.Trigger.Label>Money</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="creditcard" md="account_balance_wallet" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="admin">
         <NativeTabs.Trigger.Label>Admin</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="gearshape" md="settings" />

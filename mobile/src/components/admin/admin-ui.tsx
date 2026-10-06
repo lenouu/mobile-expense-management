@@ -40,10 +40,23 @@ export function Button({
   );
 }
 
-export function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+export function Chip({
+  label,
+  selected,
+  onPress,
+  onCard,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  /** Placed on a card, which already uses the backgroundElement color. */
+  onCard?: boolean;
+}) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type={selected ? 'backgroundSelected' : 'backgroundElement'} style={styles.chip}>
+      <ThemedView
+        type={selected ? 'backgroundSelected' : onCard ? 'background' : 'backgroundElement'}
+        style={styles.chip}>
         <ThemedText type="small" themeColor={selected ? 'text' : 'textSecondary'}>
           {label}
         </ThemedText>
