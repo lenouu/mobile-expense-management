@@ -54,6 +54,13 @@ export function fetchMyCategories(session: Session) {
   return authRequest<MyCategory[]>('/categories', session);
 }
 
+/** Body of POST /categories (US17). Only the name is required. */
+export type NewCategory = { name: string; description?: string; icon?: string; color?: string };
+
+export function createMyCategory(session: Session, category: NewCategory) {
+  return authRequest<MyCategory>('/categories', session, { method: 'POST', body: category });
+}
+
 function pageParams(options: { page?: number; size?: number }) {
   return new URLSearchParams({ page: String(options.page ?? 0), size: String(options.size ?? 20) });
 }

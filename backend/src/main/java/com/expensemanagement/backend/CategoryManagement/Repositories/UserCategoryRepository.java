@@ -12,4 +12,6 @@ public interface UserCategoryRepository extends JpaRepository<UserCategory, Long
 
     /** Scoped by owner, so another user's category is simply not found. */
     Optional<UserCategory> findByIdAndUserId(Long id, Long userId);
+
+    boolean existsByUserIdAndNameIgnoreCase(Long userId, String name);
 }

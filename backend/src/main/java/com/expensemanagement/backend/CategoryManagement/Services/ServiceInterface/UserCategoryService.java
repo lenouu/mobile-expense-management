@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface;
 
+import com.expensemanagement.backend.CategoryManagement.Dtos.DtoRequests.CategoryRequests;
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoResponses.CategoryResponses;
 import com.expensemanagement.backend.UserManagement.Entities.User;
 
@@ -19,4 +20,13 @@ public interface UserCategoryService
 
     /** The caller's own categories, by name. */
     List<CategoryResponses.Owned> findMine(Long userId);
+
+    /**
+     * Creates a category of the caller's own (US17). Needs nothing else to exist first - in
+     * particular no budget.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.DuplicateResourceException if the caller
+     *         already has a category with that name, ignoring case
+     */
+    CategoryResponses.Owned create(Long userId, CategoryRequests.SaveCategory request);
 }

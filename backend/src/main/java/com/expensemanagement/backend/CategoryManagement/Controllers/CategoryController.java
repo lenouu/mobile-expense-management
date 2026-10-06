@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.CategoryManagement.Controllers;
 
+import com.expensemanagement.backend.CategoryManagement.Dtos.DtoRequests.CategoryRequests;
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoResponses.CategoryResponses;
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.DefaultCategoryService;
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.UserCategoryService;
@@ -9,17 +10,22 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * Categories for any signed-in user: their own categories (S2-TECH-1) and a read-only view of
- * the active default categories (US09).
+ * Categories for any signed-in user: their own categories, copied at sign-up (S2-TECH-1) or
+ * created by them (US17), and a read-only view of the active default categories (US09).
  */
 @RestController
 @RequestMapping("/api/categories")
@@ -51,6 +57,23 @@ public class CategoryController
     public List<CategoryResponses.Owned> mine(@AuthenticationPrincipal Jwt jwt)
     {
         return userCategoryService.findMine(Long.valueOf(jwt.getSubject()));
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create one of my categories",
+            description = """
+                    `name` is required and must not match one of your categories, ignoring case.
+                    `description`, `icon` and `color` (hex, e.g. `#1F9D55`) are optional.
+
+                    No budget is needed: the category can be used for expenses straight away.""")
+    @ApiResponse(responseCode = "201", description = "Category created")
+    @ApiResponse(responseCode = "400", description = "Validation failed", content = @Content)
+    @ApiResponse(responseCode = "409", description = "You already have a category with that name", content = @Content)
+    public CategoryResponses.Owned create(@AuthenticationPrincipal Jwt jwt,
+                                          @Valid @RequestBody CategoryRequests.SaveCategory request)
+    {
+        return userCategoryService.create(Long.valueOf(jwt.getSubject()), request);
     }
 
     @GetMapping("/defaults")
