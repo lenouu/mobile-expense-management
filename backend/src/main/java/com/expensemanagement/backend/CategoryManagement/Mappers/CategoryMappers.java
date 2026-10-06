@@ -3,6 +3,8 @@ package com.expensemanagement.backend.CategoryManagement.Mappers;
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoRequests.CategoryRequests;
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoResponses.CategoryResponses;
 import com.expensemanagement.backend.CategoryManagement.Entities.DefaultCategory;
+import com.expensemanagement.backend.CategoryManagement.Entities.UserCategory;
+import com.expensemanagement.backend.UserManagement.Entities.User;
 import org.springframework.util.StringUtils;
 
 public final class CategoryMappers
@@ -35,6 +37,31 @@ public final class CategoryMappers
                 .icon(category.getIcon())
                 .color(category.getColor())
                 .build();
+    }
+
+    public static CategoryResponses.Owned toOwned(UserCategory category)
+    {
+        return CategoryResponses.Owned.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .description(category.getDescription())
+                .icon(category.getIcon())
+                .color(category.getColor())
+                .defaultCategoryId(category.getDefaultCategoryId())
+                .build();
+    }
+
+    /** A user's own snapshot of a default category, taken at account creation. */
+    public static UserCategory toUserCategory(DefaultCategory source, User owner)
+    {
+        UserCategory category = new UserCategory();
+        category.setUser(owner);
+        category.setName(source.getName());
+        category.setDescription(source.getDescription());
+        category.setIcon(source.getIcon());
+        category.setColor(source.getColor());
+        category.setDefaultCategoryId(source.getId());
+        return category;
     }
 
     /**

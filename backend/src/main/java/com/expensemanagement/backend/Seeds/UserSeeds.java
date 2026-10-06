@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.Seeds;
 
+import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.UserCategoryService;
 import com.expensemanagement.backend.UserManagement.Entities.User;
 import com.expensemanagement.backend.UserManagement.Enums.UserAccountState;
 import com.expensemanagement.backend.UserManagement.Enums.UserType;
@@ -8,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,6 +59,7 @@ import java.util.List;
  * two real users with the same password get different hashes.
  */
 @Component
+@Order(2)
 @ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true")
 @Slf4j
 public class UserSeeds implements ApplicationRunner
@@ -66,11 +69,14 @@ public class UserSeeds implements ApplicationRunner
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserCategoryService userCategoryService;
 
-    public UserSeeds(UserRepository userRepository, PasswordEncoder passwordEncoder)
+    public UserSeeds(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                     UserCategoryService userCategoryService)
     {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userCategoryService = userCategoryService;
     }
 
     /**
@@ -154,7 +160,14 @@ public class UserSeeds implements ApplicationRunner
                 .map(seed -> toUser(seed, passwordHash))
                 .toList();
 
-        userRepository.saveAll(users);
+        List<User> saved = userRepository.saveAll(users);
+
+        // S2-TECH-1: seeded USER accounts start with the default categories, like a real
+        // registration. Admins get none - they manage the platform, not their own expenses.
+        // DefaultCategorySeeds is @Order(1), so the defaults already exist at this point.
+        saved.stream()
+                .filter(user -> user.getType() == UserType.USER)
+                .forEach(userCategoryService::provisionDefaults);
 
         List<String> adminUserNames = SEEDS.stream()
                 .filter(seed -> seed.type() == UserType.ADMIN)

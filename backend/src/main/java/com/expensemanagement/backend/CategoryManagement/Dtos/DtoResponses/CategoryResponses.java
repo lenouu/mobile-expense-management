@@ -27,6 +27,21 @@ public class CategoryResponses
         private final LocalDateTime updatedAt;
     }
 
+    /** One of the caller's own categories (S2-TECH-1). */
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class Owned
+    {
+        private final Long id;
+        private final String name;
+        private final String description;
+        private final String icon;
+        private final String color;
+        /** The default it was copied from; null for a category the user created. */
+        private final Long defaultCategoryId;
+    }
+
     /** What regular users see: only active categories, so no status or dates. */
     @Getter
     @Builder

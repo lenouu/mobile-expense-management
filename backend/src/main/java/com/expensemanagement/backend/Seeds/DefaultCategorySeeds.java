@@ -5,6 +5,7 @@ import com.expensemanagement.backend.CategoryManagement.Repositories.DefaultCate
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,8 +17,11 @@ import java.util.List;
  * <p>Unlike {@link UserSeeds} this is not development data - a real platform needs a sensible
  * category structure from day one - so it is not behind {@code app.seed.enabled}. It only runs
  * when the table is empty, so categories an administrator has edited are never overwritten.
+ *
+ * <p>Ordered before {@link UserSeeds}, which copies these categories to the seeded users.
  */
 @Component
+@Order(1)
 @Slf4j
 public class DefaultCategorySeeds implements ApplicationRunner
 {
