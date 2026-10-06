@@ -79,6 +79,19 @@ public final class CategoryMappers
         return category;
     }
 
+    /**
+     * Same as {@link #apply(DefaultCategory, CategoryRequests.SaveCategory)} for a category the
+     * user creates themselves (US17); {@code defaultCategoryId} stays null.
+     */
+    public static UserCategory apply(UserCategory category, CategoryRequests.SaveCategory request)
+    {
+        category.setName(request.getName().trim());
+        category.setDescription(trimToNull(request.getDescription()));
+        category.setIcon(trimToNull(request.getIcon()));
+        category.setColor(trimToNull(request.getColor()));
+        return category;
+    }
+
     private static String trimToNull(String value)
     {
         return StringUtils.hasText(value) ? value.trim() : null;

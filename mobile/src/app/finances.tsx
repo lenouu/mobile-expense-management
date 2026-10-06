@@ -3,6 +3,7 @@ import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip } from '@/components/admin/admin-ui';
+import { CategoriesManager } from '@/components/finances/categories-manager';
 import { ExpensesManager } from '@/components/finances/expenses-manager';
 import { describeError, financeStyles, TextField } from '@/components/finances/finance-ui';
 import { IncomesManager } from '@/components/finances/incomes-manager';
@@ -13,15 +14,16 @@ import { useTheme } from '@/hooks/use-theme';
 import { ApiRequestError, Session } from '@/services/api-client';
 import { userLogin } from '@/services/finances';
 
-type Section = 'expenses' | 'incomes';
+type Section = 'expenses' | 'incomes' | 'categories';
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'expenses', label: 'Expenses' },
   { key: 'incomes', label: 'Incomes' },
+  { key: 'categories', label: 'Categories' },
 ];
 
 /**
- * S2-TECH-2: a regular user's money - expenses and incomes.
+ * A regular user's money: expenses and incomes (S2-TECH-2) and their own categories (US17).
  */
 export default function FinancesScreen() {
   const [session, setSession] = useState<Session | null>(null);
@@ -64,6 +66,14 @@ export default function FinancesScreen() {
       )}
       {session && section === 'incomes' && (
         <IncomesManager
+          session={session}
+          contentStyle={contentPlatformStyle}
+          onSignOut={signOut}
+          header={sectionSwitcher}
+        />
+      )}
+      {session && section === 'categories' && (
+        <CategoriesManager
           session={session}
           contentStyle={contentPlatformStyle}
           onSignOut={signOut}
