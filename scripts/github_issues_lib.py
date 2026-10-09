@@ -14,10 +14,13 @@ defaults stored in issues.json when run locally without that variable set.
 """
 import json
 import os
+import re
 import sys
 import requests
 
 API_ROOT = "https://api.github.com"
+UNASSIGNED = []   # titles that GitHub refused to assign (reported at the end of a run)
+ASSIGNED_COUNT = {}
 
 
 def load_data(path="data/issues.json"):
@@ -88,6 +91,12 @@ def get_or_create_milestone(owner, repo, title, description=""):
     return r.json()["number"]
 
 
+def norm_title(t):
+    """Ignore the sprint-dependent prefix of technical tasks (e.g. S2-TECH-3 ->
+    S3-TECH-1 after the one-week re-plan) so renumbered tasks are not duplicated."""
+    return re.sub(r"^S\d+-TECH-\d+\s+", "TECH ", t)
+
+
 def get_existing_issue_titles(owner, repo):
     """Titles of every issue (open or closed) already in the repo, so we
     never create the same issue twice on a re-run."""
@@ -102,7 +111,7 @@ def get_existing_issue_titles(owner, repo):
             break
         for it in items:
             if "pull_request" not in it:  # PRs show up in this endpoint too
-                titles.add(it["title"])
+                titles.add(norm_title(it["title"]))
         page += 1
     return titles
 
@@ -122,7 +131,10 @@ def create_issue(owner, repo, title, body, labels, milestone_number=None, assign
         print(f"  WARNING: could not assign '{assignee_username}' on '{title}' "
               f"(are they added as a collaborator on the repo?). Creating it unassigned instead.")
         payload.pop("assignees", None)
+        UNASSIGNED.append((title, assignee_username))
         r = requests.post(url, headers=_headers(), json=payload)
+    elif assignee_username:
+        ASSIGNED_COUNT[assignee_username] = ASSIGNED_COUNT.get(assignee_username, 0) + 1
     r.raise_for_status()
     return r.json()
 
@@ -145,7 +157,7 @@ def create_issues_for_sprint(data, sprint_num, assignees=None, verbose=True):
     for issue in data["issues"]:
         if issue["sprint"] != sprint_num:
             continue
-        if issue["title"] in existing_titles:
+        if norm_title(issue["title"]) in existing_titles:
             if verbose:
                 print(f"  SKIP (already exists): {issue['title']}")
             skipped += 1
@@ -162,3 +174,12 @@ def create_issues_for_sprint(data, sprint_num, assignees=None, verbose=True):
             print(f"  CREATED #{result['number']}: {issue['title']}{who}")
         created += 1
     return created, skipped
+
+
+def check_assignees(data, assignees):
+    """Stop with a clear error if any planned owner has no GitHub username,
+    instead of silently creating unassigned issues."""
+    names = {i.get("suggested_assignee_name") for i in data["issues"] if i.get("suggested_assignee_name")}
+    missing = sorted(n for n in names if not assignees.get(n))
+    if missing:
+        sys.exit("ERROR: no GitHub username in data/assignees.json for: " + ", ".join(missing))

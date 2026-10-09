@@ -144,14 +144,14 @@
       "key": "S0-TECH-5",
       "sprint": 0,
       "title": "S0-TECH-5 Scaffold the React Native app and the Spring Boot backend, connected to PostgreSQL",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 0 |\n| **Technology** | Both |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## Description\n\nScaffold the React Native app and the Spring Boot backend, connected to PostgreSQL.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 0 |\n| **Technology** | Both |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## Description\n\nScaffold the React Native app and the Spring Boot backend, connected to PostgreSQL.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "technical-setup",
         "sprint-0",
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -214,7 +214,7 @@
       "key": "US01",
       "sprint": 1,
       "title": "US01 Create a personal account",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 1 |\n| **Epic** | E1: Account & Session |\n| **Priority** | P0 |\n| **Technology** | Both |\n| **Depends on** | None |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a new user, I want to create a personal account with my required information so that I can securely manage my financial information.\n\n## Acceptance Criteria\n\n1. Given the user is not yet registered, when they submit valid required information, then an account is created and they can proceed to log in.\n2. Given a required field is missing, when the form is submitted, then the account is not created and the missing fields are shown.\n3. Given an account already exists with the same identifier (e.g. email/phone), when registration is attempted again, then the system rejects the duplicate.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 1 |\n| **Epic** | E1: Account & Session |\n| **Priority** | P0 |\n| **Technology** | Both |\n| **Depends on** | None |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a new user, I want to create a personal account with my required information so that I can securely manage my financial information.\n\n## Acceptance Criteria\n\n1. Given the user is not yet registered, when they submit valid required information, then an account is created and they can proceed to log in.\n2. Given a required field is missing, when the form is submitted, then the account is not created and the missing fields are shown.\n3. Given an account already exists with the same identifier (e.g. email/phone), when registration is attempted again, then the system rejects the duplicate.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p0-critical-priority",
         "e1",
@@ -223,7 +223,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -294,7 +294,7 @@
       "key": "US06",
       "sprint": 1,
       "title": "US06 Reset forgotten password",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 1 |\n| **Epic** | E1: Account & Session |\n| **Priority** | P1 |\n| **Technology** | Both |\n| **Depends on** | US01 |\n| **Effort estimate** | 1 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want to reset my password when I forget it so that I can regain access to my account.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 1 |\n| **Epic** | E1: Account & Session |\n| **Priority** | P1 |\n| **Technology** | Both |\n| **Depends on** | US01 |\n| **Effort estimate** | 1 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want to reset my password when I forget it so that I can regain access to my account.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p1-high-priority",
         "e1",
@@ -303,7 +303,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "1"
     },
     {
@@ -326,7 +326,7 @@
       "key": "US08",
       "sprint": 1,
       "title": "US08 Manage user account status",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 1 |\n| **Epic** | E9: Administration |\n| **Priority** | P2 |\n| **Technology** | Both |\n| **Depends on** | US07 |\n| **Effort estimate** | 1 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs an administrator, I want to manage user account status so that I can keep the platform secure without touching anyone’s financial data.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 1 |\n| **Epic** | E9: Administration |\n| **Priority** | P2 |\n| **Technology** | Both |\n| **Depends on** | US07 |\n| **Effort estimate** | 1 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs an administrator, I want to manage user account status so that I can keep the platform secure without touching anyone’s financial data.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p2-medium-priority",
         "e9",
@@ -335,7 +335,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "1"
     },
     {
@@ -358,7 +358,7 @@
       "key": "US10",
       "sprint": 1,
       "title": "US10 Monitor platform health",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 1 |\n| **Epic** | E9: Administration |\n| **Priority** | P2 |\n| **Technology** | Backend |\n| **Depends on** | US07 |\n| **Effort estimate** | 1 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs an administrator, I want to monitor technical platform health and errors so that I can spot problems early.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 1 |\n| **Epic** | E9: Administration |\n| **Priority** | P2 |\n| **Technology** | Backend |\n| **Depends on** | US07 |\n| **Effort estimate** | 1 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs an administrator, I want to monitor technical platform health and errors so that I can spot problems early.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p2-medium-priority",
         "e9",
@@ -367,7 +367,7 @@
         "technology-backend"
       ],
       "technology": "Backend",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "1"
     },
     {
@@ -418,7 +418,7 @@
       "key": "US12",
       "sprint": 2,
       "title": "US12 Add an income record",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 2 |\n| **Epic** | E2: Income Management |\n| **Priority** | P0 |\n| **Technology** | Both |\n| **Depends on** | US02 |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want to add an income record with its amount, source and date so that my income is accurately recorded.\n\n## Acceptance Criteria\n\n1. Given an authenticated user, when they submit a valid amount, source and date, then the income record is saved and linked to their account.\n2. Given a required value is missing or invalid, when the form is submitted, then the record is not saved and the user sees what needs correcting.\n3. Given the income is saved, then it is included in the user’s total income for that financial period.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 2 |\n| **Epic** | E2: Income Management |\n| **Priority** | P0 |\n| **Technology** | Both |\n| **Depends on** | US02 |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want to add an income record with its amount, source and date so that my income is accurately recorded.\n\n## Acceptance Criteria\n\n1. Given an authenticated user, when they submit a valid amount, source and date, then the income record is saved and linked to their account.\n2. Given a required value is missing or invalid, when the form is submitted, then the record is not saved and the user sees what needs correcting.\n3. Given the income is saved, then it is included in the user’s total income for that financial period.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p0-critical-priority",
         "e2",
@@ -427,7 +427,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -498,7 +498,7 @@
       "key": "US17",
       "sprint": 2,
       "title": "US17 Create an expense category",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 2 |\n| **Epic** | E3: Expense & Category Management |\n| **Priority** | P0 |\n| **Technology** | Both |\n| **Depends on** | US02 |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want to create an expense category so that I can organize my spending, without needing a budget first.\n\n## Acceptance Criteria\n\n1. Given an authenticated user, when they submit a valid category name, then the category is created and available when recording expenses.\n2. Given no budget exists yet, when the user creates a category, then creation still succeeds. Categories never depend on a budget existing.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 2 |\n| **Epic** | E3: Expense & Category Management |\n| **Priority** | P0 |\n| **Technology** | Both |\n| **Depends on** | US02 |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want to create an expense category so that I can organize my spending, without needing a budget first.\n\n## Acceptance Criteria\n\n1. Given an authenticated user, when they submit a valid category name, then the category is created and available when recording expenses.\n2. Given no budget exists yet, when the user creates a category, then creation still succeeds. Categories never depend on a budget existing.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p0-critical-priority",
         "e3",
@@ -507,7 +507,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -624,7 +624,7 @@
       "key": "US24",
       "sprint": 3,
       "title": "US24 Delete an expense",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 3 |\n| **Epic** | E3: Expense & Category Management |\n| **Priority** | P1 |\n| **Technology** | Both |\n| **Depends on** | US20 |\n| **Effort estimate** | 1 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want to delete an incorrectly recorded expense so that it does not affect my financial calculations.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 3 |\n| **Epic** | E3: Expense & Category Management |\n| **Priority** | P1 |\n| **Technology** | Both |\n| **Depends on** | US20 |\n| **Effort estimate** | 1 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want to delete an incorrectly recorded expense so that it does not affect my financial calculations.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p1-high-priority",
         "e3",
@@ -633,7 +633,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "1"
     },
     {
@@ -672,14 +672,14 @@
       "key": "S4-TECH-1",
       "sprint": 4,
       "title": "S4-TECH-1 Financial period model",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 4 |\n| **Technology** | Backend |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## Description\n\nFinancial period model.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 4 |\n| **Technology** | Backend |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## Description\n\nFinancial period model.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "technical-setup",
         "sprint-4",
         "technology-backend"
       ],
       "technology": "Backend",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -762,7 +762,7 @@
       "key": "US30",
       "sprint": 5,
       "title": "US30 View overall budget and allocations",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 5 |\n| **Epic** | E4: Budgeting & Financial Planning |\n| **Priority** | P1 |\n| **Technology** | Both |\n| **Depends on** | US28, US29 |\n| **Effort estimate** | 2 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want to see my overall budget and category allocations so that I understand how my spending plan is distributed.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 5 |\n| **Epic** | E4: Budgeting & Financial Planning |\n| **Priority** | P1 |\n| **Technology** | Both |\n| **Depends on** | US28, US29 |\n| **Effort estimate** | 2 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want to see my overall budget and category allocations so that I understand how my spending plan is distributed.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p1-high-priority",
         "e4",
@@ -771,7 +771,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "2"
     },
     {
@@ -840,14 +840,14 @@
       "key": "S6-TECH-2",
       "sprint": 6,
       "title": "S6-TECH-2 Mobile money SMS parsing (paste and direct read) and review flow",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 6 |\n| **Technology** | Both |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## Description\n\nMobile money SMS parsing (paste and direct read) and review flow.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 6 |\n| **Technology** | Both |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## Description\n\nMobile money SMS parsing (paste and direct read) and review flow.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "technical-setup",
         "sprint-6",
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -916,7 +916,7 @@
       "key": "US37",
       "sprint": 7,
       "title": "US37 Review/confirm an automatic transaction",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 7 |\n| **Epic** | E3: Automatic Expense Capture |\n| **Priority** | P0 |\n| **Technology** | Both |\n| **Depends on** | US36 |\n| **Effort estimate** | 2 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want to review and confirm an automatically detected transaction before it becomes a confirmed expense.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 7 |\n| **Epic** | E3: Automatic Expense Capture |\n| **Priority** | P0 |\n| **Technology** | Both |\n| **Depends on** | US36 |\n| **Effort estimate** | 2 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want to review and confirm an automatically detected transaction before it becomes a confirmed expense.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p0-critical-priority",
         "e3",
@@ -925,7 +925,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "2"
     },
     {
@@ -962,7 +962,7 @@
       "key": "US39",
       "sprint": 8,
       "title": "US39 Calculate total expenses",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 8 |\n| **Epic** | E5: Monitoring, Savings & Debt |\n| **Priority** | P0 |\n| **Technology** | Backend |\n| **Depends on** | US20 |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want to see my total actual expenses for a financial period so that I know how much I have spent.\n\n## Acceptance Criteria\n\n1. Given one or more expenses exist for a financial period, then total actual expenses equals the sum of those expenses for that period.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 8 |\n| **Epic** | E5: Monitoring, Savings & Debt |\n| **Priority** | P0 |\n| **Technology** | Backend |\n| **Depends on** | US20 |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want to see my total actual expenses for a financial period so that I know how much I have spent.\n\n## Acceptance Criteria\n\n1. Given one or more expenses exist for a financial period, then total actual expenses equals the sum of those expenses for that period.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p0-critical-priority",
         "e5",
@@ -971,7 +971,7 @@
         "technology-backend"
       ],
       "technology": "Backend",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -1070,7 +1070,7 @@
       "key": "US44",
       "sprint": 9,
       "title": "US44 Calculate savings",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 9 |\n| **Epic** | E5: Monitoring, Savings & Debt |\n| **Priority** | P1 |\n| **Technology** | Backend |\n| **Depends on** | US16, US39 |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want the application to calculate my savings as total income minus actual expenses so that I know how much I retained, whether or not I have a budget.\n\n## Acceptance Criteria\n\n1. Given total income and total actual expenses for a period, savings is calculated as total income minus total actual expenses.\n2. Given no budget exists, then savings is still calculated, since it depends only on income and expenses.\n3. Given expenses exceed income, then the result is treated as debt rather than shown as negative savings (see US46).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 9 |\n| **Epic** | E5: Monitoring, Savings & Debt |\n| **Priority** | P1 |\n| **Technology** | Backend |\n| **Depends on** | US16, US39 |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want the application to calculate my savings as total income minus actual expenses so that I know how much I retained, whether or not I have a budget.\n\n## Acceptance Criteria\n\n1. Given total income and total actual expenses for a period, savings is calculated as total income minus total actual expenses.\n2. Given no budget exists, then savings is still calculated, since it depends only on income and expenses.\n3. Given expenses exceed income, then the result is treated as debt rather than shown as negative savings (see US46).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p1-high-priority",
         "e5",
@@ -1079,7 +1079,7 @@
         "technology-backend"
       ],
       "technology": "Backend",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -1180,14 +1180,14 @@
       "key": "S10-TECH-2",
       "sprint": 10,
       "title": "S10-TECH-2 Chart rendering on the mobile client",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 10 |\n| **Technology** | Frontend |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## Description\n\nChart rendering on the mobile client.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 10 |\n| **Technology** | Frontend |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## Description\n\nChart rendering on the mobile client.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "technical-setup",
         "sprint-10",
         "technology-frontend"
       ],
       "technology": "Frontend",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -1288,7 +1288,7 @@
       "key": "US55",
       "sprint": 11,
       "title": "US55 Generate a financial report",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 11 |\n| **Epic** | E6: Dashboard, Reports & Visualization |\n| **Priority** | P1 |\n| **Technology** | Both |\n| **Depends on** | US50, US51 |\n| **Effort estimate** | 2 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## User Story\n\nAs a user, I want to generate a financial report for a selected period so that I can review my complete activity.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 11 |\n| **Epic** | E6: Dashboard, Reports & Visualization |\n| **Priority** | P1 |\n| **Technology** | Both |\n| **Depends on** | US50, US51 |\n| **Effort estimate** | 2 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## User Story\n\nAs a user, I want to generate a financial report for a selected period so that I can review my complete activity.\n\n## Acceptance Criteria\n\n1. to be defined at backlog refinement, ahead of this sprint, with the Product Owner (per the team’s Definition of Ready).\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "p1-high-priority",
         "e6",
@@ -1297,7 +1297,7 @@
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "2"
     },
     {
@@ -1368,14 +1368,14 @@
       "key": "S12-TECH-1",
       "sprint": 12,
       "title": "S12-TECH-1 Integration with the chosen AI provider",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 12 |\n| **Technology** | Backend |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## Description\n\nIntegration with the chosen AI provider.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 12 |\n| **Technology** | Backend |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## Description\n\nIntegration with the chosen AI provider.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "technical-setup",
         "sprint-12",
         "technology-backend"
       ],
       "technology": "Backend",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
@@ -1518,14 +1518,14 @@
       "key": "S15-TECH-1",
       "sprint": 15,
       "title": "S15-TECH-1 Full regression pass across all sprints, building on tests written incrementally since Sprint 0",
-      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 15 |\n| **Technology** | Both |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Simon |\n\n## Description\n\nFull regression pass across all sprints, building on tests written incrementally since Sprint 0.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
+      "body": "## Summary\n\n| | |\n|---|---|\n| **Sprint** | Sprint 15 |\n| **Technology** | Both |\n| **Effort estimate** | 3 points |\n| **Assigned to** | Djou Ningaye Stephane |\n\n## Description\n\nFull regression pass across all sprints, building on tests written incrementally since Sprint 0.\n\n## Definition of Done\n\n- [ ] The functionality is implemented and matches the story\n- [ ] All of its acceptance criteria pass\n- [ ] Input validation and error handling are in place\n- [ ] Relevant unit/integration tests are written and passing\n- [ ] Code has been reviewed by at least one other developer and merged\n- [ ] No known critical defect blocks normal use of the feature\n- [ ] Accepted by the Product Owner (Yuhnekeh Sidney Brown) against the acceptance criteria\n",
       "labels": [
         "technical-setup",
         "sprint-15",
         "technology-both"
       ],
       "technology": "Both",
-      "suggested_assignee_name": "Djou Ningaye Simon",
+      "suggested_assignee_name": "Djou Ningaye Stephane",
       "effort_points": "3"
     },
     {
