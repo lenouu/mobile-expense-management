@@ -1,0 +1,38 @@
+name: Create All Issues
+
+# Manual only: Actions tab -> "Create All Issues" -> Run workflow.
+# Creates every remaining sprint's issues in one run (Sprint 3 to Sprint 15),
+# assigned to the team members listed in data/assignees.json.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install requests
+
+      - name: Create all remaining issues
+        id: rollout
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/rollout_all.py
+
+      - name: Save progress
+        if: steps.rollout.outputs.rolled_out == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add automation/state.json
+          git commit -m "chore: all sprint issues created" || echo "Nothing to commit"
+          git push
