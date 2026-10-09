@@ -1,56 +1,88 @@
-# Welcome to your Expo app 👋
+# FinFlow — mobile app (Expo / React Native)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+The client for the expense-management backend in `../backend`. It runs in **Expo Go** on a
+phone, in a simulator, or in a browser.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Running it
 
 ```bash
-npm run reset-project
+npm install
+npx expo start          # then scan the QR code with Expo Go
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The backend must be running too (see `../backend`). **Nothing else to configure** — the app finds
+your machine on its own.
 
-### Other setup steps
+### How the app finds the backend
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+While you are developing, Expo already knows the address of the machine serving your app: that
+is how your phone downloaded the JS bundle. `src/constants/api.ts` reads that address
+(`Constants.expoConfig.hostUri`, e.g. `192.168.1.25:8081`) and reuses its host with the backend's
+port. Restart Expo on a different network and the API URL follows — no `.env`, no hardcoded IP.
 
-## Learn more
+The port comes from `backend/src/main/resources/application.properties` (`server.port=8083`). If
+you change it there, change `API_PORT` in `src/constants/api.ts` to match.
 
-To learn more about developing your project with Expo, look at the following resources:
+**Only override it when the automatic address cannot work** — set `EXPO_PUBLIC_API_URL` in the
+environment before `npx expo start`:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+# Expo in tunnel mode, or the backend on a different machine
+EXPO_PUBLIC_API_URL=https://api.example.com/api npx expo start
+```
 
-## Join the community
+Fallback order: `EXPO_PUBLIC_API_URL` → the Expo host on port 8083 → `http://localhost:8083/api`
+(used by the web build and Android emulators; also the result in `--tunnel` mode, where the Expo
+host is an `exp.direct` domain that cannot reach your LAN, so set the variable instead).
 
-Join our community of developers creating universal apps.
+## Structure
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+src/
+├── app/          # Expo Router routes only — every file here is a URL
+│   ├── _layout.tsx        # providers + root stack
+│   ├── (tabs)/            # the signed-in shell: index (dashboard), finances, admin
+│   └── auth/              # sign-up / sign-in, pushed from anywhere
+├── screens/      # the actual screen components, one folder per area
+├── features/     # vertical slices: each owns its API calls, hooks and private components
+│   ├── auth/     #   register + login, password rules, sign-up form state
+│   ├── finances/ #   expenses, incomes, categories
+│   └── admin/    #   platform health, error logs, default categories
+├── components/   # the shared design system (ui/) and app-wide pieces
+├── providers/    # React context providers (session)
+├── hooks/        # shared hooks (theme, colour scheme)
+├── utils/        # pure helpers (error messages)
+├── types/        # global types
+└── constants/    # design tokens and API configuration
+```
+
+Two rules keep this readable:
+
+- **A file in `src/app/` is a route, not a screen.** It re-exports from `src/screens/`, so the
+  navigation tree stays a one-page description of the app's URLs.
+- **A feature does not reach into another feature's `components/`.** Shared UI moves up into
+  `src/components/ui/`; shared API plumbing lives in `features/auth/lib/api-client.ts`, which
+  everything else imports.
+
+## Design tokens
+
+Colours, spacing, radii and text sizes come from the Figma file and live in
+`src/constants/theme.ts`. Screens should use `ThemedText`/`ThemedView` and the `ui/` components
+rather than raw hex values or font sizes, so a rebrand is a one-file change.
+
+## Screens
+
+| Route             | Screen                                    |
+| ----------------- | ----------------------------------------- |
+| `/`               | Dashboard (placeholder until reporting lands) |
+| `/finances`       | Expenses, incomes and categories          |
+| `/admin`          | Platform health, error logs, defaults     |
+| `/auth/sign-up`   | Create account — matches the Figma design |
+| `/auth/sign-in`   | Placeholder; the real form is next        |
+
+## Notes
+
+- Sessions are held in memory by `src/providers/session-provider.tsx`. Add `expo-secure-store`
+  there to persist them across restarts; no screen has to change.
+- `npm run reset-project` no longer exists — the Expo starter content it used to restore has
+  been deleted on purpose.
