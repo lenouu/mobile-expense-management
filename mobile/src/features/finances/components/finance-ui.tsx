@@ -54,6 +54,16 @@ export function formatDate(iso: string): string {
 }
 
 /** Re-exported so existing finance imports keep working; the wording lives in one place. */
+/**
+ * "Edited 10/10/2026" when a record was changed after it was created (US14), otherwise null.
+ * The backend stamps both times identically on create and only moves updatedAt on an edit.
+ */
+export function editedLabel(record: { createdAt: string; updatedAt: string }): string | null {
+  if (record.updatedAt === record.createdAt) return null;
+  // The backend sends local date-times without an offset, which JS also reads as local time.
+  return `Edited ${new Date(record.updatedAt).toLocaleDateString()}`;
+}
+
 export function describeError(e: unknown): string {
   return describeSharedError(e, { unauthorized: 'Please sign in again.' });
 }
