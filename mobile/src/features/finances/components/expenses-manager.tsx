@@ -125,10 +125,17 @@ export function ExpensesManager({
     setNotice(null);
     try {
       await deleteExpense(session, expense.id);
-      setNotice('Expense deleted.');
+      setNotice(`Expense of ${formatAmount(expense.amount)} deleted.`);
       load();
     } catch (e) {
-      handleError(e);
+      if (e instanceof ApiRequestError && e.status === 404) {
+        // Already gone (deleted on another device, or a double tap): the goal is reached, so
+        // say so and drop the stale card rather than showing an error.
+        setNotice('This expense was already deleted.');
+        load();
+      } else {
+        handleError(e);
+      }
     } finally {
       setDeletingId(null);
     }
