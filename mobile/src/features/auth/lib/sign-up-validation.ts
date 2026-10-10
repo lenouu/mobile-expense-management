@@ -1,10 +1,11 @@
+import { validateEmail, validateName, validateUsername } from '@/features/auth/lib/fields';
+import type { FieldErrors } from '@/features/auth/lib/fields';
 import { validatePassword } from '@/features/auth/lib/password';
 import type { SignUpDetails } from '@/features/auth/lib/auth-api';
 
 // Sign-up form validation. The backend validates the same values again; this copy exists so the
-// user is told what is wrong before a round-trip, not instead of one.
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// user is told what is wrong before a round-trip, not instead of one. The individual field rules
+// come from `fields.ts`, which the login screen shares, so the two cannot drift apart.
 
 /** The raw strings the form holds. They are converted to `SignUpDetails` on submit. */
 export type SignUpForm = {
@@ -33,32 +34,27 @@ export const EMPTY_SIGN_UP_FORM: SignUpForm = {
 
 export type SignUpField = keyof SignUpForm | 'form';
 
-export type SignUpErrors = Partial<Record<SignUpField, string>>;
+export type SignUpErrors = FieldErrors<SignUpField>;
 
 export function validateSignUpForm(form: SignUpForm): SignUpErrors {
   const errors: SignUpErrors = {};
 
-  if (!form.firstName.trim()) errors.firstName = 'First name is required';
-  if (!form.lastName.trim()) errors.lastName = 'Last name is required';
+  // Assigned through a helper so a `undefined` value never becomes an own property: an errors
+  // object with a key set to undefined would still look non-empty to `Object.keys().length`.
+  const add = (field: SignUpField, message: string | undefined) => {
+    if (message) errors[field] = message;
+  };
 
-  const userName = form.userName.trim();
-  if (!userName) {
-    errors.userName = 'Username is required';
-  } else if (userName.length < 3) {
-    errors.userName = 'Username must be at least 3 characters';
-  } else if (/\s/.test(userName)) {
-    errors.userName = 'Username cannot contain spaces';
-  }
+  add('firstName', validateName(form.firstName, 'First name'));
+  add('lastName', validateName(form.lastName, 'Last name'));
 
-  const email = form.email.trim();
-  if (!email) {
-    errors.email = 'Email is required';
-  } else if (!EMAIL_PATTERN.test(email)) {
-    errors.email = 'Enter a valid email address';
-  }
+  // 3 characters is this screen's policy for choosing a username; login deliberately does not
+  // re-apply it, so an older account is never locked out.
+  add('userName', validateUsername(form.userName, { minLength: 3 }));
 
-  const passwordError = validatePassword(form.password);
-  if (passwordError) errors.password = passwordError;
+  add('email', validateEmail(form.email));
+
+  add('password', validatePassword(form.password) ?? undefined);
 
   if (form.dateOfBirth.trim() && !parseDateOfBirth(form.dateOfBirth)) {
     errors.dateOfBirth = 'Use DD/MM/YYYY, and a date in the past';

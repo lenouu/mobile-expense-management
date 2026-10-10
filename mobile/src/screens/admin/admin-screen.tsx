@@ -28,6 +28,7 @@ import {
   HealthStatus,
   PlatformHealth,
 } from '@/features/admin/lib/admin-monitoring';
+import { useSession } from '@/providers';
 
 const PAGE_SIZE = 20;
 
@@ -52,14 +53,22 @@ const RANGES: { key: RangeKey; label: string; hours?: number }[] = [
  * Admin area: platform health and errors (US10) and default expense categories (US09).
  */
 export function AdminScreen() {
-  const [session, setSession] = useState<AdminSession | null>(null);
+  const { session: signedIn, signOut: signOutOfApp } = useSession();
+  // Fallback sign-in for an admin who arrived here directly. Signing in through the login screen
+  // is the normal path and needs no second form, because the session already exists.
+  const [localSession, setLocalSession] = useState<AdminSession | null>(null);
+  const session = signedIn ?? localSession;
   const [section, setSection] = useState<Section>('monitoring');
   // Why the admin was sent back to sign in (e.g. account no longer allowed).
   const [signInMessage, setSignInMessage] = useState<string | null>(null);
-  const signOut = useCallback((message?: string) => {
-    setSession(null);
-    setSignInMessage(message ?? null);
-  }, []);
+  const signOut = useCallback(
+    (message?: string) => {
+      setLocalSession(null);
+      setSignInMessage(message ?? null);
+      if (signedIn) signOutOfApp();
+    },
+    [signedIn, signOutOfApp],
+  );
 
   const safeAreaInsets = useSafeAreaInsets();
   const theme = useTheme();
@@ -104,7 +113,7 @@ export function AdminScreen() {
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}
           keyboardShouldPersistTaps="handled">
-          <AdminSignIn initialError={signInMessage} onSignedIn={setSession} />
+          <AdminSignIn initialError={signInMessage} onSignedIn={setLocalSession} />
         </ScrollView>
       )}
     </ThemedView>

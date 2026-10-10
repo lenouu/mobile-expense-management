@@ -13,6 +13,7 @@ import { IncomesManager } from '@/features/finances/components/incomes-manager';
 import { ApiRequestError } from '@/features/auth/lib/api-client';
 import { userLogin } from '@/features/finances/lib/finances-api';
 import { useTheme } from '@/hooks/use-theme';
+import { useSession } from '@/providers';
 import type { Session } from '@/types/api';
 
 type Section = 'expenses' | 'incomes' | 'categories';
@@ -27,14 +28,24 @@ const SECTIONS: { key: Section; label: string }[] = [
  * A regular user's money: expenses and incomes (S2-TECH-2) and their own categories (US17).
  */
 export function FinancesScreen() {
-  const [session, setSession] = useState<Session | null>(null);
+  const { session: signedIn, signOut: signOutOfApp } = useSession();
+  // Fallback for someone who signed in from this tab rather than the login screen. Once the
+  // login screen is the only way in, this can go.
+  const [localSession, setLocalSession] = useState<Session | null>(null);
+  const session = signedIn ?? localSession;
   const [section, setSection] = useState<Section>('expenses');
   // Why the user was sent back to sign in (e.g. session expired).
   const [signInMessage, setSignInMessage] = useState<string | null>(null);
-  const signOut = useCallback((message?: string) => {
-    setSession(null);
-    setSignInMessage(message ?? null);
-  }, []);
+  const signOut = useCallback(
+    (message?: string) => {
+      setLocalSession(null);
+      setSignInMessage(message ?? null);
+      // A session that came from the login screen lives in the provider, so it has to be cleared
+      // there too - otherwise signing out here would leave the Dashboard convinced you are in.
+      if (signedIn) signOutOfApp();
+    },
+    [signedIn, signOutOfApp],
+  );
 
   const safeAreaInsets = useSafeAreaInsets();
   const theme = useTheme();
@@ -87,7 +98,7 @@ export function FinancesScreen() {
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={[financeStyles.contentContainer, contentPlatformStyle]}
           keyboardShouldPersistTaps="handled">
-          <UserSignIn initialError={signInMessage} onSignedIn={setSession} />
+          <UserSignIn initialError={signInMessage} onSignedIn={setLocalSession} />
         </ScrollView>
       )}
     </ThemedView>
