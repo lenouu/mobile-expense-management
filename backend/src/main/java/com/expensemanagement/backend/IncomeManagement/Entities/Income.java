@@ -8,6 +8,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Money a user received (S2-TECH-2), e.g. a salary or a sale.
@@ -49,13 +50,15 @@ public class Income
     @PrePersist
     protected void onCreate()
     {
-        this.createdAt = LocalDateTime.now();
+        // Microseconds, because that is all PostgreSQL keeps: without truncating, the response
+        // to a create would show a time that differs from the one stored and read back later.
+        this.createdAt = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
         this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
     protected void onUpdate()
     {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
     }
 }

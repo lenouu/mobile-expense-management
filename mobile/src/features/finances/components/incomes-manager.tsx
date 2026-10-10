@@ -4,6 +4,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-nativ
 import { Button, Chip } from '@/components/ui/primitives';
 import {
   DeleteButton,
+  editedLabel,
   Field,
   financeStyles as styles,
   formatAmount,
@@ -196,6 +197,11 @@ export function IncomesManager({
               {income.description && (
                 <ThemedText type="small" themeColor="textSecondary">
                   {income.description}
+                </ThemedText>
+              )}
+              {editedLabel(income) && (
+                <ThemedText type="small" themeColor="textSecondary">
+                  {editedLabel(income)}
                 </ThemedText>
               )}
               <View style={styles.row}>
