@@ -1,1 +1,1 @@
-export { AdminScreen as default } from '@/screens/admin/admin-screen';
+export { AdminConsole as default } from '@/screens/admin/admin-console';

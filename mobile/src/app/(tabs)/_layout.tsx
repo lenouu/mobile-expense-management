@@ -1,19 +1,25 @@
 import { Tabs } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 
+import { Icon, type IconName } from '@/components/ui/icon';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useSession } from '@/providers';
 
 /**
- * The signed-in app shell: three tabs sharing one bottom bar.
+ * The one bottom bar, which shows a different set of tabs depending on who is signed in.
  *
- * Expo Router's file-based `Tabs` is used rather than the newer native tabs so the same code
- * renders identically in Expo Go on Android, on iOS and on the web. `_layout.tsx` files in this
- * folder are routes, not screens - the screens themselves live in `src/screens/`.
+ * An administrator gets the console - Home, Analytics, Users, Categories - and does not get the
+ * consumer screens, because an admin account has no expenses or incomes of its own to manage and
+ * the mock-ups give the console its own four tabs. Everyone else gets Dashboard and Money.
+ *
+ * `href: null` removes a route from the bar while leaving it reachable by URL, which is how the
+ * Audit Logs screen stays off the bar but openable from Home's Administrative Controls.
  */
 export default function TabsLayout() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const { session } = useSession();
+  const isAdmin = session?.type === 'ADMIN';
 
   return (
     <Tabs
@@ -26,45 +32,63 @@ export default function TabsLayout() {
           borderTopColor: colors.border,
         },
       }}>
+      {/* Consumer screens: hidden from an administrator. */}
       <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <SymbolView
-              name={{ ios: 'house.fill', android: 'dashboard', web: 'dashboard' }}
-              tintColor={color}
-              size={size}
-            />
-          ),
+          href: isAdmin ? null : '/',
+          tabBarIcon: ({ color, size }) => <Icon name="home" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="finances"
         options={{
           title: 'Money',
-          tabBarIcon: ({ color, size }) => (
-            <SymbolView
-              name={{ ios: 'creditcard.fill', android: 'account_balance_wallet', web: 'account_balance_wallet' }}
-              tintColor={color}
-              size={size}
-            />
-          ),
+          href: isAdmin ? null : '/finances',
+          tabBarIcon: ({ color, size }) => <Icon name="wallet" size={size} color={color} />,
         }}
       />
+
+      {/* Admin console: hidden from everyone who is not an administrator. */}
       <Tabs.Screen
         name="admin"
         options={{
-          title: 'Admin',
-          tabBarIcon: ({ color, size }) => (
-            <SymbolView
-              name={{ ios: 'gearshape.fill', android: 'settings', web: 'settings' }}
-              tintColor={color}
-              size={size}
-            />
-          ),
+          title: 'Home',
+          href: isAdmin ? '/admin' : null,
+          tabBarIcon: ({ color, size }) => <Icon name="home" size={size} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="admin-analytics"
+        options={{
+          title: 'Analytics',
+          href: isAdmin ? '/admin-analytics' : null,
+          tabBarIcon: ({ color, size }) => <Icon name="analytics" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-users"
+        options={{
+          title: 'Users',
+          href: isAdmin ? '/admin-users' : null,
+          tabBarIcon: ({ color, size }) => <Icon name="users" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-categories"
+        options={{
+          title: 'Categories',
+          href: isAdmin ? '/admin-categories' : null,
+          tabBarIcon: ({ color, size }) => <Icon name="categories" size={size} color={color} />,
+        }}
+      />
+
+      {/* Reachable from Home's Administrative Controls; never on the bar. */}
+      <Tabs.Screen name="admin-logs" options={{ href: null }} />
     </Tabs>
   );
 }
+
+/** Kept for the Metro plugin: an unused reference to the icon type avoids a lint warning. */
+export type TabIconName = IconName;

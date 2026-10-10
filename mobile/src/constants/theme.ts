@@ -59,6 +59,14 @@ export const Colors = {
     surfaceSubtle: 'rgba(245, 250, 255, 0.8)',
     /** Tinted fill inside a text input, per the Figma component. */
     inputBackground: 'rgba(245, 250, 255, 0.3)',
+    /** Page background for the admin console, the paler wash in the admin mock-ups. */
+    adminBackground: '#F4F8FC',
+    /** The pale green disc behind an admin icon, from the admin mock-ups. */
+    iconTile: 'rgba(1, 145, 109, 0.10)',
+    /** Tinted pill backgrounds: "Live", "Operational", "Default". */
+    tintSuccess: 'rgba(1, 145, 109, 0.12)',
+    tintDanger: 'rgba(217, 48, 37, 0.10)',
+    tintNeutral: 'rgba(148, 163, 184, 0.16)',
   },
   dark: {
     text: '#F1F5F9',
@@ -72,6 +80,11 @@ export const Colors = {
     onBrand: '#FFFFFF',
     surfaceSubtle: 'rgba(17, 28, 46, 0.8)',
     inputBackground: 'rgba(30, 41, 59, 0.35)',
+    adminBackground: '#0B1220',
+    iconTile: 'rgba(43, 196, 154, 0.16)',
+    tintSuccess: 'rgba(43, 196, 154, 0.18)',
+    tintDanger: 'rgba(217, 48, 37, 0.20)',
+    tintNeutral: 'rgba(148, 163, 184, 0.20)',
   },
 } as const;
 

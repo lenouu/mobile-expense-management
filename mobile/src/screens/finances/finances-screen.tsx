@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -57,6 +58,30 @@ export function FinancesScreen() {
     ios: { paddingBottom: Spacing.three },
     web: { paddingTop: Spacing.six + Spacing.four, paddingBottom: Spacing.four },
   });
+
+  // An administrator has no money of its own to record. The tab bar already hides this screen
+  // from an ADMIN session, so this is the guard for reaching it another way - a deep link, or a
+  // URL restored on web - and it stops the admin from being shown a second sign-in form.
+  // The hooks above run before this return, so the component's hook order never changes.
+  if (signedIn?.type === 'ADMIN') {
+    return (
+      <ThemedView style={styles.screen}>
+        <ScrollView
+          style={{ backgroundColor: theme.background }}
+          contentContainerStyle={[financeStyles.contentContainer, contentPlatformStyle]}>
+          <View style={styles.adminNotice}>
+            <ThemedText type="subtitle">Not available for administrators</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Expenses, incomes and personal categories belong to the account that owns them, and an
+              administrator account has none. The admin API deliberately exposes no way to read
+              another user&apos;s money.
+            </ThemedText>
+            <Button label="Go to the admin console" primary onPress={() => router.replace('/admin')} />
+          </View>
+        </ScrollView>
+      </ThemedView>
+    );
+  }
 
   const sectionSwitcher = (
     <View style={financeStyles.row}>
@@ -163,6 +188,13 @@ function UserSignIn({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+  },
+  adminNotice: {
+    flexGrow: 1,
+    maxWidth: 420,
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.five,
   },
   signIn: {
     flexGrow: 1,
