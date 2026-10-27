@@ -61,6 +61,10 @@ export function createMyCategory(session: Session, category: NewCategory) {
   return authRequest<MyCategory>('/categories', session, { method: 'POST', body: category });
 }
 
+export function deleteMyCategory(session: Session, id: number) {
+  return authRequest<void>(`/categories/${id}`, session, { method: 'DELETE' });
+}
+
 function pageParams(options: { page?: number; size?: number }) {
   return new URLSearchParams({ page: String(options.page ?? 0), size: String(options.size ?? 20) });
 }

@@ -21,4 +21,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>
     /** Inclusive on both ends; the service substitutes wide bounds when the caller gives none. */
     @EntityGraph(attributePaths = "category")
     Page<Expense> findAllByUserIdAndDateBetween(Long userId, LocalDate from, LocalDate to, Pageable pageable);
+
+    /** Checks whether any expenses are filed under the given category. */
+    boolean existsByCategoryId(Long categoryId);
 }

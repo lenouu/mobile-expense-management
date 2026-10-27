@@ -8,6 +8,9 @@ import com.expensemanagement.backend.CategoryManagement.Repositories.DefaultCate
 import com.expensemanagement.backend.CategoryManagement.Repositories.UserCategoryRepository;
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.UserCategoryService;
 import com.expensemanagement.backend.Exceptions.DuplicateResourceException;
+import com.expensemanagement.backend.Exceptions.OperationNotAllowedException;
+import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
+import com.expensemanagement.backend.ExpenseManagement.Repositories.ExpenseRepository;
 import com.expensemanagement.backend.UserManagement.Entities.User;
 import com.expensemanagement.backend.UserManagement.Repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -32,14 +35,17 @@ public class UserCategoryServiceImpl implements UserCategoryService
     private final UserCategoryRepository userCategoryRepository;
     private final DefaultCategoryRepository defaultCategoryRepository;
     private final UserRepository userRepository;
+    private final ExpenseRepository expenseRepository;
 
     public UserCategoryServiceImpl(UserCategoryRepository userCategoryRepository,
                                    DefaultCategoryRepository defaultCategoryRepository,
-                                   UserRepository userRepository)
+                                   UserRepository userRepository,
+                                   ExpenseRepository expenseRepository)
     {
         this.userCategoryRepository = userCategoryRepository;
         this.defaultCategoryRepository = defaultCategoryRepository;
         this.userRepository = userRepository;
+        this.expenseRepository = expenseRepository;
     }
 
     @Override
@@ -87,5 +93,21 @@ public class UserCategoryServiceImpl implements UserCategoryService
 
         log.info("User id={} created category id={} name={}", userId, saved.getId(), saved.getName());
         return CategoryMappers.toOwned(saved);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long userId, Long id)
+    {
+        UserCategory category = userCategoryRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No category with id " + id));
+
+        if (expenseRepository.existsByCategoryId(id))
+        {
+            throw new OperationNotAllowedException("Cannot delete category because it has active linked expenses");
+        }
+
+        userCategoryRepository.delete(category);
+        log.info("User id={} deleted category id={} name={}", userId, id, category.getName());
     }
 }

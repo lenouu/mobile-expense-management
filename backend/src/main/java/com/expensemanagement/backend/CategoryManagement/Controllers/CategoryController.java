@@ -14,7 +14,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -74,6 +76,21 @@ public class CategoryController
                                           @Valid @RequestBody CategoryRequests.SaveCategory request)
     {
         return userCategoryService.create(Long.valueOf(jwt.getSubject()), request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete one of my categories",
+            description = """
+                    Deletes an unused category. Fails with 409 Conflict if any expenses are
+                    linked to it.""")
+    @ApiResponse(responseCode = "204", description = "Category deleted")
+    @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Category not found", content = @Content)
+    @ApiResponse(responseCode = "409", description = "Category has linked expenses and cannot be deleted", content = @Content)
+    public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id)
+    {
+        userCategoryService.delete(Long.valueOf(jwt.getSubject()), id);
     }
 
     @GetMapping("/defaults")
