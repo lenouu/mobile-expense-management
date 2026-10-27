@@ -1,5 +1,4 @@
 package com.expensemanagement.backend.IncomeManagement.Services.ServiceInterface;
-
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoRequests.IncomeRequests;
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoResponses.IncomeResponses;
 import org.springframework.data.domain.Page;
@@ -27,4 +26,13 @@ public interface IncomeService
     IncomeResponses.Details update(Long userId, Long id, IncomeRequests.SaveIncome request);
 
     void delete(Long userId, Long id);
+
+    /**
+     * US13: total income for the given financial period. The sum is always calculated fresh from
+     * the database, so it is always consistent after creates, edits and deletes.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if the period does
+     *         not exist or does not belong to the user
+     */
+    IncomeResponses.TotalIncome totalForPeriod(Long userId, Long periodId);
 }

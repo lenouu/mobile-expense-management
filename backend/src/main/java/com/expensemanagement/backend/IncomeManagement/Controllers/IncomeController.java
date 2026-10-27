@@ -71,6 +71,21 @@ public class IncomeController
         return new PagedModel<>(incomeService.findMine(currentUserId(jwt), from, to, pageable));
     }
 
+    @GetMapping("/total")
+    @Operation(summary = "Total income for a financial period (US13)",
+            description = """
+                    Calculates the sum of all income records that fall within the given financial
+                    period. The total is always computed fresh from the database, so it reflects
+                    the latest creates, edits and deletes immediately.""")
+    @ApiResponse(responseCode = "200", description = "The total income for the requested period")
+    @ApiResponse(responseCode = "404", description = "No such financial period among yours", content = @Content)
+    public IncomeResponses.TotalIncome total(@AuthenticationPrincipal Jwt jwt,
+                                             @Parameter(description = "Id of the financial period", required = true)
+                                             @RequestParam Long periodId)
+    {
+        return incomeService.totalForPeriod(currentUserId(jwt), periodId);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "One of my incomes")
     @ApiResponse(responseCode = "200", description = "Income found")
