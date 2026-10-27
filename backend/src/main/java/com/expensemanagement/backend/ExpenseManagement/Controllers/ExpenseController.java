@@ -71,6 +71,24 @@ public class ExpenseController
         return new PagedModel<>(expenseService.findMine(currentUserId(jwt), from, to, pageable));
     }
 
+    @GetMapping("/spending")
+    @Operation(summary = "My spending summary (totals and per-category)",
+            description = """
+                    Aggregated total spending and per-category spending for the caller.
+                    `from` and `to` are optional dates (inclusive), e.g. `?from=2026-09-01&to=2026-09-30`""")
+    @ApiResponse(responseCode = "200", description = "Spending summary")
+    @ApiResponse(responseCode = "400", description = "Invalid date, or 'from' after 'to'", content = @Content)
+    @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
+    public ExpenseResponses.SpendingSummary spending(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Only expenses on or after this date")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Only expenses on or before this date")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to)
+    {
+        return expenseService.getSpendingSummary(currentUserId(jwt), from, to);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "One of my expenses")
     @ApiResponse(responseCode = "200", description = "Expense found")

@@ -18,7 +18,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Expenses (S2-TECH-2).
@@ -89,6 +91,43 @@ public class ExpenseServiceImpl implements ExpenseService
     {
         expenseRepository.delete(getExpenseOrThrow(userId, id));
         log.info("User id={} deleted expense id={}", userId, id);
+    }
+
+    @Override
+    public BigDecimal calculateTotalSpending(Long userId, LocalDate from, LocalDate to)
+    {
+        DateRanges.Range range = DateRanges.of(from, to);
+        BigDecimal total = expenseRepository.sumAmountByUserIdAndDateBetween(userId, range.from(), range.to());
+        return total != null ? total : BigDecimal.ZERO;
+    }
+
+    @Override
+    public List<ExpenseResponses.CategorySpending> findSpendingByCategory(Long userId, LocalDate from, LocalDate to)
+    {
+        DateRanges.Range range = DateRanges.of(from, to);
+        return expenseRepository.findCategorySpendingByUserIdAndDateBetween(userId, range.from(), range.to())
+                .stream()
+                .map(ExpenseMappers::toCategorySpending)
+                .toList();
+    }
+
+    @Override
+    public ExpenseResponses.SpendingSummary getSpendingSummary(Long userId, LocalDate from, LocalDate to)
+    {
+        DateRanges.Range range = DateRanges.of(from, to);
+        BigDecimal total = expenseRepository.sumAmountByUserIdAndDateBetween(userId, range.from(), range.to());
+        List<ExpenseResponses.CategorySpending> categories = expenseRepository
+                .findCategorySpendingByUserIdAndDateBetween(userId, range.from(), range.to())
+                .stream()
+                .map(ExpenseMappers::toCategorySpending)
+                .toList();
+
+        return ExpenseResponses.SpendingSummary.builder()
+                .from(from)
+                .to(to)
+                .totalSpent(total != null ? total : BigDecimal.ZERO)
+                .categories(categories)
+                .build();
     }
 
     private Expense getExpenseOrThrow(Long userId, Long id)

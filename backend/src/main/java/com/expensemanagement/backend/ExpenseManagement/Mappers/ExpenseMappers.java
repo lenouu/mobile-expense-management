@@ -44,4 +44,16 @@ public final class ExpenseMappers
         expense.setDescription(StringUtils.hasText(request.getDescription()) ? request.getDescription().trim() : null);
         return expense;
     }
+
+    public static ExpenseResponses.CategorySpending toCategorySpending(
+            com.expensemanagement.backend.ExpenseManagement.Repositories.Projections.CategorySpendingProjection projection)
+    {
+        return ExpenseResponses.CategorySpending.builder()
+                .categoryId(projection.getCategoryId())
+                .categoryName(projection.getCategoryName())
+                .categoryIcon(projection.getCategoryIcon())
+                .categoryColor(projection.getCategoryColor())
+                .totalSpent(projection.getTotalSpent() != null ? projection.getTotalSpent() : java.math.BigDecimal.ZERO)
+                .build();
+    }
 }
