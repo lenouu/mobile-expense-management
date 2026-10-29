@@ -29,4 +29,13 @@ public interface ExpenseService
     ExpenseResponses.Details update(Long userId, Long id, ExpenseRequests.SaveExpense request);
 
     void delete(Long userId, Long id);
+
+    /**
+     * Total of the caller's expenses for a financial period (US39): the current period when
+     * {@code periodId} is null, otherwise that period, which must be the caller's.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if the period
+     *         does not exist or belongs to someone else
+     */
+    ExpenseResponses.Total totalForPeriod(Long userId, Long periodId);
 }
