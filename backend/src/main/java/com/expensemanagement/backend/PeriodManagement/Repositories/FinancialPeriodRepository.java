@@ -12,6 +12,9 @@ public interface FinancialPeriodRepository extends JpaRepository<FinancialPeriod
 {
     Optional<FinancialPeriod> findFirstByUserIdOrderBySequenceDesc(Long userId);
 
+    /** Scoped by owner, so another user's period is simply not found. */
+    Optional<FinancialPeriod> findByIdAndUserId(Long id, Long userId);
+
     Optional<FinancialPeriod> findByUserIdAndSequence(Long userId, int sequence);
 
     /** The period covering {@code date}: periods never overlap, so there is at most one. */

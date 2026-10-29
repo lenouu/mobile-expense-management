@@ -13,6 +13,7 @@ import {
   todayIso,
   validateAmountAndDate,
 } from '@/features/finances/components/finance-ui';
+import { ExpenseTotalCard } from '@/features/finances/components/expense-total-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
@@ -62,6 +63,8 @@ export function ExpensesManager({
   const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  // Bumped on every reload so the total card (US39) refetches after an add, edit or delete.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleError = useCallback(
     (e: unknown) => {
@@ -75,9 +78,18 @@ export function ExpensesManager({
     [onSignOut],
   );
 
+  // The card shows its own message; only an expired session needs the screen to react.
+  const handleTotalError = useCallback(
+    (e: unknown) => {
+      if (e instanceof ApiRequestError && e.status === 401) handleError(e);
+    },
+    [handleError],
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setMessage(null);
+    setRefreshKey((key) => key + 1);
     try {
       const [list, mine] = await Promise.all([
         fetchExpenses(session, { page: 0, size: PAGE_SIZE }),
@@ -170,6 +182,8 @@ export function ExpensesManager({
 
         {message && <ThemedText style={styles.errorText}>{message}</ThemedText>}
         {notice && <ThemedText style={styles.noticeText}>{notice}</ThemedText>}
+
+        <ExpenseTotalCard session={session} refreshKey={refreshKey} onError={handleTotalError} />
 
         {editing === 'new' ? (
           <ExpenseForm
