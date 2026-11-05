@@ -10,6 +10,8 @@ import java.util.Optional;
 
 public interface FinancialPeriodRepository extends JpaRepository<FinancialPeriod, Long>
 {
+    Optional<FinancialPeriod> findByIdAndUserId(Long id, Long userId);
+
     Optional<FinancialPeriod> findFirstByUserIdOrderBySequenceDesc(Long userId);
 
     /** Scoped by owner, so another user's period is simply not found. */
