@@ -83,3 +83,11 @@ Thumbs.db
 
 *.tmp
 *.temp
+mobile/.claude
+mobile/.idea
+mobile/node_modules
+mobile/figmaInspiration
+mobile/CLAUDE.md 
+mobile/README.md
+mobile/folderStructure.txt
+backend/.idea

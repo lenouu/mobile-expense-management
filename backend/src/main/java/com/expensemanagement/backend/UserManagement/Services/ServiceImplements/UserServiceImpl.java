@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.UserManagement.Services.ServiceImplements;
 
+import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.UserCategoryService;
 import com.expensemanagement.backend.Exceptions.DuplicateResourceException;
 import com.expensemanagement.backend.Exceptions.InvalidCredentialsException;
 import com.expensemanagement.backend.Exceptions.OperationNotAllowedException;
@@ -39,11 +40,14 @@ public class UserServiceImpl implements UserService
 {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserCategoryService userCategoryService;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder)
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                           UserCategoryService userCategoryService)
     {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userCategoryService = userCategoryService;
     }
 
     // ------------------------------------------------------------------
@@ -87,6 +91,10 @@ public class UserServiceImpl implements UserService
         user.setStatus(UserAccountState.ACTIVE);
 
         User saved = userRepository.save(user);
+
+        // S2-TECH-1: the new account starts with its own copy of the active default
+        // categories. Same transaction as the insert above, so it is all or nothing.
+        userCategoryService.provisionDefaults(saved);
 
         log.info("Registered account id={} username={}", saved.getId(), saved.getUserName());
         return UserMappers.toDetails(saved);
