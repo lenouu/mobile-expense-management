@@ -2,7 +2,8 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Icon } from '@/components/ui/icon';
@@ -78,6 +79,8 @@ export function AdminProfileScreen({
   // Profile picture.
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  /** The full-screen viewer, opened by pressing the picture itself. */
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -302,6 +305,7 @@ export function AdminProfileScreen({
             uri={avatarUri(profile?.profilePictureUrl)}
             busy={uploadingPhoto}
             onPress={pickPhoto}
+            onViewPhoto={() => setViewerOpen(true)}
           />
           <ThemedText type="subtitle">{displayName}</ThemedText>
         </View>
@@ -441,6 +445,13 @@ export function AdminProfileScreen({
           />
         </SectionCard>
       </View>
+
+      {/* A Modal draws in its own window, so keeping it in the scroll content costs nothing. */}
+      <ProfilePhotoViewer
+        uri={avatarUri(profile?.profilePictureUrl)}
+        visible={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
     </ScrollView>
   );
 }
@@ -448,21 +459,25 @@ export function AdminProfileScreen({
 /**
  * The signed-in account's picture, or its initials, with a camera badge to change it.
  *
- * The badge is a sibling of the circle rather than a child, so it can sit half-over the edge
- * without being clipped. While an upload is running it becomes a spinner, which tells the user the
- * press was taken without a second dialog.
+ * Two separate targets, deliberately: pressing the picture opens it full screen (the way a
+ * messenger does), pressing the camera badge changes it. The badge is a sibling of the circle
+ * rather than a child, so it can sit half-over the edge without being clipped, and while an upload
+ * is running it becomes a spinner so the press always has feedback.
  */
 function ProfileAvatar({
   initials,
   uri,
   busy,
   onPress,
+  onViewPhoto,
 }: {
   initials: string;
   /** Absolute URI of the stored picture, or null to show the initials. */
   uri: string | null;
   busy: boolean;
   onPress: () => void;
+  /** Opens the picture full screen. Only offered when there is a picture to look at. */
+  onViewPhoto: () => void;
 }) {
   const theme = useTheme();
 
@@ -470,13 +485,19 @@ function ProfileAvatar({
     <View style={styles.avatarWrap}>
       <View style={[styles.bigAvatar, { borderColor: theme.border }]}>
         {uri ? (
-          <Image
-            source={{ uri }}
-            style={styles.bigAvatarImage}
-            contentFit="cover"
-            transition={150}
-            accessibilityLabel="Profile picture"
-          />
+          <Pressable
+            onPress={onViewPhoto}
+            accessibilityRole="imagebutton"
+            accessibilityLabel="View profile picture"
+            style={({ pressed }) => [styles.bigAvatarImagePress, pressed && styles.pressed]}>
+            <Image
+              source={{ uri }}
+              style={styles.bigAvatarImage}
+              contentFit="cover"
+              transition={150}
+              accessibilityLabel="Profile picture"
+            />
+          </Pressable>
         ) : (
           <ThemedText style={styles.bigAvatarText}>{initials}</ThemedText>
         )}
@@ -500,6 +521,58 @@ function ProfileAvatar({
         )}
       </Pressable>
     </View>
+  );
+}
+
+/**
+ * The profile picture, full screen on a dark backdrop.
+ *
+ * A viewer, not a gallery: one image, no zoom or swipe, so a single tap - or the hardware back
+ * button, through `onRequestClose` - always dismisses it. That is how a messenger shows an avatar,
+ * and it keeps the modal impossible to get stuck in.
+ */
+function ProfilePhotoViewer({
+  uri,
+  visible,
+  onClose,
+}: {
+  uri: string | null;
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  if (!uri) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}>
+      <Pressable
+        style={styles.viewerBackdrop}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close picture">
+        <Image
+          source={{ uri }}
+          style={styles.viewerImage}
+          contentFit="contain"
+          accessibilityLabel="Profile picture, full screen"
+        />
+
+        <Pressable
+          onPress={onClose}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          style={[styles.viewerClose, { top: insets.top + Spacing.three }]}>
+          <ThemedText style={styles.viewerCloseGlyph}>✕</ThemedText>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -562,6 +635,37 @@ const styles = StyleSheet.create({
   bigAvatarImage: {
     width: '100%',
     height: '100%',
+  },
+  /** The circle's whole face is the tap target for the full-screen view. */
+  bigAvatarImagePress: {
+    width: '100%',
+    height: '100%',
+  },
+  viewerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.94)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  viewerClose: {
+    position: 'absolute',
+    right: Spacing.four,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+  },
+  viewerCloseGlyph: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '700',
   },
   bigAvatarText: {
     color: '#FFFFFF',
