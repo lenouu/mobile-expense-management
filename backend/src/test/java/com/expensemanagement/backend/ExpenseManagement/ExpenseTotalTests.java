@@ -51,14 +51,14 @@ class ExpenseTotalTests {
 	void theTotalIsTheExactSumOfTheCurrentPeriodsExpenses() throws Exception {
 		User user = registerAndLogin();
 		String today = LocalDate.now().toString();
-		Integer food = categoryId(user.token(), "Food & Groceries");
+		String food = categoryId(user.token(), "Food & Groceries");
 		create(user.token(), "12.50", today, food);
 		create(user.token(), "0.25", today, food);
 		create(user.token(), "100", today, categoryId(user.token(), "Transport"));
 
 		mockMvc.perform(get("/api/expenses/total").header(HttpHeaders.AUTHORIZATION, user.token()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(112.75))
+			.andExpect(jsonPath("$.total.amount").value(112.75))
 			.andExpect(jsonPath("$.count").value(3))
 			.andExpect(jsonPath("$.period.sequence").value(1))
 			.andExpect(jsonPath("$.period.status").value("CURRENT"))
@@ -69,7 +69,7 @@ class ExpenseTotalTests {
 	void aPeriodWithoutExpensesTotalsZero() throws Exception {
 		mockMvc.perform(get("/api/expenses/total").header(HttpHeaders.AUTHORIZATION, registerAndLogin().token()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(0.0))
+			.andExpect(jsonPath("$.total.amount").value(0.0))
 			.andExpect(jsonPath("$.count").value(0));
 	}
 
@@ -83,9 +83,9 @@ class ExpenseTotalTests {
 		settings.setLengthUnit(PeriodUnit.WEEKS);
 		settings.setAnchorDate(today.minusDays(20));
 		settingsRepository.save(settings);
-		Long middle = periodService.containing(user.id(), today.minusDays(10)).orElseThrow().getId();
+		UUID middle = periodService.containing(user.id(), today.minusDays(10)).orElseThrow().getId();
 
-		Integer other = categoryId(user.token(), "Other");
+		String other = categoryId(user.token(), "Other");
 		create(user.token(), "1", today.minusDays(14).toString(), other); // last day of the previous period
 		create(user.token(), "10", today.minusDays(13).toString(), other); // first day
 		create(user.token(), "20", today.minusDays(7).toString(), other); // last day
@@ -95,7 +95,7 @@ class ExpenseTotalTests {
 			.perform(get("/api/expenses/total").param("periodId", middle.toString())
 				.header(HttpHeaders.AUTHORIZATION, user.token()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(30))
+			.andExpect(jsonPath("$.total.amount").value(30))
 			.andExpect(jsonPath("$.count").value(2))
 			.andExpect(jsonPath("$.period.sequence").value(2))
 			.andExpect(jsonPath("$.period.status").value("PAST"))
@@ -103,7 +103,7 @@ class ExpenseTotalTests {
 			.andExpect(jsonPath("$.period.endDate").value(today.minusDays(7).toString()));
 
 		mockMvc.perform(get("/api/expenses/total").header(HttpHeaders.AUTHORIZATION, user.token()))
-			.andExpect(jsonPath("$.total").value(1000))
+			.andExpect(jsonPath("$.total.amount").value(1000))
 			.andExpect(jsonPath("$.period.sequence").value(3));
 	}
 
@@ -111,8 +111,8 @@ class ExpenseTotalTests {
 	void editingOrDeletingAnExpenseIsReflectedImmediately() throws Exception {
 		User user = registerAndLogin();
 		String today = LocalDate.now().toString();
-		Integer food = categoryId(user.token(), "Food & Groceries");
-		Integer wrong = create(user.token(), "500", today, food);
+		String food = categoryId(user.token(), "Food & Groceries");
+		String wrong = create(user.token(), "500", today, food);
 		create(user.token(), "20", today, food);
 
 		mockMvc
@@ -121,13 +121,13 @@ class ExpenseTotalTests {
 				.content(expenseJson("50", today, food)))
 			.andExpect(status().isOk());
 		mockMvc.perform(get("/api/expenses/total").header(HttpHeaders.AUTHORIZATION, user.token()))
-			.andExpect(jsonPath("$.total").value(70))
+			.andExpect(jsonPath("$.total.amount").value(70))
 			.andExpect(jsonPath("$.count").value(2));
 
 		mockMvc.perform(delete("/api/expenses/" + wrong).header(HttpHeaders.AUTHORIZATION, user.token()))
 			.andExpect(status().isNoContent());
 		mockMvc.perform(get("/api/expenses/total").header(HttpHeaders.AUTHORIZATION, user.token()))
-			.andExpect(jsonPath("$.total").value(20))
+			.andExpect(jsonPath("$.total.amount").value(20))
 			.andExpect(jsonPath("$.count").value(1));
 	}
 
@@ -140,11 +140,11 @@ class ExpenseTotalTests {
 		create(other.token(), "5", today, categoryId(other.token(), "Health"));
 
 		mockMvc.perform(get("/api/expenses/total").header(HttpHeaders.AUTHORIZATION, other.token()))
-			.andExpect(jsonPath("$.total").value(5))
+			.andExpect(jsonPath("$.total.amount").value(5))
 			.andExpect(jsonPath("$.count").value(1));
 
 		// Someone else's period, or one that does not exist: 404, nothing revealed.
-		Long ownersPeriod = periodService.current(owner.id()).getId();
+		UUID ownersPeriod = periodService.current(owner.id()).getId();
 		mockMvc
 			.perform(get("/api/expenses/total").param("periodId", ownersPeriod.toString())
 				.header(HttpHeaders.AUTHORIZATION, other.token()))
@@ -160,7 +160,7 @@ class ExpenseTotalTests {
 		mockMvc.perform(get("/api/expenses/total")).andExpect(status().isUnauthorized());
 	}
 
-	private Integer create(String token, String amount, String date, Integer categoryId) throws Exception {
+	private String create(String token, String amount, String date, String categoryId) throws Exception {
 		String body = mockMvc
 			.perform(post("/api/expenses").header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -172,20 +172,20 @@ class ExpenseTotalTests {
 		return JsonPath.read(body, "$.id");
 	}
 
-	private static String expenseJson(String amount, String date, Integer categoryId) {
-		return "{\"amount\":" + amount + ",\"date\":\"" + date + "\",\"categoryId\":" + categoryId + "}";
+	private static String expenseJson(String amount, String date, String categoryId) {
+		return "{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"categoryId\":" + categoryId + "}";
 	}
 
-	private Integer categoryId(String token, String name) throws Exception {
+	private String categoryId(String token, String name) throws Exception {
 		String body = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
+		List<String> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
 		return ids.get(0);
 	}
 
-	private record User(Long id, String token) {
+	private record User(UUID id, String token) {
 	}
 
 	private User registerAndLogin() throws Exception {
@@ -205,8 +205,8 @@ class ExpenseTotalTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		Integer id = JsonPath.read(registered, "$.id");
-		return new User(id.longValue(), "Bearer " + JsonPath.read(body, "$.accessToken"));
+		String id = JsonPath.read(registered, "$.id");
+		return new User(UUID.fromString(id), "Bearer " + JsonPath.read(body, "$.accessToken"));
 	}
 
 }

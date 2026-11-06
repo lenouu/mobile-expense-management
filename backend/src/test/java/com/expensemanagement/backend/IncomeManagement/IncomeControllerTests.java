@@ -47,14 +47,14 @@ class IncomeControllerTests {
 				.content(incomeJson("1500", "2026-09-30", "  Salary  ", "September")))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.id").isNumber())
-			.andExpect(jsonPath("$.amount").value(1500))
+			.andExpect(jsonPath("$.amount.amount").value(1500))
 			.andExpect(jsonPath("$.date").value("2026-09-30"))
 			.andExpect(jsonPath("$.source").value("Salary"))
 			.andExpect(jsonPath("$.description").value("September"))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		Integer id = JsonPath.read(created, "$.id");
+		String id = JsonPath.read(created, "$.id");
 
 		mockMvc.perform(get("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
@@ -65,7 +65,7 @@ class IncomeControllerTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(incomeJson("1600.75", "2026-09-29", "Salary + bonus", null)))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.amount").value(1600.75))
+			.andExpect(jsonPath("$.amount.amount").value(1600.75))
 			.andExpect(jsonPath("$.source").value("Salary + bonus"))
 			.andExpect(jsonPath("$.description").doesNotExist());
 
@@ -84,13 +84,13 @@ class IncomeControllerTests {
 
 		mockMvc.perform(get("/api/incomes").header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.content", hasSize(3)))
-			.andExpect(jsonPath("$.content[0].date").value("2026-09-30"))
-			.andExpect(jsonPath("$.page.totalElements").value(3));
+			.andExpect(jsonPath("$.data", hasSize(3)))
+			.andExpect(jsonPath("$.data[0].date").value("2026-09-30"))
+			.andExpect(jsonPath("$.totalElements").value(3));
 
 		mockMvc
 			.perform(get("/api/incomes").param("from", "2026-08-01").header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.content", hasSize(2)));
+			.andExpect(jsonPath("$.data", hasSize(2)));
 	}
 
 	@Test
@@ -99,19 +99,19 @@ class IncomeControllerTests {
 		mockMvc
 			.perform(post("/api/incomes").header(HttpHeaders.AUTHORIZATION, registerAndLogin())
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":-5,\"date\":\"" + tomorrow + "\",\"source\":\" \"}"))
+				.content("{\"amount\":{\"amount\":-5},\"date\":\"" + tomorrow + "\",\"source\":\" \"}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error").value("validation_failed"))
-			.andExpect(jsonPath("$.fieldErrors.amount").exists())
-			.andExpect(jsonPath("$.fieldErrors.date").exists())
-			.andExpect(jsonPath("$.fieldErrors.source").exists());
+			.andExpect(jsonPath("$.code").value("validation_failed"))
+			.andExpect(jsonPath("$.fields['amount.amount']").exists())
+			.andExpect(jsonPath("$.fields.date").exists())
+			.andExpect(jsonPath("$.fields.source").exists());
 	}
 
 	@Test
 	void usersCannotReachEachOthersIncomes() throws Exception {
 		String owner = registerAndLogin();
 		String other = registerAndLogin();
-		Integer id = create(owner, "900", "2026-09-30");
+		String id = create(owner, "900", "2026-09-30");
 
 		mockMvc.perform(get("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, other))
 			.andExpect(status().isNotFound());
@@ -123,11 +123,11 @@ class IncomeControllerTests {
 		mockMvc.perform(delete("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, other))
 			.andExpect(status().isNotFound());
 		mockMvc.perform(get("/api/incomes").header(HttpHeaders.AUTHORIZATION, other))
-			.andExpect(jsonPath("$.content", hasSize(0)));
+			.andExpect(jsonPath("$.data", hasSize(0)));
 
 		mockMvc.perform(get("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, owner))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.amount").value(900));
+			.andExpect(jsonPath("$.amount.amount").value(900));
 	}
 
 	@Test
@@ -135,7 +135,7 @@ class IncomeControllerTests {
 		mockMvc.perform(get("/api/incomes")).andExpect(status().isUnauthorized());
 	}
 
-	private Integer create(String token, String amount, String date) throws Exception {
+	private String create(String token, String amount, String date) throws Exception {
 		String body = mockMvc
 			.perform(post("/api/incomes").header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -148,7 +148,7 @@ class IncomeControllerTests {
 	}
 
 	private static String incomeJson(String amount, String date, String source, String description) {
-		return "{\"amount\":" + amount + ",\"date\":\"" + date + "\",\"source\":\"" + source + "\""
+		return "{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"source\":\"" + source + "\""
 				+ (description != null ? ",\"description\":\"" + description + "\"" : "") + "}";
 	}
 

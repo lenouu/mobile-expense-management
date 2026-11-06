@@ -3,6 +3,7 @@ package com.expensemanagement.backend.IncomeManagement.Mappers;
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoRequests.IncomeRequests;
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoResponses.IncomeResponses;
 import com.expensemanagement.backend.IncomeManagement.Entities.Income;
+import com.expensemanagement.backend.Shared.Money;
 import org.springframework.util.StringUtils;
 
 public final class IncomeMappers
@@ -16,7 +17,7 @@ public final class IncomeMappers
     {
         return IncomeResponses.Details.builder()
                 .id(income.getId())
-                .amount(income.getAmount())
+                .amount(Money.of(income.getAmount(), income.getCurrency()))
                 .date(income.getDate())
                 .source(income.getSource())
                 .description(income.getDescription())
@@ -28,7 +29,8 @@ public final class IncomeMappers
     /** Copies the request onto the income (create and full replace). */
     public static Income apply(Income income, IncomeRequests.SaveIncome request)
     {
-        income.setAmount(request.getAmount());
+        income.setAmount(request.getAmount().normalisedAmount());
+        income.setCurrency(request.getAmount().currencyOrDefault());
         income.setDate(request.getDate());
         income.setSource(request.getSource().trim());
         income.setDescription(StringUtils.hasText(request.getDescription()) ? request.getDescription().trim() : null);

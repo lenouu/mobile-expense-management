@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Button } from '@/components/ui/primitives';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { financeStyles, formatAmount, formatDate } from '@/features/finances/components/finance-ui';
+import { financeStyles, formatDate, formatMoney } from '@/features/finances/components/finance-ui';
 import {
   type ExpenseTotal,
   fetchExpenseTotal,
@@ -47,10 +47,10 @@ export function ExpenseTotalCard({
       setFailure(null);
       try {
         const history = await fetchPeriods(session, { size: PERIOD_HISTORY_SIZE });
-        const selected = history.content[Math.min(index, history.content.length - 1)];
+        const selected = history.data[Math.min(index, history.data.length - 1)];
         const total = await fetchExpenseTotal(session, selected?.id);
         if (!cancelled) {
-          setPeriods(history.content);
+          setPeriods(history.data);
           setData(total);
         }
       } catch (e) {
@@ -99,7 +99,7 @@ export function ExpenseTotalCard({
         period && (
           <>
             <ThemedText type="smallBold" style={styles.total}>
-              {formatAmount(data.total)}
+              {formatMoney(data.total)}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {formatDate(period.startDate)} – {formatDate(period.endDate)} · {data.count}{' '}

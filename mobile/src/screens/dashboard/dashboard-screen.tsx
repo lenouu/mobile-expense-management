@@ -23,8 +23,10 @@ export function DashboardScreen() {
   const params = useLocalSearchParams<{ welcome?: string }>();
 
   return (
-    <Screen contentStyle={styles.content}>
+    // Signed out there is no tab bar, so the frame should not reserve room for one either.
+    <Screen withTabInset={!!session} contentStyle={styles.content}>
       <BrandLockup
+        floating={!session}
         title={session ? `Welcome, ${session.userName}` : 'FinFlow'}
         subtitle={
           session

@@ -51,12 +51,20 @@ public class SecurityConfig
     /** Endpoints that must work without a token - you cannot log in without them. */
     private static final String[] PUBLIC_POST_ENDPOINTS = {
             "/api/auth/login",
-            "/api/auth/register"
+            "/api/auth/register",
+            // Password reset: the user is by definition locked out, so neither call can carry a
+            // token. Forgot always answers 202 and never says whether the account exists.
+            "/api/auth/password/forgot",
+            "/api/auth/password/reset"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
             "/actuator/health",
-            "/actuator/health/**"
+            "/actuator/health/**",
+            // Profile pictures. The random 128-bit file name is the credential, which is what lets
+            // the bytes be cached for a year and loaded by an image tag - an image tag cannot send
+            // a Bearer header on the web build. Every money endpoint stays authenticated.
+            "/api/avatars/**"
     };
 
     // ------------------------------------------------------------------
@@ -256,13 +264,13 @@ public class SecurityConfig
         return http.build();
     }
 
-    private static void writeJsonError(HttpServletResponse response, int status, String error, String message)
+    private static void writeJsonError(HttpServletResponse response, int status, String code, String message)
             throws IOException
     {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.getWriter().write(
-                "{\"status\":" + status + ",\"error\":\"" + error + "\",\"message\":\"" + message + "\"}");
+        // Same {code, message} body as ApiError, so a client parses one shape everywhere.
+        response.getWriter().write("{\"code\":\"" + code + "\",\"message\":\"" + message + "\"}");
     }
 }

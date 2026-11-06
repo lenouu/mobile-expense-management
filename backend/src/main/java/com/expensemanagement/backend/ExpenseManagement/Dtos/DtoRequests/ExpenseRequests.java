@@ -1,14 +1,14 @@
 package com.expensemanagement.backend.ExpenseManagement.Dtos.DtoRequests;
 
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Digits;
+import com.expensemanagement.backend.Shared.Money;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public class ExpenseRequests {
 
@@ -20,10 +20,10 @@ public class ExpenseRequests {
     @AllArgsConstructor
     public static class SaveExpense {
 
+        /** {@code {"amount": 12.50, "currency": "XAF"}} - never a bare number. */
+        @Valid
         @NotNull(message = "Amount is required")
-        @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
-        @Digits(integer = 10, fraction = 2, message = "Amount can have at most 10 digits and 2 decimals")
-        private BigDecimal amount;
+        private Money amount;
 
         @NotNull(message = "Date is required")
         @PastOrPresent(message = "Date cannot be in the future")
@@ -31,7 +31,7 @@ public class ExpenseRequests {
 
         /** One of the caller's own categories (GET /api/categories). */
         @NotNull(message = "Category is required")
-        private Long categoryId;
+        private UUID categoryId;
 
         @Size(max = 255, message = "Description must be at most 255 characters")
         private String description;

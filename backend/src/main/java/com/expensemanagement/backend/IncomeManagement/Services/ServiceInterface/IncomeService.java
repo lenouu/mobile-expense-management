@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Incomes of one user. Every method takes the caller's id (from the token), and another user's
@@ -18,13 +19,13 @@ public interface IncomeService
      *
      * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if from is after to
      */
-    Page<IncomeResponses.Details> findMine(Long userId, LocalDate from, LocalDate to, Pageable pageable);
+    Page<IncomeResponses.Details> findMine(UUID userId, LocalDate from, LocalDate to, Pageable pageable);
 
-    IncomeResponses.Details findMine(Long userId, Long id);
+    IncomeResponses.Details findMine(UUID userId, UUID id);
 
-    IncomeResponses.Details create(Long userId, IncomeRequests.SaveIncome request);
+    IncomeResponses.Details create(UUID userId, IncomeRequests.SaveIncome request);
 
-    IncomeResponses.Details update(Long userId, Long id, IncomeRequests.SaveIncome request);
+    IncomeResponses.Details update(UUID userId, UUID id, IncomeRequests.SaveIncome request);
 
-    void delete(Long userId, Long id);
+    void delete(UUID userId, UUID id);
 }

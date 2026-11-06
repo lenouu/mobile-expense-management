@@ -1,11 +1,32 @@
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Icon } from '@/components/ui/icon';
 import { Brand, Radius, Spacing } from '@/constants/theme';
+import { useConsoleNav } from '@/features/admin/components/console-nav';
 import { Pill } from '@/features/admin/components/console-ui';
 import { useTheme } from '@/hooks/use-theme';
+
+/**
+ * How far the header sits from the top of the window.
+ *
+ * The console screens scroll under the status bar rather than inside a navigator header, so they
+ * never receive the safe-area padding a normal screen gets from `Screen` - which left the bar
+ * tucked under the status bar on Android. iOS already shifts the scroll content down through
+ * `contentInsetAdjustmentBehavior="automatic"`, so only Android has to add the inset here. Web has
+ * no status bar at all, so it gets a real page margin instead of a status-bar one.
+ */
+function headerTopPadding(statusBarInset: number): number {
+  return (
+    Platform.select({
+      android: statusBarInset + Spacing.three,
+      web: Spacing.five,
+      default: Spacing.three,
+    }) ?? Spacing.three
+  );
+}
 
 /**
  * The admin console's top bar, as drawn in every admin mock-up: the FinFlow mark, an "Admin
@@ -26,9 +47,11 @@ export function ConsoleHeader({
   onBellPress?: () => void;
 }) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const nav = useConsoleNav();
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: headerTopPadding(insets.top) }]}>
       <View style={styles.brand}>
         <Image
           source={require('@/assets/images/logo.png')}
@@ -54,11 +77,20 @@ export function ConsoleHeader({
           <Icon name="bell" size={22} color={theme.text} />
         </Pressable>
 
-        <View style={[styles.avatar, { borderColor: theme.border }]}>
+        <Pressable
+          onPress={() => nav?.openProfile()}
+          accessibilityRole="button"
+          accessibilityLabel="Open my profile"
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.avatar,
+            { borderColor: theme.border },
+            pressed && styles.pressed,
+          ]}>
           <ThemedText type="caption" style={styles.avatarText}>
             {initials}
           </ThemedText>
-        </View>
+        </Pressable>
       </View>
     </View>
   );
@@ -79,7 +111,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.two,
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
+    // paddingTop is applied inline: it has to add the safe-area inset, which is not static.
     paddingBottom: Spacing.two,
   },
   brand: {

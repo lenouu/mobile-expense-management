@@ -186,7 +186,7 @@ function CategoryForm({
         // "You already have a category named ..." belongs next to the name.
         setFieldErrors({ name: e.message });
       } else {
-        setFieldErrors(e instanceof ApiRequestError ? e.fieldErrors : {});
+        setFieldErrors(e instanceof ApiRequestError ? e.fields : {});
         setError(describeError(e));
       }
     } finally {

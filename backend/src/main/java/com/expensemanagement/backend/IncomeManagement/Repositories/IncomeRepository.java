@@ -7,12 +7,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
-public interface IncomeRepository extends JpaRepository<Income, Long>
+public interface IncomeRepository extends JpaRepository<Income, UUID>
 {
     /** Scoped by owner: another user's id simply is not found. */
-    Optional<Income> findByIdAndUserId(Long id, Long userId);
+    Optional<Income> findByIdAndUserId(UUID id, UUID userId);
 
     /** Inclusive on both ends; the service substitutes wide bounds when the caller gives none. */
-    Page<Income> findAllByUserIdAndDateBetween(Long userId, LocalDate from, LocalDate to, Pageable pageable);
+    Page<Income> findAllByUserIdAndDateBetween(UUID userId, LocalDate from, LocalDate to, Pageable pageable);
 }

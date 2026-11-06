@@ -27,6 +27,12 @@
         {
           "backgroundColor": "#02284C"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FinFlow uses your photo library so you can choose a profile picture."
+        }
       ]
     ],
     "experiments": {

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * An expense category owned by one user (S2-TECH-1).
@@ -24,8 +25,8 @@ import java.time.LocalDateTime;
 public class UserCategory
 {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -44,7 +45,7 @@ public class UserCategory
     private String color;
 
     /** The default category this was copied from; null for a category the user created. */
-    private Long defaultCategoryId;
+    private UUID defaultCategoryId;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

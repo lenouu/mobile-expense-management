@@ -109,9 +109,9 @@ export function useAdminConsole(session: AdminSession, range: AdminRange): Admin
       }
 
       if (recentResult.status === 'fulfilled') {
-        setUsers(recentResult.value.content);
+        setUsers(recentResult.value.data);
         setUsersTruncated(
-          recentResult.value.page.totalElements > recentResult.value.content.length,
+          recentResult.value.totalElements > recentResult.value.data.length,
         );
       }
 
@@ -125,18 +125,18 @@ export function useAdminConsole(session: AdminSession, range: AdminRange): Admin
       // to filter on client-side.
       if (categoriesResult[0].status === 'fulfilled') {
         setCategories({
-          total: categoriesResult[0].value.page.totalElements,
+          total: categoriesResult[0].value.totalElements,
           active:
             categoriesResult[1].status === 'fulfilled'
-              ? categoriesResult[1].value.page.totalElements
+              ? categoriesResult[1].value.totalElements
               : 0,
         });
       }
 
       const totals = stateResults.map((result) =>
-        result.status === 'fulfilled' ? result.value.page.totalElements : null,
+        result.status === 'fulfilled' ? result.value.totalElements : null,
       );
-      const total = usersResult.status === 'fulfilled' ? usersResult.value.page.totalElements : null;
+      const total = usersResult.status === 'fulfilled' ? usersResult.value.totalElements : null;
 
       if (total !== null && totals.every((value) => value !== null)) {
         setAccounts({

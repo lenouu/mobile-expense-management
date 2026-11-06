@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Incomes (S2-TECH-2). Same privacy model as {@code ExpenseServiceImpl}: every query is scoped
@@ -36,7 +37,7 @@ public class IncomeServiceImpl implements IncomeService
     }
 
     @Override
-    public Page<IncomeResponses.Details> findMine(Long userId, LocalDate from, LocalDate to, Pageable pageable)
+    public Page<IncomeResponses.Details> findMine(UUID userId, LocalDate from, LocalDate to, Pageable pageable)
     {
         DateRanges.Range range = DateRanges.of(from, to);
         return incomeRepository.findAllByUserIdAndDateBetween(userId, range.from(), range.to(), pageable)
@@ -44,14 +45,14 @@ public class IncomeServiceImpl implements IncomeService
     }
 
     @Override
-    public IncomeResponses.Details findMine(Long userId, Long id)
+    public IncomeResponses.Details findMine(UUID userId, UUID id)
     {
         return IncomeMappers.toDetails(getIncomeOrThrow(userId, id));
     }
 
     @Override
     @Transactional
-    public IncomeResponses.Details create(Long userId, IncomeRequests.SaveIncome request)
+    public IncomeResponses.Details create(UUID userId, IncomeRequests.SaveIncome request)
     {
         Income income = new Income();
         // A reference, not a query: the id comes from a verified token, so the user exists.
@@ -64,7 +65,7 @@ public class IncomeServiceImpl implements IncomeService
 
     @Override
     @Transactional
-    public IncomeResponses.Details update(Long userId, Long id, IncomeRequests.SaveIncome request)
+    public IncomeResponses.Details update(UUID userId, UUID id, IncomeRequests.SaveIncome request)
     {
         Income income = getIncomeOrThrow(userId, id);
         IncomeMappers.apply(income, request);
@@ -75,13 +76,13 @@ public class IncomeServiceImpl implements IncomeService
 
     @Override
     @Transactional
-    public void delete(Long userId, Long id)
+    public void delete(UUID userId, UUID id)
     {
         incomeRepository.delete(getIncomeOrThrow(userId, id));
         log.info("User id={} deleted income id={}", userId, id);
     }
 
-    private Income getIncomeOrThrow(Long userId, Long id)
+    private Income getIncomeOrThrow(UUID userId, UUID id)
     {
         return incomeRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No income with id " + id));

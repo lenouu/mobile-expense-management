@@ -27,10 +27,11 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: Brand.green,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: {
-          backgroundColor: colors.backgroundElement,
-          borderTopColor: colors.border,
-        },
+        // Signed out, the app is showing its single login screen, so the bar would only offer two
+        // destinations the user cannot use yet. It appears as soon as there is a session.
+        tabBarStyle: session
+          ? { backgroundColor: colors.backgroundElement, borderTopColor: colors.border }
+          : { display: 'none' },
       }}>
       {/* Consumer screens: hidden from an administrator. */}
       <Tabs.Screen

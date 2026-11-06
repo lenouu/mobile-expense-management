@@ -4,8 +4,9 @@ import com.expensemanagement.backend.PeriodManagement.Entities.FinancialPeriodSe
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.UUID;
 
-public interface FinancialPeriodSettingsRepository extends JpaRepository<FinancialPeriodSettings, Long>
+public interface FinancialPeriodSettingsRepository extends JpaRepository<FinancialPeriodSettings, UUID>
 {
-    Optional<FinancialPeriodSettings> findByUserId(Long userId);
+    Optional<FinancialPeriodSettings> findByUserId(UUID userId);
 }
