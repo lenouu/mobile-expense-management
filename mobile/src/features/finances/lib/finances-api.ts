@@ -61,11 +61,32 @@ export function createMyCategory(session: Session, category: NewCategory) {
   return authRequest<MyCategory>('/categories', session, { method: 'POST', body: category });
 }
 
-function pageParams(options: { page?: number; size?: number }) {
-  return new URLSearchParams({ page: String(options.page ?? 0), size: String(options.size ?? 20) });
+export type ExpenseFilterOptions = {
+  page?: number;
+  size?: number;
+  categoryId?: number | null;
+  from?: string | null;
+  to?: string | null;
+};
+
+function pageParams(options: ExpenseFilterOptions) {
+  const params = new URLSearchParams({
+    page: String(options.page ?? 0),
+    size: String(options.size ?? 20),
+  });
+  if (options.categoryId !== undefined && options.categoryId !== null) {
+    params.set('categoryId', String(options.categoryId));
+  }
+  if (options.from && options.from.trim()) {
+    params.set('from', options.from.trim());
+  }
+  if (options.to && options.to.trim()) {
+    params.set('to', options.to.trim());
+  }
+  return params;
 }
 
-export function fetchExpenses(session: Session, options: { page?: number; size?: number } = {}) {
+export function fetchExpenses(session: Session, options: ExpenseFilterOptions = {}) {
   return authRequest<PagedModel<Expense>>(`/expenses?${pageParams(options)}`, session);
 }
 

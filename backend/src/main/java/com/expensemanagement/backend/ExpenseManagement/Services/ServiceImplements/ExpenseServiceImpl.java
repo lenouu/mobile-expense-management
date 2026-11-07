@@ -52,9 +52,17 @@ public class ExpenseServiceImpl implements ExpenseService
     @Override
     public Page<ExpenseResponses.Details> findMine(Long userId, LocalDate from, LocalDate to, Pageable pageable)
     {
+        return findMine(userId, from, to, null, pageable);
+    }
+
+    @Override
+    public Page<ExpenseResponses.Details> findMine(Long userId, LocalDate from, LocalDate to, Long categoryId, Pageable pageable)
+    {
         DateRanges.Range range = DateRanges.of(from, to);
-        return expenseRepository.findAllByUserIdAndDateBetween(userId, range.from(), range.to(), pageable)
-                .map(ExpenseMappers::toDetails);
+        Page<Expense> page = (categoryId == null)
+                ? expenseRepository.findAllByUserIdAndDateBetween(userId, range.from(), range.to(), pageable)
+                : expenseRepository.findAllByUserIdAndCategoryIdAndDateBetween(userId, categoryId, range.from(), range.to(), pageable);
+        return page.map(ExpenseMappers::toDetails);
     }
 
     @Override
