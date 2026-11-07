@@ -10,6 +10,8 @@ import java.util.Optional;
 
 public interface FinancialPeriodRepository extends JpaRepository<FinancialPeriod, Long>
 {
+    Optional<FinancialPeriod> findByIdAndUserId(Long id, Long userId);
+
     Optional<FinancialPeriod> findFirstByUserIdOrderBySequenceDesc(Long userId);
 
     Optional<FinancialPeriod> findByUserIdAndSequence(Long userId, int sequence);

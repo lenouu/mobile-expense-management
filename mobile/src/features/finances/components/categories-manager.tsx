@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/primitives';
 import { Field, financeStyles, TextField } from '@/features/finances/components/finance-ui';
@@ -9,7 +9,14 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiRequestError } from '@/features/auth/lib/api-client';
 import type { Session } from '@/types/api';
-import { createMyCategory, fetchMyCategories, type MyCategory, type NewCategory } from '@/features/finances/lib/finances-api';
+import {
+  createMyCategory,
+  deleteMyCategory,
+  fetchMyCategories,
+  type MyCategory,
+  type NewCategory,
+} from '@/features/finances/lib/finances-api';
+import { Radius, Shadows, Spacing } from '@/constants/theme';
 
 /** Quick picks for the color field; any #RRGGBB value can still be typed. */
 const COLOR_PRESETS = ['#1F9D55', '#2D7FF9', '#E67E22', '#8E44AD', '#D93025', '#F1C40F', '#16A085', '#7F8C8D'];
@@ -37,6 +44,9 @@ export function CategoriesManager({
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<MyCategory | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const handleError = useCallback(
     (e: unknown) => {
@@ -69,6 +79,39 @@ export function CategoriesManager({
     setCreating(false);
     setNotice(`“${created.name}” created. You can now use it when adding an expense.`);
     load();
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!categoryToDelete) return;
+    setDeleting(true);
+    setModalError(null);
+    setMessage(null);
+    try {
+      await deleteMyCategory(session, categoryToDelete.id);
+      const name = categoryToDelete.name;
+      setCategoryToDelete(null);
+      setNotice(`“${name}” deleted.`);
+      load();
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 401) {
+        setCategoryToDelete(null);
+        handleError(e);
+      } else if (e instanceof ApiRequestError && e.status === 409) {
+        const errorMsg = e.message || 'Cannot delete category because it has active linked expenses.';
+        setModalError(errorMsg);
+        setMessage(errorMsg);
+      } else if (e instanceof ApiRequestError && e.status === 404) {
+        setCategoryToDelete(null);
+        setNotice('This category was already deleted.');
+        load();
+      } else {
+        const errorMsg = describeError(e);
+        setModalError(errorMsg);
+        setMessage(errorMsg);
+      }
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -133,8 +176,84 @@ export function CategoriesManager({
                 {category.description}
               </ThemedText>
             )}
+            <View style={financeStyles.row}>
+              <Button
+                label="Delete"
+                onPress={() => {
+                  setMessage(null);
+                  setNotice(null);
+                  setModalError(null);
+                  setCategoryToDelete(category);
+                }}
+                secondary
+                onCard
+              />
+            </View>
           </ThemedView>
         ))}
+
+        <Modal
+          visible={categoryToDelete !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            if (!deleting) {
+              setCategoryToDelete(null);
+              setModalError(null);
+            }
+          }}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => {
+              if (!deleting) {
+                setCategoryToDelete(null);
+                setModalError(null);
+              }
+            }}
+            accessibilityRole="button">
+            <Pressable
+              style={[
+                styles.modalCard,
+                Shadows.card,
+                { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+              ]}
+              onPress={(e) => e.stopPropagation()}>
+              <ThemedText type="subtitle">Delete Category</ThemedText>
+              <ThemedText type="body" style={styles.modalBodyText}>
+                Are you sure you want to delete this category? This action cannot be undone.
+              </ThemedText>
+              {categoryToDelete && (
+                <View style={[financeStyles.row, { marginVertical: Spacing.one }]}>
+                  <View
+                    style={[
+                      financeStyles.dot,
+                      { backgroundColor: categoryToDelete.color ?? theme.textSecondary },
+                    ]}
+                  />
+                  <ThemedText type="smallBold">{categoryToDelete.name}</ThemedText>
+                </View>
+              )}
+              {modalError && <ThemedText style={financeStyles.errorText}>{modalError}</ThemedText>}
+              <View style={[financeStyles.row, { justifyContent: 'flex-end', marginTop: Spacing.two }]}>
+                <Button
+                  label="Cancel"
+                  onPress={() => {
+                    setCategoryToDelete(null);
+                    setModalError(null);
+                  }}
+                  disabled={deleting}
+                  secondary
+                  onCard
+                />
+                <Button
+                  label={deleting ? 'Deleting…' : 'Delete'}
+                  onPress={handleDeleteConfirm}
+                  disabled={deleting}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </View>
     </ScrollView>
   );
@@ -270,5 +389,24 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.6,
+  },
+  modalBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.four,
+    backgroundColor: 'rgba(2, 40, 76, 0.45)',
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    padding: Spacing.four,
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  modalBodyText: {
+    textAlign: 'center',
   },
 });

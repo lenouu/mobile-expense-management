@@ -10,6 +10,9 @@ import com.expensemanagement.backend.ExpenseManagement.Entities.Expense;
 import com.expensemanagement.backend.ExpenseManagement.Mappers.ExpenseMappers;
 import com.expensemanagement.backend.ExpenseManagement.Repositories.ExpenseRepository;
 import com.expensemanagement.backend.ExpenseManagement.Services.ServiceInterface.ExpenseService;
+import com.expensemanagement.backend.PeriodManagement.Entities.FinancialPeriod;
+import com.expensemanagement.backend.PeriodManagement.Mappers.PeriodMappers;
+import com.expensemanagement.backend.PeriodManagement.Services.ServiceInterface.FinancialPeriodService;
 import com.expensemanagement.backend.Shared.DateRanges;
 import com.expensemanagement.backend.UserManagement.Repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.RoundingMode;
 import java.time.LocalDate;
 
 /**
@@ -34,13 +38,15 @@ public class ExpenseServiceImpl implements ExpenseService
     private final ExpenseRepository expenseRepository;
     private final UserCategoryRepository userCategoryRepository;
     private final UserRepository userRepository;
+    private final FinancialPeriodService periodService;
 
     public ExpenseServiceImpl(ExpenseRepository expenseRepository, UserCategoryRepository userCategoryRepository,
-                              UserRepository userRepository)
+                              UserRepository userRepository, FinancialPeriodService periodService)
     {
         this.expenseRepository = expenseRepository;
         this.userCategoryRepository = userCategoryRepository;
         this.userRepository = userRepository;
+        this.periodService = periodService;
     }
 
     @Override
@@ -89,6 +95,30 @@ public class ExpenseServiceImpl implements ExpenseService
     {
         expenseRepository.delete(getExpenseOrThrow(userId, id));
         log.info("User id={} deleted expense id={}", userId, id);
+    }
+
+    /**
+     * Not read-only, unlike the other reads: asking for the current period may create it (see
+     * {@code FinancialPeriodService}), and a read-only transaction would refuse that insert.
+     * Nothing is cached, so an added, edited or deleted expense counts on the very next call.
+     */
+    @Override
+    @Transactional
+    public ExpenseResponses.Total totalForPeriod(Long userId, Long periodId)
+    {
+        FinancialPeriod period = periodId == null
+                ? periodService.current(userId)
+                : periodService.findMine(userId, periodId);
+
+        ExpenseRepository.Totals totals =
+                expenseRepository.totalsBetween(userId, period.getStartDate(), period.getEndDate());
+
+        return ExpenseResponses.Total.builder()
+                .period(PeriodMappers.toPeriod(period, LocalDate.now()))
+                // Always two decimals, so 0 reads "0.00" like any other amount.
+                .total(totals.getTotal().setScale(2, RoundingMode.UNNECESSARY))
+                .count(totals.getCount())
+                .build();
     }
 
     private Expense getExpenseOrThrow(Long userId, Long id)

@@ -29,4 +29,14 @@ public interface UserCategoryService
      *         already has a category with that name, ignoring case
      */
     CategoryResponses.Owned create(Long userId, CategoryRequests.SaveCategory request);
+
+    /**
+     * Deletes one of the caller's categories (US18). Fails if any expenses are linked to it.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if no such category exists
+     *         for this user
+     * @throws com.expensemanagement.backend.Exceptions.OperationNotAllowedException if the category is in use
+     *         by one or more expenses
+     */
+    void delete(Long userId, Long id);
 }

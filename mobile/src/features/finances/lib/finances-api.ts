@@ -61,6 +61,10 @@ export function createMyCategory(session: Session, category: NewCategory) {
   return authRequest<MyCategory>('/categories', session, { method: 'POST', body: category });
 }
 
+export function deleteMyCategory(session: Session, id: number) {
+  return authRequest<void>(`/categories/${id}`, session, { method: 'DELETE' });
+}
+
 function pageParams(options: { page?: number; size?: number }) {
   return new URLSearchParams({ page: String(options.page ?? 0), size: String(options.size ?? 20) });
 }
@@ -79,6 +83,32 @@ export function updateExpense(session: Session, id: number, expense: SaveExpense
 
 export function deleteExpense(session: Session, id: number) {
   return authRequest<void>(`/expenses/${id}`, session, { method: 'DELETE' });
+}
+
+/** One financial period of the signed-in user (S4-TECH-1). Dates are YYYY-MM-DD, both inclusive. */
+export type FinancialPeriod = {
+  id: number;
+  sequence: number;
+  startDate: string;
+  endDate: string;
+  days: number;
+  lengthCount: number;
+  lengthUnit: 'DAYS' | 'WEEKS' | 'MONTHS';
+  status: 'PAST' | 'CURRENT' | 'UPCOMING';
+};
+
+/** GET /expenses/total (US39). */
+export type ExpenseTotal = { period: FinancialPeriod; total: number; count: number };
+
+/** GET /periods - newest first, so index 0 is the current period. */
+export function fetchPeriods(session: Session, options: { page?: number; size?: number } = {}) {
+  return authRequest<PagedModel<FinancialPeriod>>(`/periods?${pageParams(options)}`, session);
+}
+
+/** Total of my expenses for a period; the current one when `periodId` is omitted. */
+export function fetchExpenseTotal(session: Session, periodId?: number) {
+  const query = periodId !== undefined ? `?periodId=${periodId}` : '';
+  return authRequest<ExpenseTotal>(`/expenses/total${query}`, session);
 }
 
 export function fetchIncomes(session: Session, options: { page?: number; size?: number } = {}) {

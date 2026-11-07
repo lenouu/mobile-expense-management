@@ -71,6 +71,23 @@ public class ExpenseController
         return new PagedModel<>(expenseService.findMine(currentUserId(jwt), from, to, pageable));
     }
 
+    /** Declared before {@code /{id}} for readability; the literal path wins either way. */
+    @GetMapping("/total")
+    @Operation(summary = "Total of my expenses for a financial period (US39)",
+            description = """
+                    Sum of the expenses dated inside the period, both ends included, and how many
+                    there are. Without `periodId` it is the current period; past periods come
+                    from `GET /api/periods`. A period without expenses totals 0.""")
+    @ApiResponse(responseCode = "200", description = "The period, its total and the number of expenses")
+    @ApiResponse(responseCode = "404", description = "No such period among yours", content = @Content)
+    public ExpenseResponses.Total total(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "One of your periods; omit for the current one")
+            @RequestParam(required = false) Long periodId)
+    {
+        return expenseService.totalForPeriod(currentUserId(jwt), periodId);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "One of my expenses")
     @ApiResponse(responseCode = "200", description = "Expense found")

@@ -85,6 +85,13 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
     }
 
     @Override
+    public FinancialPeriod findMine(Long userId, Long periodId)
+    {
+        return periodRepository.findByIdAndUserId(periodId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No financial period with id " + periodId));
+    }
+
+    @Override
     public Optional<FinancialPeriod> previous(FinancialPeriod period)
     {
         if (period.getSequence() <= 1)
