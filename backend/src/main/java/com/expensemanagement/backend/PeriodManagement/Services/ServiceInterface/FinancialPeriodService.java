@@ -32,6 +32,14 @@ public interface FinancialPeriodService
      */
     Optional<FinancialPeriod> containing(Long userId, LocalDate date);
 
+    /**
+     * One of the user's own periods by id, e.g. to compute totals for a past period (US39).
+     *
+     * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if it does not
+     *         exist or belongs to someone else
+     */
+    FinancialPeriod findMine(Long userId, Long periodId);
+
     /** The period just before {@code period}; empty for the user's first period. */
     Optional<FinancialPeriod> previous(FinancialPeriod period);
 

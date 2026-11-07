@@ -17,7 +17,7 @@ import { useSession } from '@/providers';
  */
 export default function TabsLayout() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme ?? 'light'];
   const { session } = useSession();
   const isAdmin = session?.type === 'ADMIN';
 
