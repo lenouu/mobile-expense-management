@@ -21,7 +21,7 @@ public final class ExpenseMappers
                 .amount(expense.getAmount())
                 .date(expense.getDate())
                 .description(expense.getDescription())
-                .category(ExpenseResponses.CategoryRef.builder()
+                .category(category == null ? null : ExpenseResponses.CategoryRef.builder()
                         .id(category.getId())
                         .name(category.getName())
                         .icon(category.getIcon())

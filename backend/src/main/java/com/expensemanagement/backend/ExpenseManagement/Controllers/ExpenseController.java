@@ -65,7 +65,7 @@ public class ExpenseController
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @Parameter(description = "Only expenses on or before this date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-            @ParameterObject @PageableDefault(size = 20, sort = {"date", "id"}, direction = Sort.Direction.DESC)
+            @ParameterObject @PageableDefault(size = 20, sort = {"date", "createdAt", "id"}, direction = Sort.Direction.DESC)
             Pageable pageable)
     {
         return new PagedModel<>(expenseService.findMine(currentUserId(jwt), from, to, pageable));

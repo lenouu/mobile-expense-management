@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { Button, Chip } from '@/components/ui/primitives';
 import {
@@ -175,6 +176,7 @@ export function ExpensesManager({
             </ThemedText>
           </View>
           <View style={styles.row}>
+            <Button label="History" onPress={() => router.push('/history')} secondary />
             <Button label="Refresh" onPress={load} disabled={loading} secondary />
             <Button label="Sign out" onPress={() => onSignOut()} secondary />
           </View>
@@ -229,8 +231,8 @@ export function ExpensesManager({
                 </ThemedText>
               </View>
               <View style={styles.row}>
-                <View style={[styles.dot, { backgroundColor: expense.category.color ?? theme.textSecondary }]} />
-                <ThemedText type="small">{expense.category.name}</ThemedText>
+                <View style={[styles.dot, { backgroundColor: expense.category?.color ?? theme.textSecondary }]} />
+                <ThemedText type="small">{expense.category?.name ?? 'Uncategorized'}</ThemedText>
               </View>
               {expense.description && (
                 <ThemedText type="small" themeColor="textSecondary">
@@ -276,7 +278,7 @@ function ExpenseForm({
 }) {
   const [amount, setAmount] = useState(expense ? String(expense.amount) : '');
   const [date, setDate] = useState(expense?.date ?? todayIso());
-  const [categoryId, setCategoryId] = useState<number | null>(expense?.category.id ?? null);
+  const [categoryId, setCategoryId] = useState<number | null>(expense?.category?.id ?? null);
   const [description, setDescription] = useState(expense?.description ?? '');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
