@@ -18,7 +18,7 @@ export type Expense = {
   /** YYYY-MM-DD */
   date: string;
   description: string | null;
-  category: { id: number; name: string; icon: string | null; color: string | null };
+  category: { id: number; name: string; icon: string | null; color: string | null } | null;
   createdAt: string;
   updatedAt: string;
 };
