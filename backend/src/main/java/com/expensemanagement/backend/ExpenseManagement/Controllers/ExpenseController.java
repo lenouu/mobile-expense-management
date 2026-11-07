@@ -91,9 +91,14 @@ public class ExpenseController
     @GetMapping("/{id}")
     @Operation(summary = "One of my expenses")
     @ApiResponse(responseCode = "200", description = "Expense found")
+    @ApiResponse(responseCode = "400", description = "Invalid expense ID format or value", content = @Content)
     @ApiResponse(responseCode = "404", description = "No such expense among yours", content = @Content)
     public ExpenseResponses.Details get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id)
     {
+        if (id == null || id <= 0)
+        {
+            throw new com.expensemanagement.backend.Exceptions.InvalidRequestException("Expense id must be a positive number");
+        }
         return expenseService.findMine(currentUserId(jwt), id);
     }
 

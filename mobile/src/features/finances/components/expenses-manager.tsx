@@ -240,6 +240,7 @@ export function ExpensesManager({
                 </ThemedText>
               )}
               <View style={styles.row}>
+                <Button label="Details" onPress={() => router.push(`/expenses/${expense.id}` as any)} secondary onCard />
                 <Button label="Edit" onPress={() => startEditing(expense.id)} secondary onCard />
                 <DeleteButton onConfirm={() => remove(expense)} busy={deletingId === expense.id} />
               </View>

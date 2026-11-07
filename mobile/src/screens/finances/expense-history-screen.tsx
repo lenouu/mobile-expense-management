@@ -185,6 +185,16 @@ export function ExpenseHistoryScreen() {
                   {expense.description}
                 </ThemedText>
               ) : null}
+
+              {/* View Details button (US22) */}
+              <View style={[styles.row, { marginTop: Spacing.one }]}>
+                <Button
+                  label="View details"
+                  onPress={() => router.push(`/expenses/${expense.id}` as any)}
+                  secondary
+                  onCard
+                />
+              </View>
             </ThemedView>
           ))}
 

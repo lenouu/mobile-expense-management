@@ -69,6 +69,10 @@ export function fetchExpenses(session: Session, options: { page?: number; size?:
   return authRequest<PagedModel<Expense>>(`/expenses?${pageParams(options)}`, session);
 }
 
+export function fetchExpense(session: Session, id: number | string) {
+  return authRequest<Expense>(`/expenses/${id}`, session);
+}
+
 export function createExpense(session: Session, expense: SaveExpense) {
   return authRequest<Expense>('/expenses', session, { method: 'POST', body: expense });
 }

@@ -199,6 +199,20 @@ public class GlobalExceptionHandler
                 .body(ApiError.of(400, "invalid_request", ex.getMessage()));
     }
 
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<ApiError> handleConstraintViolation(jakarta.validation.ConstraintViolationException ex)
+    {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "validation_failed", ex.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.web.method.annotation.HandlerMethodValidationException.class)
+    public ResponseEntity<ApiError> handleHandlerMethodValidation(org.springframework.web.method.annotation.HandlerMethodValidationException ex)
+    {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "validation_failed", "Request validation failed"));
+    }
+
     /**
      * Last resort for anything no handler above claims.
      *
