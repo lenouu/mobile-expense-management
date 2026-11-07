@@ -25,6 +25,10 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>
     @EntityGraph(attributePaths = "category")
     Page<Expense> findAllByUserIdAndDateBetween(Long userId, LocalDate from, LocalDate to, Pageable pageable);
 
+    /** Filtered by category and date range, inclusive on both ends. */
+    @EntityGraph(attributePaths = "category")
+    Page<Expense> findAllByUserIdAndCategoryIdAndDateBetween(Long userId, Long categoryId, LocalDate from, LocalDate to, Pageable pageable);
+
     /** Sum and count of a user's expenses dated between {@code from} and {@code to}, inclusive. */
     interface Totals
     {

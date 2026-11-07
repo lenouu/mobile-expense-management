@@ -55,20 +55,37 @@ public class ExpenseController
     @GetMapping
     @Operation(summary = "My expenses (paged)",
             description = """
-                    Newest first by default. `from` / `to` are optional dates (inclusive), e.g.
-                    `?from=2026-09-01&to=2026-09-30&page=0&size=20`""")
+                    Newest first by default. `from` / `to` are optional dates (inclusive), and
+                    `categoryId` is an optional category filter, e.g.
+                    `?from=2026-09-01&to=2026-09-30&categoryId=1&page=0&size=20`""")
     @ApiResponse(responseCode = "200", description = "Page of expenses")
-    @ApiResponse(responseCode = "400", description = "Invalid date, or 'from' after 'to'", content = @Content)
+    @ApiResponse(responseCode = "400", description = "Invalid date, 'from' after 'to', or invalid categoryId", content = @Content)
     public PagedModel<ExpenseResponses.Details> list(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "Only expenses on or after this date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @Parameter(description = "Only expenses on or before this date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-            @ParameterObject @PageableDefault(size = 20, sort = {"date", "id"}, direction = Sort.Direction.DESC)
+            @Parameter(description = "Only expenses in this category")
+            @RequestParam(required = false) Long categoryId,
+            @ParameterObject @PageableDefault(size = 20, sort = {"date", "createdAt", "id"}, direction = Sort.Direction.DESC)
             Pageable pageable)
     {
-        return new PagedModel<>(expenseService.findMine(currentUserId(jwt), from, to, pageable));
+        if (categoryId != null && categoryId <= 0)
+        {
+            throw new com.expensemanagement.backend.Exceptions.InvalidRequestException("Category ID must be a positive number");
+        }
+        return new PagedModel<>(expenseService.findMine(currentUserId(jwt), from, to, categoryId, pageable));
+    }
+
+    /** Overload for callers who omit the category filter. */
+    public PagedModel<ExpenseResponses.Details> list(
+            Jwt jwt,
+            LocalDate from,
+            LocalDate to,
+            Pageable pageable)
+    {
+        return list(jwt, from, to, null, pageable);
     }
 
     /** Declared before {@code /{id}} for readability; the literal path wins either way. */
@@ -91,9 +108,14 @@ public class ExpenseController
     @GetMapping("/{id}")
     @Operation(summary = "One of my expenses")
     @ApiResponse(responseCode = "200", description = "Expense found")
+    @ApiResponse(responseCode = "400", description = "Invalid expense ID format or value", content = @Content)
     @ApiResponse(responseCode = "404", description = "No such expense among yours", content = @Content)
     public ExpenseResponses.Details get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id)
     {
+        if (id == null || id <= 0)
+        {
+            throw new com.expensemanagement.backend.Exceptions.InvalidRequestException("Expense id must be a positive number");
+        }
         return expenseService.findMine(currentUserId(jwt), id);
     }
 

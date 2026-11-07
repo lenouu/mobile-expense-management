@@ -17,7 +17,7 @@ import { useSession } from '@/providers';
  */
 export default function TabsLayout() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme ?? 'light'];
+  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { session } = useSession();
   const isAdmin = session?.type === 'ADMIN';
 
@@ -47,6 +47,14 @@ export default function TabsLayout() {
           title: 'Money',
           href: isAdmin ? null : '/finances',
           tabBarIcon: ({ color, size }) => <Icon name="wallet" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          href: isAdmin ? null : '/history',
+          tabBarIcon: ({ color, size }) => <Icon name="clock" size={size} color={color} />,
         }}
       />
 

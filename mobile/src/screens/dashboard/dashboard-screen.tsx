@@ -68,6 +68,7 @@ function SignedInCard({
 
       <View style={styles.actions}>
         <Button label="Go to Money" primary onPress={() => router.replace('/finances')} />
+        <Button label="Expense History" onPress={() => router.push('/history')} />
         <Button label="Sign out" onPress={onSignOut} />
       </View>
 

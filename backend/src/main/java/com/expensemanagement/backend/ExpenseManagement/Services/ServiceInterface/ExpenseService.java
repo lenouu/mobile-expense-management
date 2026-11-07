@@ -20,6 +20,13 @@ public interface ExpenseService
      */
     Page<ExpenseResponses.Details> findMine(Long userId, LocalDate from, LocalDate to, Pageable pageable);
 
+    /**
+     * Expenses between {@code from} and {@code to} (both optional, inclusive), optionally filtered by category.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if from is after to
+     */
+    Page<ExpenseResponses.Details> findMine(Long userId, LocalDate from, LocalDate to, Long categoryId, Pageable pageable);
+
     ExpenseResponses.Details findMine(Long userId, Long id);
 
     /** @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if the category is not the caller's */
