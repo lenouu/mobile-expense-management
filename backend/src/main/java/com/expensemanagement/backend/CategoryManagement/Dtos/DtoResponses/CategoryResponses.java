@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Outgoing payloads for default categories (US09). Same shape as {@code UserResponses}.
@@ -17,7 +18,7 @@ public class CategoryResponses
     @AllArgsConstructor
     public static class Details
     {
-        private final Long id;
+        private final UUID id;
         private final String name;
         private final String description;
         private final String icon;
@@ -33,13 +34,13 @@ public class CategoryResponses
     @AllArgsConstructor
     public static class Owned
     {
-        private final Long id;
+        private final UUID id;
         private final String name;
         private final String description;
         private final String icon;
         private final String color;
         /** The default it was copied from; null for a category the user created. */
-        private final Long defaultCategoryId;
+        private final UUID defaultCategoryId;
     }
 
     /** What regular users see: only active categories, so no status or dates. */
@@ -48,7 +49,7 @@ public class CategoryResponses
     @AllArgsConstructor
     public static class Summary
     {
-        private final Long id;
+        private final UUID id;
         private final String name;
         private final String description;
         private final String icon;

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Default categories (US09).
@@ -48,7 +49,7 @@ public class DefaultCategoryServiceImpl implements DefaultCategoryService
 
     @Override
     @PreAuthorize("hasRole('ADMIN')")
-    public CategoryResponses.Details findById(Long id)
+    public CategoryResponses.Details findById(UUID id)
     {
         return CategoryMappers.toDetails(getCategoryOrThrow(id));
     }
@@ -76,7 +77,7 @@ public class DefaultCategoryServiceImpl implements DefaultCategoryService
     @Override
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
-    public CategoryResponses.Details update(Long id, CategoryRequests.SaveCategory request)
+    public CategoryResponses.Details update(UUID id, CategoryRequests.SaveCategory request)
     {
         DefaultCategory category = getCategoryOrThrow(id);
         String name = request.getName().trim();
@@ -96,7 +97,20 @@ public class DefaultCategoryServiceImpl implements DefaultCategoryService
     @Override
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
-    public CategoryResponses.Details changeStatus(Long id, boolean active)
+    public void delete(UUID id)
+    {
+        // No reference check needed: UserCategory rows are snapshots and carry only a plain
+        // defaultCategoryId column, so nothing is left dangling by removing this row.
+        DefaultCategory category = getCategoryOrThrow(id);
+        categoryRepository.delete(category);
+
+        log.info("Admin deleted default category id={} name={}", id, category.getName());
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public CategoryResponses.Details changeStatus(UUID id, boolean active)
     {
         DefaultCategory category = getCategoryOrThrow(id);
         category.setActive(active);
@@ -114,7 +128,7 @@ public class DefaultCategoryServiceImpl implements DefaultCategoryService
                 .toList();
     }
 
-    private DefaultCategory getCategoryOrThrow(Long id)
+    private DefaultCategory getCategoryOrThrow(UUID id)
     {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No default category with id " + id));

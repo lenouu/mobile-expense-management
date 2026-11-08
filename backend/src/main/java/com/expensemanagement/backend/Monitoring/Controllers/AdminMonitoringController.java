@@ -3,6 +3,7 @@ package com.expensemanagement.backend.Monitoring.Controllers;
 import com.expensemanagement.backend.Monitoring.Dtos.DtoResponses.MonitoringResponses;
 import com.expensemanagement.backend.Monitoring.Services.ServiceInterface.ErrorLogService;
 import com.expensemanagement.backend.Monitoring.Services.ServiceInterface.PlatformHealthService;
+import com.expensemanagement.backend.Shared.PageResponse;
 import com.expensemanagement.backend.Swagger.SwaggerConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,7 +15,6 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.data.web.PagedModel;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -73,7 +73,7 @@ public class AdminMonitoringController
     @ApiResponse(responseCode = "200", description = "Page of error log entries")
     @ApiResponse(responseCode = "400", description = "Invalid date, or 'from' after 'to'", content = @Content)
     @ApiResponse(responseCode = "403", description = "Caller is not an ADMIN", content = @Content)
-    public PagedModel<MonitoringResponses.ErrorLogEntry> errors(
+    public PageResponse<MonitoringResponses.ErrorLogEntry> errors(
             @Parameter(description = "Only errors at or after this time")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
             @Parameter(description = "Only errors at or before this time")
@@ -81,7 +81,7 @@ public class AdminMonitoringController
             @ParameterObject @PageableDefault(size = 20, sort = "occurredAt", direction = Sort.Direction.DESC)
             Pageable pageable)
     {
-        return new PagedModel<>(errorLogService.find(
+        return PageResponse.of(errorLogService.find(
                 from != null ? from.toInstant() : null,
                 to != null ? to.toInstant() : null,
                 pageable));

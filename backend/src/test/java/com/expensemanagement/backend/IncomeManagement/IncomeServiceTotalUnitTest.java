@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,8 +46,8 @@ class IncomeServiceTotalUnitTest {
 
 	@Test
 	void totalForPeriod_calculatesSumAndCount_forValidPeriodAndUser() {
-		Long userId = 1L;
-		Long periodId = 10L;
+		UUID userId = id(1);
+		UUID periodId = id(10);
 		LocalDate start = LocalDate.of(2026, 9, 1);
 		LocalDate end = LocalDate.of(2026, 9, 30);
 
@@ -66,7 +67,7 @@ class IncomeServiceTotalUnitTest {
 		TotalIncome result = incomeService.totalForPeriod(userId, periodId);
 
 		assertThat(result).isNotNull();
-		assertThat(result.getTotal()).isEqualByComparingTo(new BigDecimal("1500.50"));
+		assertThat(result.getTotal().amount()).isEqualByComparingTo(new BigDecimal("1500.50"));
 		assertThat(result.getPeriodId()).isEqualTo(periodId);
 		assertThat(result.getPeriodStartDate()).isEqualTo(start);
 		assertThat(result.getPeriodEndDate()).isEqualTo(end);
@@ -79,8 +80,8 @@ class IncomeServiceTotalUnitTest {
 
 	@Test
 	void totalForPeriod_whenNoRecords_returnsZeroAmountAndZeroCount() {
-		Long userId = 1L;
-		Long periodId = 10L;
+		UUID userId = id(1);
+		UUID periodId = id(10);
 		LocalDate start = LocalDate.of(2026, 9, 1);
 		LocalDate end = LocalDate.of(2026, 9, 30);
 
@@ -100,14 +101,14 @@ class IncomeServiceTotalUnitTest {
 		TotalIncome result = incomeService.totalForPeriod(userId, periodId);
 
 		assertThat(result).isNotNull();
-		assertThat(result.getTotal()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(result.getTotal().amount()).isEqualByComparingTo(BigDecimal.ZERO);
 		assertThat(result.getRecordCount()).isEqualTo(0L);
 	}
 
 	@Test
 	void totalForPeriod_periodNotFound_throwsResourceNotFoundException() {
-		Long userId = 1L;
-		Long nonExistentPeriodId = 999L;
+		UUID userId = id(1);
+		UUID nonExistentPeriodId = id(999);
 
 		when(periodRepository.findById(nonExistentPeriodId)).thenReturn(Optional.empty());
 
@@ -118,9 +119,9 @@ class IncomeServiceTotalUnitTest {
 
 	@Test
 	void totalForPeriod_periodBelongsToDifferentUser_throwsResourceNotFoundException() {
-		Long currentUserId = 1L;
-		Long otherUserId = 2L;
-		Long periodId = 10L;
+		UUID currentUserId = id(1);
+		UUID otherUserId = id(2);
+		UUID periodId = id(10);
 
 		User otherUser = new User();
 		otherUser.setId(otherUserId);
@@ -137,4 +138,9 @@ class IncomeServiceTotalUnitTest {
 				.isInstanceOf(ResourceNotFoundException.class)
 				.hasMessageContaining("No financial period with id " + periodId);
 	}
+
+	private static UUID id(long value) {
+		return new UUID(0L, value);
+	}
+
 }

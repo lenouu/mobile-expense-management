@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Budget and category allocation service (S4-TECH-2, US28).
@@ -56,7 +57,7 @@ public class BudgetServiceImpl implements BudgetService
 
     @Override
     @Transactional
-    public BudgetResponses.BudgetDetails createBudget(Long userId, BudgetRequests.CreateBudget request)
+    public BudgetResponses.BudgetDetails createBudget(UUID userId, BudgetRequests.CreateBudget request)
     {
         FinancialPeriod period = getOwnPeriodOrThrow(userId, request.getPeriodId());
 
@@ -77,7 +78,7 @@ public class BudgetServiceImpl implements BudgetService
 
     @Override
     @Transactional
-    public BudgetResponses.BudgetDetails updateBudget(Long userId, Long budgetId, BudgetRequests.UpdateBudget request)
+    public BudgetResponses.BudgetDetails updateBudget(UUID userId, UUID budgetId, BudgetRequests.UpdateBudget request)
     {
         Budget budget = getBudgetOrThrow(userId, budgetId);
 
@@ -99,7 +100,7 @@ public class BudgetServiceImpl implements BudgetService
     }
 
     @Override
-    public BudgetResponses.BudgetDetails getBudget(Long userId, Long budgetId)
+    public BudgetResponses.BudgetDetails getBudget(UUID userId, UUID budgetId)
     {
         Budget budget = getBudgetOrThrow(userId, budgetId);
         List<CategoryAllocation> allocations = allocationRepository.findAllByBudgetId(budgetId);
@@ -107,7 +108,7 @@ public class BudgetServiceImpl implements BudgetService
     }
 
     @Override
-    public BudgetResponses.BudgetDetails getBudgetByPeriod(Long userId, Long periodId)
+    public BudgetResponses.BudgetDetails getBudgetByPeriod(UUID userId, UUID periodId)
     {
         getOwnPeriodOrThrow(userId, periodId);
         Budget budget = budgetRepository.findByUserIdAndPeriodId(userId, periodId)
@@ -119,13 +120,13 @@ public class BudgetServiceImpl implements BudgetService
 
     @Override
     @Transactional
-    public BudgetResponses.AllocationDetails addOrUpdateAllocation(Long userId, Long budgetId, CategoryAllocationRequests.SaveAllocation request)
+    public BudgetResponses.AllocationDetails addOrUpdateAllocation(UUID userId, UUID budgetId, CategoryAllocationRequests.SaveAllocation request)
     {
         Budget budget = getBudgetOrThrow(userId, budgetId);
         UserCategory category = getOwnCategoryOrThrow(userId, request.getCategoryId());
 
         Optional<CategoryAllocation> existing = allocationRepository.findByBudgetIdAndCategoryId(budgetId, category.getId());
-        Long existingAllocationId = existing.map(CategoryAllocation::getId).orElse(null);
+        UUID existingAllocationId = existing.map(CategoryAllocation::getId).orElse(null);
 
         // Core validation logic (S4-TECH-2)
         validateAllocationAgainstBudget(budget, request.getAllocatedAmount(), existingAllocationId);
@@ -148,7 +149,7 @@ public class BudgetServiceImpl implements BudgetService
 
     @Override
     @Transactional
-    public BudgetResponses.AllocationDetails updateAllocation(Long userId, Long budgetId, Long allocationId, CategoryAllocationRequests.UpdateAllocation request)
+    public BudgetResponses.AllocationDetails updateAllocation(UUID userId, UUID budgetId, UUID allocationId, CategoryAllocationRequests.UpdateAllocation request)
     {
         Budget budget = getBudgetOrThrow(userId, budgetId);
         CategoryAllocation allocation = allocationRepository.findByIdAndBudgetId(allocationId, budgetId)
@@ -166,7 +167,7 @@ public class BudgetServiceImpl implements BudgetService
 
     @Override
     @Transactional
-    public void deleteAllocation(Long userId, Long budgetId, Long allocationId)
+    public void deleteAllocation(UUID userId, UUID budgetId, UUID allocationId)
     {
         getBudgetOrThrow(userId, budgetId);
         CategoryAllocation allocation = allocationRepository.findByIdAndBudgetId(allocationId, budgetId)
@@ -177,7 +178,7 @@ public class BudgetServiceImpl implements BudgetService
     }
 
     @Override
-    public List<BudgetResponses.AllocationDetails> getAllocations(Long userId, Long budgetId)
+    public List<BudgetResponses.AllocationDetails> getAllocations(UUID userId, UUID budgetId)
     {
         getBudgetOrThrow(userId, budgetId);
         return allocationRepository.findAllByBudgetId(budgetId)
@@ -187,7 +188,7 @@ public class BudgetServiceImpl implements BudgetService
     }
 
     @Override
-    public void validateAllocationAgainstBudget(Budget budget, BigDecimal proposedAmount, Long existingAllocationId)
+    public void validateAllocationAgainstBudget(Budget budget, BigDecimal proposedAmount, UUID existingAllocationId)
     {
         if (proposedAmount == null || proposedAmount.compareTo(BigDecimal.ZERO) <= 0)
         {
@@ -208,19 +209,19 @@ public class BudgetServiceImpl implements BudgetService
         }
     }
 
-    private Budget getBudgetOrThrow(Long userId, Long budgetId)
+    private Budget getBudgetOrThrow(UUID userId, UUID budgetId)
     {
         return budgetRepository.findByIdAndUserId(budgetId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No budget with id " + budgetId));
     }
 
-    private UserCategory getOwnCategoryOrThrow(Long userId, Long categoryId)
+    private UserCategory getOwnCategoryOrThrow(UUID userId, UUID categoryId)
     {
         return userCategoryRepository.findByIdAndUserId(categoryId, userId)
                 .orElseThrow(() -> new InvalidRequestException("Category " + categoryId + " is not one of your categories"));
     }
 
-    private FinancialPeriod getOwnPeriodOrThrow(Long userId, Long periodId)
+    private FinancialPeriod getOwnPeriodOrThrow(UUID userId, UUID periodId)
     {
         return periodRepository.findByIdAndUserId(periodId, userId)
                 .orElseThrow(() -> new InvalidRequestException("Financial period " + periodId + " is not one of your periods"));

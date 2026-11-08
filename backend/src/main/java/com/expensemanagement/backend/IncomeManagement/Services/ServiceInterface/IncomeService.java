@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Incomes of one user. Every method takes the caller's id (from the token), and another user's
@@ -17,15 +18,15 @@ public interface IncomeService
      *
      * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if from is after to
      */
-    Page<IncomeResponses.Details> findMine(Long userId, LocalDate from, LocalDate to, Pageable pageable);
+    Page<IncomeResponses.Details> findMine(UUID userId, LocalDate from, LocalDate to, Pageable pageable);
 
-    IncomeResponses.Details findMine(Long userId, Long id);
+    IncomeResponses.Details findMine(UUID userId, UUID id);
 
-    IncomeResponses.Details create(Long userId, IncomeRequests.SaveIncome request);
+    IncomeResponses.Details create(UUID userId, IncomeRequests.SaveIncome request);
 
-    IncomeResponses.Details update(Long userId, Long id, IncomeRequests.SaveIncome request);
+    IncomeResponses.Details update(UUID userId, UUID id, IncomeRequests.SaveIncome request);
 
-    void delete(Long userId, Long id);
+    void delete(UUID userId, UUID id);
 
     /**
      * US13: total income for the given financial period. The sum is always calculated fresh from
@@ -34,5 +35,5 @@ public interface IncomeService
      * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if the period does
      *         not exist or does not belong to the user
      */
-    IncomeResponses.TotalIncome totalForPeriod(Long userId, Long periodId);
+    IncomeResponses.TotalIncome totalForPeriod(UUID userId, UUID periodId);
 }

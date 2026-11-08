@@ -1,13 +1,14 @@
 package com.expensemanagement.backend.ExpenseManagement.Dtos.DtoResponses;
 
 import com.expensemanagement.backend.PeriodManagement.Dtos.DtoResponses.PeriodResponses;
+import com.expensemanagement.backend.Shared.Money;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Outgoing payloads for expenses (S2-TECH-2). Same shape as {@code UserResponses}.
@@ -19,8 +20,9 @@ public class ExpenseResponses
     @AllArgsConstructor
     public static class Details
     {
-        private final Long id;
-        private final BigDecimal amount;
+        private final UUID id;
+        /** Never a bare number: {@code {"amount": 12.50, "currency": "XAF"}}. */
+        private final Money amount;
         private final LocalDate date;
         private final String description;
         private final CategoryRef category;
@@ -37,7 +39,7 @@ public class ExpenseResponses
         /** The financial period the total covers. */
         private final PeriodResponses.Period period;
         /** Sum of the expenses dated inside the period; 0 when there are none. */
-        private final BigDecimal total;
+        private final Money total;
         /** How many expenses make up the total. */
         private final long count;
     }
@@ -48,7 +50,7 @@ public class ExpenseResponses
     @AllArgsConstructor
     public static class CategoryRef
     {
-        private final Long id;
+        private final UUID id;
         private final String name;
         private final String icon;
         private final String color;

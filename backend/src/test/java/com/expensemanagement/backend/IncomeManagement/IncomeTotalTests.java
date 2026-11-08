@@ -40,16 +40,16 @@ class IncomeTotalTests {
 	@Test
 	void singleIncomeReturnsThatAmountAsTotal() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
+		String periodId = currentPeriodId(token);
 		String periodStart = currentPeriodStart(token);
 		String periodEnd = currentPeriodEnd(token);
 
 		create(token, "1500.00", periodStart, "Salary");
 
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(1500.00))
+			.andExpect(jsonPath("$.total.amount").value(1500.00))
 			.andExpect(jsonPath("$.periodId").value(periodId))
 			.andExpect(jsonPath("$.periodStartDate").value(periodStart))
 			.andExpect(jsonPath("$.periodEndDate").value(periodEnd))
@@ -59,36 +59,36 @@ class IncomeTotalTests {
 	@Test
 	void multipleIncomesReturnTheirSum() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
+		String periodId = currentPeriodId(token);
 		String periodStart = currentPeriodStart(token);
 
 		create(token, "1000.00", periodStart, "Salary");
 		create(token, "250.50", periodStart, "Freelance");
 		create(token, "99.50", periodStart, "Refund");
 
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(1350.00))
+			.andExpect(jsonPath("$.total.amount").value(1350.00))
 			.andExpect(jsonPath("$.recordCount").value(3));
 	}
 
 	@Test
 	void periodWithNoRecordsReturnsZero() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
+		String periodId = currentPeriodId(token);
 
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(0))
+			.andExpect(jsonPath("$.total.amount").value(0))
 			.andExpect(jsonPath("$.recordCount").value(0));
 	}
 
 	@Test
 	void recordsOutsideThePeriodAreExcluded() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
+		String periodId = currentPeriodId(token);
 		String periodStart = currentPeriodStart(token);
 
 		// This record is inside the period.
@@ -97,10 +97,10 @@ class IncomeTotalTests {
 		// This record is outside the period (well before the start).
 		create(token, "999.00", "2020-01-15", "Outside");
 
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(500.00))
+			.andExpect(jsonPath("$.total.amount").value(500.00))
 			.andExpect(jsonPath("$.recordCount").value(1));
 	}
 
@@ -109,7 +109,7 @@ class IncomeTotalTests {
 		String ownerToken = registerAndLogin();
 		String otherToken = registerAndLogin();
 
-		Long ownerPeriodId = currentPeriodId(ownerToken);
+		String ownerPeriodId = currentPeriodId(ownerToken);
 		String ownerPeriodStart = currentPeriodStart(ownerToken);
 
 		// Both create income on the same date.
@@ -117,14 +117,14 @@ class IncomeTotalTests {
 		create(otherToken, "999.00", ownerPeriodStart, "Other income");
 
 		// Owner's total only includes their own.
-		mockMvc.perform(get("/api/incomes/total").param("periodId", ownerPeriodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", ownerPeriodId)
 				.header(HttpHeaders.AUTHORIZATION, ownerToken))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(100.00))
+			.andExpect(jsonPath("$.total.amount").value(100.00))
 			.andExpect(jsonPath("$.recordCount").value(1));
 
 		// The other user cannot access owner's period.
-		mockMvc.perform(get("/api/incomes/total").param("periodId", ownerPeriodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", ownerPeriodId)
 				.header(HttpHeaders.AUTHORIZATION, otherToken))
 			.andExpect(status().isNotFound());
 	}
@@ -132,17 +132,17 @@ class IncomeTotalTests {
 	@Test
 	void decimalAmountsAreSummedAccurately() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
+		String periodId = currentPeriodId(token);
 		String periodStart = currentPeriodStart(token);
 
 		// Amounts that would fail with floating-point: 0.1 + 0.2 ≠ 0.3 in IEEE 754.
 		create(token, "0.10", periodStart, "A");
 		create(token, "0.20", periodStart, "B");
 
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.total").value(0.30));
+			.andExpect(jsonPath("$.total.amount").value(0.30));
 	}
 
 	// ---- Acceptance Criterion 2: recalculate after modifications ----
@@ -150,35 +150,35 @@ class IncomeTotalTests {
 	@Test
 	void creatingAnIncomeUpdatesTheTotal() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
+		String periodId = currentPeriodId(token);
 		String periodStart = currentPeriodStart(token);
 
 		// Start with zero.
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.total").value(0));
+			.andExpect(jsonPath("$.total.amount").value(0));
 
 		// Add an income.
 		create(token, "200.00", periodStart, "Salary");
 
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.total").value(200.00))
+			.andExpect(jsonPath("$.total.amount").value(200.00))
 			.andExpect(jsonPath("$.recordCount").value(1));
 	}
 
 	@Test
 	void editingAnIncomeUpdatesTheTotal() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
+		String periodId = currentPeriodId(token);
 		String periodStart = currentPeriodStart(token);
 
-		Integer id = create(token, "300.00", periodStart, "Salary");
+		String id = create(token, "300.00", periodStart, "Salary");
 
 		// Total is 300.
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.total").value(300.00));
+			.andExpect(jsonPath("$.total.amount").value(300.00));
 
 		// Edit to 500.
 		mockMvc.perform(put("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token)
@@ -187,25 +187,25 @@ class IncomeTotalTests {
 			.andExpect(status().isOk());
 
 		// Total is now 500.
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.total").value(500.00))
+			.andExpect(jsonPath("$.total.amount").value(500.00))
 			.andExpect(jsonPath("$.recordCount").value(1));
 	}
 
 	@Test
 	void deletingAnIncomeUpdatesTheTotal() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
+		String periodId = currentPeriodId(token);
 		String periodStart = currentPeriodStart(token);
 
-		Integer id1 = create(token, "100.00", periodStart, "A");
-		Integer id2 = create(token, "200.00", periodStart, "B");
+		String id1 = create(token, "100.00", periodStart, "A");
+		String id2 = create(token, "200.00", periodStart, "B");
 
 		// Total is 300.
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.total").value(300.00))
+			.andExpect(jsonPath("$.total.amount").value(300.00))
 			.andExpect(jsonPath("$.recordCount").value(2));
 
 		// Delete the first income.
@@ -213,9 +213,9 @@ class IncomeTotalTests {
 			.andExpect(status().isNoContent());
 
 		// Total is now 200.
-		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId.toString())
+		mockMvc.perform(get("/api/incomes/total").param("periodId", periodId)
 				.header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.total").value(200.00))
+			.andExpect(jsonPath("$.total.amount").value(200.00))
 			.andExpect(jsonPath("$.recordCount").value(1));
 	}
 
@@ -225,10 +225,10 @@ class IncomeTotalTests {
 	void nonExistentPeriodReturnsNotFound() throws Exception {
 		String token = registerAndLogin();
 
-		mockMvc.perform(get("/api/incomes/total").param("periodId", "999999999")
+		mockMvc.perform(get("/api/incomes/total").param("periodId", UUID.randomUUID().toString())
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error").value("not_found"));
+			.andExpect(jsonPath("$.code").value("not_found"));
 	}
 
 	@Test
@@ -251,11 +251,11 @@ class IncomeTotalTests {
 		String token = registerAndLogin();
 		String periodStart = currentPeriodStart(token);
 
-		Integer id = create(token, "42.00", periodStart, "Salary");
+		String id = create(token, "42.00", periodStart, "Salary");
 
 		mockMvc.perform(get("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.amount").value(42.00));
+			.andExpect(jsonPath("$.amount.amount").value(42.00));
 
 		mockMvc.perform(delete("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isNoContent());
@@ -266,7 +266,7 @@ class IncomeTotalTests {
 
 	// ---- helpers ----
 
-	private Integer create(String token, String amount, String date, String source) throws Exception {
+	private String create(String token, String amount, String date, String source) throws Exception {
 		String body = mockMvc
 			.perform(post("/api/incomes").header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -278,14 +278,14 @@ class IncomeTotalTests {
 		return JsonPath.read(body, "$.id");
 	}
 
-	private Long currentPeriodId(String token) throws Exception {
+	private String currentPeriodId(String token) throws Exception {
 		String body = mockMvc
 			.perform(get("/api/periods/current").header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		return ((Number) JsonPath.read(body, "$.id")).longValue();
+		return JsonPath.read(body, "$.id");
 	}
 
 	private String currentPeriodStart(String token) throws Exception {
@@ -309,7 +309,7 @@ class IncomeTotalTests {
 	}
 
 	private static String incomeJson(String amount, String date, String source, String description) {
-		return "{\"amount\":" + amount + ",\"date\":\"" + date + "\",\"source\":\"" + source + "\""
+		return "{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"source\":\"" + source + "\""
 				+ (description != null ? ",\"description\":\"" + description + "\"" : "") + "}";
 	}
 

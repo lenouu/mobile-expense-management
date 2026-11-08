@@ -45,8 +45,8 @@ class AdminCategoryControllerTests {
 	void starterCategoriesAreSeeded() throws Exception {
 		mockMvc.perform(get("/api/admin/categories").param("size", "100").header(HttpHeaders.AUTHORIZATION, bearer(ADMIN)))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.content[*].name").value(hasItem("Transport")))
-			.andExpect(jsonPath("$.content[*].name").value(hasItem("Other")));
+			.andExpect(jsonPath("$.data[*].name").value(hasItem("Transport")))
+			.andExpect(jsonPath("$.data[*].name").value(hasItem("Other")));
 	}
 
 	@Test
@@ -59,7 +59,7 @@ class AdminCategoryControllerTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\"  " + name + "  \",\"description\":\"Food and vet\",\"icon\":\"paw\",\"color\":\"#AABBCC\"}"))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.id").isNumber())
+			.andExpect(jsonPath("$.id").isString())
 			.andExpect(jsonPath("$.name").value(name))
 			.andExpect(jsonPath("$.description").value("Food and vet"))
 			.andExpect(jsonPath("$.icon").value("paw"))
@@ -68,7 +68,7 @@ class AdminCategoryControllerTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		Integer id = JsonPath.read(created, "$.id");
+		String id = JsonPath.read(created, "$.id");
 
 		// Full replace: the omitted icon and color are cleared.
 		mockMvc
@@ -97,10 +97,10 @@ class AdminCategoryControllerTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\"" + name.toUpperCase() + "\"}"))
 			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.error").value("conflict"));
+			.andExpect(jsonPath("$.code").value("conflict"));
 
 		// Renaming another category to the taken name is refused too...
-		Integer otherId = create(adminToken, uniqueName("Travel"));
+		String otherId = create(adminToken, uniqueName("Travel"));
 		mockMvc
 			.perform(put("/api/admin/categories/" + otherId).header(HttpHeaders.AUTHORIZATION, adminToken)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -112,7 +112,7 @@ class AdminCategoryControllerTests {
 	void renamingToOwnNameWithDifferentCaseIsAllowed() throws Exception {
 		String adminToken = bearer(ADMIN);
 		String name = uniqueName("savings");
-		Integer id = create(adminToken, name);
+		String id = create(adminToken, name);
 
 		mockMvc
 			.perform(put("/api/admin/categories/" + id).header(HttpHeaders.AUTHORIZATION, adminToken)
@@ -129,14 +129,14 @@ class AdminCategoryControllerTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\" \",\"color\":\"green\"}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error").value("validation_failed"))
-			.andExpect(jsonPath("$.fieldErrors.name").exists())
-			.andExpect(jsonPath("$.fieldErrors.color").exists());
+			.andExpect(jsonPath("$.code").value("validation_failed"))
+			.andExpect(jsonPath("$.fields.name").exists())
+			.andExpect(jsonPath("$.fields.color").exists());
 	}
 
 	@Test
 	void unknownCategoryIsNotFound() throws Exception {
-		mockMvc.perform(get("/api/admin/categories/999999").header(HttpHeaders.AUTHORIZATION, bearer(ADMIN)))
+		mockMvc.perform(get("/api/admin/categories/00000000-0000-0000-0000-000000000000").header(HttpHeaders.AUTHORIZATION, bearer(ADMIN)))
 			.andExpect(status().isNotFound());
 	}
 
@@ -145,7 +145,7 @@ class AdminCategoryControllerTests {
 		String adminToken = bearer(ADMIN);
 		String userToken = bearer(USER);
 		String name = uniqueName("Subscriptions");
-		Integer id = create(adminToken, name);
+		String id = create(adminToken, name);
 
 		mockMvc.perform(get("/api/categories/defaults").header(HttpHeaders.AUTHORIZATION, userToken))
 			.andExpect(status().isOk())
@@ -168,7 +168,7 @@ class AdminCategoryControllerTests {
 			.perform(get("/api/admin/categories").param("active", "false")
 				.param("size", "100")
 				.header(HttpHeaders.AUTHORIZATION, adminToken))
-			.andExpect(jsonPath("$.content[*].name").value(hasItem(name)));
+			.andExpect(jsonPath("$.data[*].name").value(hasItem(name)));
 
 		mockMvc
 			.perform(patch("/api/admin/categories/" + id + "/status").header(HttpHeaders.AUTHORIZATION, adminToken)
@@ -191,7 +191,7 @@ class AdminCategoryControllerTests {
 				.content("{\"name\":\"" + uniqueName("Hack") + "\"}"))
 			.andExpect(status().isForbidden());
 		mockMvc
-			.perform(patch("/api/admin/categories/1/status").header(HttpHeaders.AUTHORIZATION, userToken)
+			.perform(patch("/api/admin/categories/00000000-0000-0000-0000-000000000000/status").header(HttpHeaders.AUTHORIZATION, userToken)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"active\":false}"))
 			.andExpect(status().isForbidden());
@@ -203,7 +203,7 @@ class AdminCategoryControllerTests {
 		mockMvc.perform(get("/api/categories/defaults")).andExpect(status().isUnauthorized());
 	}
 
-	private Integer create(String adminToken, String name) throws Exception {
+	private String create(String adminToken, String name) throws Exception {
 		String body = mockMvc
 			.perform(post("/api/admin/categories").header(HttpHeaders.AUTHORIZATION, adminToken)
 				.contentType(MediaType.APPLICATION_JSON)

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Issues signed JWTs.
@@ -48,7 +49,7 @@ public class JwtService
      * <p>{@code sub} holds the user id as a string (the JWT spec requires a string subject);
      * controllers read it back with {@code jwt.getSubject()}.
      */
-    public String generateToken(Long userId, String userName, UserType type)
+    public String generateToken(UUID userId, String userName, UserType type)
     {
         Instant now = Instant.now();
 

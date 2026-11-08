@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Budgets and category allocations (S4-TECH-2, US28).
@@ -57,7 +58,7 @@ public class BudgetController
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
     public BudgetResponses.BudgetDetails getById(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long id)
+            @PathVariable UUID id)
     {
         return budgetService.getBudget(currentUserId(jwt), id);
     }
@@ -69,7 +70,7 @@ public class BudgetController
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
     public BudgetResponses.BudgetDetails getByPeriod(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long periodId)
+            @PathVariable UUID periodId)
     {
         return budgetService.getBudgetByPeriod(currentUserId(jwt), periodId);
     }
@@ -83,7 +84,7 @@ public class BudgetController
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
     public BudgetResponses.BudgetDetails update(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody BudgetRequests.UpdateBudget request)
     {
         return budgetService.updateBudget(currentUserId(jwt), id, request);
@@ -99,7 +100,7 @@ public class BudgetController
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
     public BudgetResponses.AllocationDetails allocateCategory(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long budgetId,
+            @PathVariable UUID budgetId,
             @Valid @RequestBody CategoryAllocationRequests.SaveAllocation request)
     {
         return budgetService.addOrUpdateAllocation(currentUserId(jwt), budgetId, request);
@@ -114,8 +115,8 @@ public class BudgetController
     @ApiResponse(responseCode = "404", description = "Budget or allocation not found", content = @Content)
     public BudgetResponses.AllocationDetails updateAllocation(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long budgetId,
-            @PathVariable Long allocationId,
+            @PathVariable UUID budgetId,
+            @PathVariable UUID allocationId,
             @Valid @RequestBody CategoryAllocationRequests.UpdateAllocation request)
     {
         return budgetService.updateAllocation(currentUserId(jwt), budgetId, allocationId, request);
@@ -129,8 +130,8 @@ public class BudgetController
     @ApiResponse(responseCode = "404", description = "Budget or allocation not found", content = @Content)
     public void deleteAllocation(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long budgetId,
-            @PathVariable Long allocationId)
+            @PathVariable UUID budgetId,
+            @PathVariable UUID allocationId)
     {
         budgetService.deleteAllocation(currentUserId(jwt), budgetId, allocationId);
     }
@@ -142,13 +143,13 @@ public class BudgetController
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
     public List<BudgetResponses.AllocationDetails> getAllocations(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long budgetId)
+            @PathVariable UUID budgetId)
     {
         return budgetService.getAllocations(currentUserId(jwt), budgetId);
     }
 
-    private Long currentUserId(Jwt jwt)
+    private UUID currentUserId(Jwt jwt)
     {
-        return Long.valueOf(jwt.getSubject());
+        return UUID.fromString(jwt.getSubject());
     }
 }

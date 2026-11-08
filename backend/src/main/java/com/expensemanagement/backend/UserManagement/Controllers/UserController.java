@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.UserManagement.Controllers;
 
+import java.util.UUID;
 import com.expensemanagement.backend.UserManagement.Dtos.DtoRequests.UserRequests;
 import com.expensemanagement.backend.UserManagement.Dtos.DtoResponses.UserResponses;
 import com.expensemanagement.backend.UserManagement.Services.ServiceInterface.UserService;
@@ -96,12 +97,12 @@ public class UserController
     @Operation(summary = "Change my password",
             description = """
                     Requires the current password, so a stolen token alone cannot lock the
-                    real owner out. Fails with 401 if the current password is wrong and 409
+                    real owner out. Fails with 401 if the current password is wrong and 422
                     if newPassword and confirmNewPassword do not match.""")
     @ApiResponse(responseCode = "204", description = "Password changed")
     @ApiResponse(responseCode = "401", description = "Current password is incorrect",
             content = @io.swagger.v3.oas.annotations.media.Content)
-    @ApiResponse(responseCode = "409", description = "New passwords do not match",
+    @ApiResponse(responseCode = "422", description = "New passwords do not match",
             content = @io.swagger.v3.oas.annotations.media.Content)
     public void changeMyPassword(@AuthenticationPrincipal Jwt jwt,
                                  @Valid @RequestBody UserRequests.ChangePassword request)
@@ -143,8 +144,8 @@ public class UserController
      * {@code String} because the JWT spec requires a string subject, which is why this
      * parses rather than casts.
      */
-    private Long currentUserId(Jwt jwt)
+    private UUID currentUserId(Jwt jwt)
     {
-        return Long.valueOf(jwt.getSubject());
+        return UUID.fromString(jwt.getSubject());
     }
 }
