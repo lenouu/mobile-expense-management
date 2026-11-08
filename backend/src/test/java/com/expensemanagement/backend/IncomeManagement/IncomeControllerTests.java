@@ -46,7 +46,7 @@ class IncomeControllerTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(incomeJson("1500", "2026-09-30", "  Salary  ", "September")))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.id").isNumber())
+			.andExpect(jsonPath("$.id").isString())
 			.andExpect(jsonPath("$.amount.amount").value(1500))
 			.andExpect(jsonPath("$.date").value("2026-09-30"))
 			.andExpect(jsonPath("$.source").value("Salary"))

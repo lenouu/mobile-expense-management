@@ -150,7 +150,7 @@ class ExpenseTotalTests {
 				.header(HttpHeaders.AUTHORIZATION, other.token()))
 			.andExpect(status().isNotFound());
 		mockMvc
-			.perform(get("/api/expenses/total").param("periodId", "999999999")
+			.perform(get("/api/expenses/total").param("periodId", UUID.randomUUID().toString())
 				.header(HttpHeaders.AUTHORIZATION, other.token()))
 			.andExpect(status().isNotFound());
 	}
@@ -173,7 +173,7 @@ class ExpenseTotalTests {
 	}
 
 	private static String expenseJson(String amount, String date, String categoryId) {
-		return "{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"categoryId\":" + categoryId + "}";
+		return "{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"categoryId\":\"" + categoryId + "\"" + "}";
 	}
 
 	private String categoryId(String token, String name) throws Exception {

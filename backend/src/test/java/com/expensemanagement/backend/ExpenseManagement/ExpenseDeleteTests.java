@@ -104,7 +104,7 @@ class ExpenseDeleteTests {
 		String body = mockMvc
 			.perform(post("/api/expenses").header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"categoryId\":" + categoryId + "}"))
+				.content("{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"categoryId\":\"" + categoryId + "\"" + "}"))
 			.andExpect(status().isCreated())
 			.andReturn()
 			.getResponse()

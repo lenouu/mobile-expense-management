@@ -89,7 +89,7 @@ class AdminMonitoringControllerTests {
 		mockMvc.perform(get("/api/admin/logs/errors").header(HttpHeaders.AUTHORIZATION, adminToken))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data", hasSize(1)))
-			.andExpect(jsonPath("$.data[0].id").isNumber())
+			.andExpect(jsonPath("$.data[0].id").isString())
 			.andExpect(jsonPath("$.data[0].occurredAt").isNotEmpty())
 			.andExpect(jsonPath("$.data[0].httpMethod").value("POST"))
 			.andExpect(jsonPath("$.data[0].path").value("/api/admin/monitoring/simulate-error"))

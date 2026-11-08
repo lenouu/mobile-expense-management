@@ -61,7 +61,7 @@ class UserCategoryProvisioningTests {
 
 		String mine = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, userToken))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0].id").isNumber())
+			.andExpect(jsonPath("$[0].id").isString())
 			.andExpect(jsonPath("$[0].defaultCategoryId").value(notNullValue()))
 			.andReturn()
 			.getResponse()

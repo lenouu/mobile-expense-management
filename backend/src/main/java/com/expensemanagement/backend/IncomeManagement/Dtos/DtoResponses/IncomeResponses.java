@@ -28,4 +28,17 @@ public class IncomeResponses
         private final LocalDateTime createdAt;
         private final LocalDateTime updatedAt;
     }
+
+    /** US13: total income for a financial period. */
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class TotalIncome
+    {
+        private final Money total;
+        private final UUID periodId;
+        private final LocalDate periodStartDate;
+        private final LocalDate periodEndDate;
+        private final long recordCount;
+    }
 }

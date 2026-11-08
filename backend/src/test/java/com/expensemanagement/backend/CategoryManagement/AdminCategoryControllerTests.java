@@ -59,7 +59,7 @@ class AdminCategoryControllerTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\"  " + name + "  \",\"description\":\"Food and vet\",\"icon\":\"paw\",\"color\":\"#AABBCC\"}"))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.id").isNumber())
+			.andExpect(jsonPath("$.id").isString())
 			.andExpect(jsonPath("$.name").value(name))
 			.andExpect(jsonPath("$.description").value("Food and vet"))
 			.andExpect(jsonPath("$.icon").value("paw"))

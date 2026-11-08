@@ -48,7 +48,7 @@ class ExpenseControllerTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(expenseJson("12.50", "2026-09-15", food, "  Market  ")))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.id").isNumber())
+			.andExpect(jsonPath("$.id").isString())
 			.andExpect(jsonPath("$.amount.amount").value(12.5))
 			.andExpect(jsonPath("$.date").value("2026-09-15"))
 			.andExpect(jsonPath("$.description").value("Market"))
@@ -183,7 +183,7 @@ class ExpenseControllerTests {
 	}
 
 	private static String expenseJson(String amount, String date, String categoryId, String description) {
-		return "{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"categoryId\":" + categoryId
+		return "{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"categoryId\":\"" + categoryId + "\""
 				+ (description != null ? ",\"description\":\"" + description + "\"" : "") + "}";
 	}
 

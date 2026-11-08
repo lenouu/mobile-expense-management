@@ -46,7 +46,7 @@ class UserCategoryCreationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\"  Pets  \",\"description\":\"Food and vet\",\"icon\":\"paw\",\"color\":\"#AABBCC\"}"))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.id").isNumber())
+			.andExpect(jsonPath("$.id").isString())
 			.andExpect(jsonPath("$.name").value("Pets"))
 			.andExpect(jsonPath("$.description").value("Food and vet"))
 			.andExpect(jsonPath("$.icon").value("paw"))
@@ -64,7 +64,7 @@ class UserCategoryCreationTests {
 		mockMvc
 			.perform(post("/api/expenses").header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":{\"amount\":25},\"date\":\"2026-09-15\",\"categoryId\":" + id + "}"))
+				.content("{\"amount\":{\"amount\":25},\"date\":\"2026-09-15\",\"categoryId\":\"" + id + "\"}"))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.category.id").value(id))
 			.andExpect(jsonPath("$.category.name").value("Pets"));
