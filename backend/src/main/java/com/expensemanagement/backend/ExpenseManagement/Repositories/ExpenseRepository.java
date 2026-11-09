@@ -50,9 +50,6 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID>
                          @Param("pattern") String pattern,
                          Pageable pageable);
 
-    /** Checks whether any expenses are filed under the given category. */
-    boolean existsByCategoryId(Long categoryId);
-
     /** Sum and count of a user's expenses dated between {@code from} and {@code to}, inclusive. */
     interface Totals
     {
