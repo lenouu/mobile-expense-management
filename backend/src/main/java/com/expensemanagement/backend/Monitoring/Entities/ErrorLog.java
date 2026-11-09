@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * An unexpected server error (HTTP 5xx), stored so administrators can review it (US10).
@@ -19,8 +20,8 @@ import java.time.Instant;
 public class ErrorLog
 {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(nullable = false)
     private Instant occurredAt;

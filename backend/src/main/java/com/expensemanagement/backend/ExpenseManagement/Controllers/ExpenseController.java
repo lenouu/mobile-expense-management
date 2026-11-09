@@ -3,6 +3,7 @@ package com.expensemanagement.backend.ExpenseManagement.Controllers;
 import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoRequests.ExpenseRequests;
 import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoResponses.ExpenseResponses;
 import com.expensemanagement.backend.ExpenseManagement.Services.ServiceInterface.ExpenseService;
+import com.expensemanagement.backend.Shared.PageResponse;
 import com.expensemanagement.backend.Swagger.SwaggerConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,7 +16,6 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.data.web.PagedModel;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * S2-TECH-2: the caller's own expenses.
@@ -53,22 +54,41 @@ public class ExpenseController
     }
 
     @GetMapping
-    @Operation(summary = "My expenses (paged)",
+    @Operation(summary = "My expenses (paged, filterable)",
             description = """
-                    Newest first by default. `from` / `to` are optional dates (inclusive), e.g.
-                    `?from=2026-09-01&to=2026-09-30&page=0&size=20`""")
+                    Newest first by default. Every filter is optional and they combine:
+
+                    - `periodId`: one of your financial periods (US21); its start and end dates
+                      become the date bounds
+                    - `from` / `to`: dates, inclusive (US25)
+                    - `categoryId`: one of your categories (US25)
+                    - `q`: case-insensitive text in the description (US26)
+
+                    e.g. `?periodId=3&categoryId=7&q=lunch&page=0&size=20`.
+
+                    `periodId` and `from`/`to` are both date filters, so when a period and
+                    explicit dates are given the dates narrow the period rather than replacing it.
+                    A filter that matches nothing returns an empty page, not an error.""")
     @ApiResponse(responseCode = "200", description = "Page of expenses")
     @ApiResponse(responseCode = "400", description = "Invalid date, or 'from' after 'to'", content = @Content)
-    public PagedModel<ExpenseResponses.Details> list(
+    @ApiResponse(responseCode = "404", description = "No such period among yours", content = @Content)
+    public PageResponse<ExpenseResponses.Details> list(
             @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Only expenses dated inside this period; must be one of yours")
+            @RequestParam(required = false) UUID periodId,
             @Parameter(description = "Only expenses on or after this date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @Parameter(description = "Only expenses on or before this date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @Parameter(description = "Only expenses in this category; must be one of yours")
+            @RequestParam(required = false) UUID categoryId,
+            @Parameter(description = "Case-insensitive text to look for in the description")
+            @RequestParam(required = false) String q,
             @ParameterObject @PageableDefault(size = 20, sort = {"date", "createdAt", "id"}, direction = Sort.Direction.DESC)
             Pageable pageable)
     {
-        return new PagedModel<>(expenseService.findMine(currentUserId(jwt), from, to, pageable));
+        return PageResponse.of(
+                expenseService.findMine(currentUserId(jwt), periodId, from, to, categoryId, q, pageable));
     }
 
     /** Declared before {@code /{id}} for readability; the literal path wins either way. */
@@ -83,7 +103,7 @@ public class ExpenseController
     public ExpenseResponses.Total total(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "One of your periods; omit for the current one")
-            @RequestParam(required = false) Long periodId)
+            @RequestParam(required = false) UUID periodId)
     {
         return expenseService.totalForPeriod(currentUserId(jwt), periodId);
     }
@@ -92,7 +112,7 @@ public class ExpenseController
     @Operation(summary = "One of my expenses")
     @ApiResponse(responseCode = "200", description = "Expense found")
     @ApiResponse(responseCode = "404", description = "No such expense among yours", content = @Content)
-    public ExpenseResponses.Details get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id)
+    public ExpenseResponses.Details get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id)
     {
         return expenseService.findMine(currentUserId(jwt), id);
     }
@@ -101,8 +121,9 @@ public class ExpenseController
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add an expense",
             description = """
-                    `amount` > 0 with at most 2 decimals, `date` not in the future, and
-                    `categoryId` one of your categories (`GET /api/categories`).""")
+                    `amount` is an object, never a bare number: `{"amount": 12.50, "currency": "XAF"}`.
+                    `currency` is optional and defaults to XAF. `date` must not be in the future,
+                    and `categoryId` must be one of your categories (`GET /api/categories`).""")
     @ApiResponse(responseCode = "201", description = "Expense created")
     @ApiResponse(responseCode = "400", description = "Validation failed or category not yours", content = @Content)
     public ExpenseResponses.Details create(@AuthenticationPrincipal Jwt jwt,
@@ -116,7 +137,7 @@ public class ExpenseController
     @ApiResponse(responseCode = "200", description = "Expense updated")
     @ApiResponse(responseCode = "400", description = "Validation failed or category not yours", content = @Content)
     @ApiResponse(responseCode = "404", description = "No such expense among yours", content = @Content)
-    public ExpenseResponses.Details update(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+    public ExpenseResponses.Details update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                            @Valid @RequestBody ExpenseRequests.SaveExpense request)
     {
         return expenseService.update(currentUserId(jwt), id, request);
@@ -127,14 +148,14 @@ public class ExpenseController
     @Operation(summary = "Delete an expense")
     @ApiResponse(responseCode = "204", description = "Expense deleted")
     @ApiResponse(responseCode = "404", description = "No such expense among yours", content = @Content)
-    public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id)
+    public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id)
     {
         expenseService.delete(currentUserId(jwt), id);
     }
 
     /** {@code sub} holds the user id as a string (see {@code JwtService}). */
-    private Long currentUserId(Jwt jwt)
+    private UUID currentUserId(Jwt jwt)
     {
-        return Long.valueOf(jwt.getSubject());
+        return UUID.fromString(jwt.getSubject());
     }
 }

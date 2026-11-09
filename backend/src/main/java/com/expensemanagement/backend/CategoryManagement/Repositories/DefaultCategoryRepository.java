@@ -6,13 +6,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.UUID;
 
-public interface DefaultCategoryRepository extends JpaRepository<DefaultCategory, Long>
+public interface DefaultCategoryRepository extends JpaRepository<DefaultCategory, UUID>
 {
     boolean existsByNameIgnoreCase(String name);
 
     /** Same check for a rename: another category may not already use the name. */
-    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+    boolean existsByNameIgnoreCaseAndIdNot(String name, UUID id);
 
     Page<DefaultCategory> findAllByActive(boolean active, Pageable pageable);
 

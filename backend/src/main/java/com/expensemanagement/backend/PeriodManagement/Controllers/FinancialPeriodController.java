@@ -3,6 +3,7 @@ package com.expensemanagement.backend.PeriodManagement.Controllers;
 import com.expensemanagement.backend.PeriodManagement.Dtos.DtoResponses.PeriodResponses;
 import com.expensemanagement.backend.PeriodManagement.Mappers.PeriodMappers;
 import com.expensemanagement.backend.PeriodManagement.Services.ServiceInterface.FinancialPeriodService;
+import com.expensemanagement.backend.Shared.PageResponse;
 import com.expensemanagement.backend.Swagger.SwaggerConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,7 +14,6 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.data.web.PagedModel;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * S4-TECH-1: read access to the caller's financial periods.
@@ -58,12 +59,12 @@ public class FinancialPeriodController
             description = "From the current period back to the first one, newest first.")
     @ApiResponse(responseCode = "200", description = "Page of periods")
     @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
-    public PagedModel<PeriodResponses.Period> history(
+    public PageResponse<PeriodResponses.Period> history(
             @AuthenticationPrincipal Jwt jwt,
             @ParameterObject @PageableDefault(size = 20, sort = "sequence", direction = Sort.Direction.DESC)
             Pageable pageable)
     {
-        return new PagedModel<>(periodService.history(currentUserId(jwt), pageable));
+        return PageResponse.of(periodService.history(currentUserId(jwt), pageable));
     }
 
     @GetMapping("/settings")
@@ -79,8 +80,8 @@ public class FinancialPeriodController
     }
 
     /** {@code sub} holds the user id as a string (see {@code JwtService}). */
-    private Long currentUserId(Jwt jwt)
+    private UUID currentUserId(Jwt jwt)
     {
-        return Long.valueOf(jwt.getSubject());
+        return UUID.fromString(jwt.getSubject());
     }
 }

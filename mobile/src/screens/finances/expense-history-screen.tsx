@@ -11,8 +11,8 @@ import { BottomTabInset, Brand, MaxContentWidth, Spacing } from '@/constants/the
 import { ApiRequestError } from '@/features/auth/lib/api-client';
 import {
   financeStyles as styles,
-  formatAmount,
   formatDate,
+  formatMoney,
 } from '@/features/finances/components/finance-ui';
 import { Expense, fetchExpenses } from '@/features/finances/lib/finances-api';
 import { useTheme } from '@/hooks/use-theme';
@@ -57,10 +57,10 @@ export function ExpenseHistoryScreen() {
     setError(null);
     try {
       const response = await fetchExpenses(session, { page: 0, size: PAGE_SIZE });
-      setExpenses(response.content);
+      setExpenses(response.data);
       setPage(0);
-      setTotalPages(response.page.totalPages);
-      setTotalElements(response.page.totalElements);
+      setTotalPages(response.totalPages);
+      setTotalElements(response.totalElements);
     } catch (e) {
       handleError(e);
     } finally {
@@ -77,9 +77,9 @@ export function ExpenseHistoryScreen() {
     setLoadingMore(true);
     try {
       const next = await fetchExpenses(session, { page: page + 1, size: PAGE_SIZE });
-      setExpenses((current) => [...current, ...next.content]);
-      setPage(next.page.number);
-      setTotalPages(next.page.totalPages);
+      setExpenses((current) => [...current, ...next.data]);
+      setPage(next.page);
+      setTotalPages(next.totalPages);
     } catch (e) {
       handleError(e);
     } finally {
@@ -159,7 +159,7 @@ export function ExpenseHistoryScreen() {
             <ThemedView key={expense.id} type="backgroundElement" style={styles.card}>
               <View style={styles.headerRow}>
                 <ThemedText type="smallBold" style={styles.amount}>
-                  {formatAmount(expense.amount)}
+                  {formatMoney(expense.amount)}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {formatDate(expense.date)}

@@ -1,5 +1,5 @@
 import { ApiRequestError, authRequest, login } from '@/features/auth/lib/api-client';
-import type { Account, AccountState, AccountType, PagedModel, Session } from '@/types/api';
+import type { Account, AccountState, AccountType, Page, Session } from '@/types/api';
 
 // Every endpoint under /api/admin/**, in one module.
 //
@@ -11,7 +11,7 @@ import type { Account, AccountState, AccountType, PagedModel, Session } from '@/
 // missing token with 401, and each controller repeats the check with @PreAuthorize.
 
 /** Re-exported so callers that only need shared plumbing import one module. */
-export { ApiRequestError, type PagedModel } from '@/features/auth/lib/api-client';
+export { ApiRequestError, type Page } from '@/features/auth/lib/api-client';
 
 /** An admin session is an ordinary session; the alias keeps the admin screens readable. */
 export type AdminSession = Session;
@@ -36,7 +36,7 @@ export type PlatformHealth = {
 
 /** One entry of GET /api/admin/logs/errors. */
 export type ErrorLogEntry = {
-  id: number;
+  id: string;
   occurredAt: string;
   httpMethod: string | null;
   path: string | null;
@@ -58,7 +58,7 @@ export type ErrorLogEntry = {
  * field is absent.
  */
 export type UserSummary = {
-  id: number;
+  id: string;
   userName: string;
   firstName: string;
   lastName: string;
@@ -76,7 +76,7 @@ export type ChangeAccountType = { type: AccountType; reason?: string };
 
 /** A default expense category, as the admin API returns it (`CategoryResponses.Details`). */
 export type DefaultCategory = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   icon: string | null;
@@ -150,7 +150,7 @@ function errorParams(options: ErrorQuery) {
 }
 
 function fetchErrorLogs(session: AdminSession, options: ErrorQuery) {
-  return adminGet<PagedModel<ErrorLogEntry>>(`/admin/logs/errors?${errorParams(options)}`, session);
+  return adminGet<Page<ErrorLogEntry>>(`/admin/logs/errors?${errorParams(options)}`, session);
 }
 
 /**
@@ -173,10 +173,10 @@ export async function fetchErrorLogWindow(
 
   while (entries.length < maxEntries) {
     const result = await fetchErrorLogs(session, { from: options.from, page, size: pageSize });
-    total = result.page.totalElements;
-    entries.push(...result.content);
+    total = result.totalElements;
+    entries.push(...result.data);
     // Stop when the last page has been read, or when the server returns an empty page.
-    if (result.content.length < pageSize || page + 1 >= result.page.totalPages) break;
+    if (result.data.length < pageSize || page + 1 >= result.totalPages) break;
     page += 1;
   }
 
@@ -199,9 +199,9 @@ export type UserQuery = {
 /**
  * GET /api/admin/users - a page of account summaries.
  *
- * The response is `PagedModel`, so `page.totalElements` is the count for the current `status`
- * filter. That is how the dashboard gets "total accounts" and "active accounts" without a
- * dedicated count endpoint.
+ * The response is the flat page envelope, so `totalElements` is the count for the current
+ * `status` filter. That is how the dashboard gets "total accounts" and "active accounts" without
+ * a dedicated count endpoint.
  */
 export function fetchUsers(session: AdminSession, options: UserQuery = {}) {
   const params = new URLSearchParams({
@@ -210,7 +210,7 @@ export function fetchUsers(session: AdminSession, options: UserQuery = {}) {
     sort: options.sort ?? 'userName,asc',
   });
   if (options.status) params.set('status', options.status);
-  return adminGet<PagedModel<UserSummary>>(`/admin/users?${params}`, session);
+  return adminGet<Page<UserSummary>>(`/admin/users?${params}`, session);
 }
 
 /** GET /api/admin/users/search - case-insensitive contains-match on first OR last name. */
@@ -225,11 +225,11 @@ export function searchUsers(
     size: String(options.size ?? 20),
     sort: options.sort ?? 'userName,asc',
   });
-  return adminGet<PagedModel<UserSummary>>(`/admin/users/search?${params}`, session);
+  return adminGet<Page<UserSummary>>(`/admin/users/search?${params}`, session);
 }
 
 /** GET /api/admin/users/{id} - the full profile, including email and date of birth. */
-export function fetchUserById(session: AdminSession, id: number) {
+export function fetchUserById(session: AdminSession, id: string) {
   return adminGet<Account>(`/admin/users/${id}`, session);
 }
 
@@ -239,7 +239,7 @@ export function fetchUserById(session: AdminSession, id: number) {
  * `reason` has no column on the entity: the backend writes it to the application log, so it is
  * an audit trail rather than stored data.
  */
-export function changeUserStatus(session: AdminSession, id: number, request: ChangeAccountStatus) {
+export function changeUserStatus(session: AdminSession, id: string, request: ChangeAccountStatus) {
   return adminRequest<Account>(`/admin/users/${id}/status`, session, { method: 'PATCH', body: request });
 }
 
@@ -249,7 +249,7 @@ export function changeUserStatus(session: AdminSession, id: number, request: Cha
  * The backend refuses to demote the last remaining ADMIN with 409, so a 409 here is a real
  * business rule rather than a bug: promote a successor first.
  */
-export function changeUserType(session: AdminSession, id: number, request: ChangeAccountType) {
+export function changeUserType(session: AdminSession, id: string, request: ChangeAccountType) {
   return adminRequest<Account>(`/admin/users/${id}/type`, session, { method: 'PATCH', body: request });
 }
 
@@ -268,11 +268,11 @@ export function fetchDefaultCategories(
     sort: options.sort ?? 'name,asc',
   });
   if (options.active !== undefined) params.set('active', String(options.active));
-  return adminGet<PagedModel<DefaultCategory>>(`/admin/categories?${params}`, session);
+  return adminGet<Page<DefaultCategory>>(`/admin/categories?${params}`, session);
 }
 
 /** GET /api/admin/categories/{id}. */
-export function fetchDefaultCategory(session: AdminSession, id: number) {
+export function fetchDefaultCategory(session: AdminSession, id: string) {
   return adminGet<DefaultCategory>(`/admin/categories/${id}`, session);
 }
 
@@ -285,7 +285,7 @@ export function createDefaultCategory(session: AdminSession, category: SaveCateg
 }
 
 /** PUT /api/admin/categories/{id} - full replace; omitted optional fields are cleared. */
-export function updateDefaultCategory(session: AdminSession, id: number, category: SaveCategory) {
+export function updateDefaultCategory(session: AdminSession, id: string, category: SaveCategory) {
   return adminRequest<DefaultCategory>(`/admin/categories/${id}`, session, {
     method: 'PUT',
     body: category,
@@ -293,7 +293,7 @@ export function updateDefaultCategory(session: AdminSession, id: number, categor
 }
 
 /** PATCH /api/admin/categories/{id}/status - activate or deactivate. */
-export function setDefaultCategoryActive(session: AdminSession, id: number, active: boolean) {
+export function setDefaultCategoryActive(session: AdminSession, id: string, active: boolean) {
   return adminRequest<DefaultCategory>(`/admin/categories/${id}/status`, session, {
     method: 'PATCH',
     body: { active },

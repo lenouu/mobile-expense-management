@@ -3,6 +3,7 @@ package com.expensemanagement.backend.IncomeManagement.Controllers;
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoRequests.IncomeRequests;
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoResponses.IncomeResponses;
 import com.expensemanagement.backend.IncomeManagement.Services.ServiceInterface.IncomeService;
+import com.expensemanagement.backend.Shared.PageResponse;
 import com.expensemanagement.backend.Swagger.SwaggerConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,7 +16,6 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.data.web.PagedModel;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * S2-TECH-2: the caller's own incomes (money received, e.g. a salary).
@@ -59,7 +60,7 @@ public class IncomeController
                     `?from=2026-09-01&to=2026-09-30&page=0&size=20`""")
     @ApiResponse(responseCode = "200", description = "Page of incomes")
     @ApiResponse(responseCode = "400", description = "Invalid date, or 'from' after 'to'", content = @Content)
-    public PagedModel<IncomeResponses.Details> list(
+    public PageResponse<IncomeResponses.Details> list(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "Only incomes on or after this date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -68,14 +69,29 @@ public class IncomeController
             @ParameterObject @PageableDefault(size = 20, sort = {"date", "id"}, direction = Sort.Direction.DESC)
             Pageable pageable)
     {
-        return new PagedModel<>(incomeService.findMine(currentUserId(jwt), from, to, pageable));
+        return PageResponse.of(incomeService.findMine(currentUserId(jwt), from, to, pageable));
+    }
+
+    @GetMapping("/total")
+    @Operation(summary = "Total income for a financial period (US13)",
+            description = """
+                    Calculates the sum of all income records that fall within the given financial
+                    period. The total is always computed fresh from the database, so it reflects
+                    the latest creates, edits and deletes immediately.""")
+    @ApiResponse(responseCode = "200", description = "The total income for the requested period")
+    @ApiResponse(responseCode = "404", description = "No such financial period among yours", content = @Content)
+    public IncomeResponses.TotalIncome total(@AuthenticationPrincipal Jwt jwt,
+                                             @Parameter(description = "Id of the financial period", required = true)
+                                             @RequestParam UUID periodId)
+    {
+        return incomeService.totalForPeriod(currentUserId(jwt), periodId);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "One of my incomes")
     @ApiResponse(responseCode = "200", description = "Income found")
     @ApiResponse(responseCode = "404", description = "No such income among yours", content = @Content)
-    public IncomeResponses.Details get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id)
+    public IncomeResponses.Details get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id)
     {
         return incomeService.findMine(currentUserId(jwt), id);
     }
@@ -84,8 +100,10 @@ public class IncomeController
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add an income",
             description = """
-                    `amount` > 0 with at most 2 decimals, `date` not in the future, and a
-                    `source` such as "Salary".""")
+                    `amount` is an object, never a bare number:
+                    `{"amount": 250000.00, "currency": "XAF"}`. `currency` is optional and
+                    defaults to XAF. `date` must not be in the future, and `source` is a label
+                    such as "Salary".""")
     @ApiResponse(responseCode = "201", description = "Income created")
     @ApiResponse(responseCode = "400", description = "Validation failed", content = @Content)
     public IncomeResponses.Details create(@AuthenticationPrincipal Jwt jwt,
@@ -99,7 +117,7 @@ public class IncomeController
     @ApiResponse(responseCode = "200", description = "Income updated")
     @ApiResponse(responseCode = "400", description = "Validation failed", content = @Content)
     @ApiResponse(responseCode = "404", description = "No such income among yours", content = @Content)
-    public IncomeResponses.Details update(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+    public IncomeResponses.Details update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                            @Valid @RequestBody IncomeRequests.SaveIncome request)
     {
         return incomeService.update(currentUserId(jwt), id, request);
@@ -110,14 +128,14 @@ public class IncomeController
     @Operation(summary = "Delete an income")
     @ApiResponse(responseCode = "204", description = "Income deleted")
     @ApiResponse(responseCode = "404", description = "No such income among yours", content = @Content)
-    public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id)
+    public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id)
     {
         incomeService.delete(currentUserId(jwt), id);
     }
 
     /** {@code sub} holds the user id as a string (see {@code JwtService}). */
-    private Long currentUserId(Jwt jwt)
+    private UUID currentUserId(Jwt jwt)
     {
-        return Long.valueOf(jwt.getSubject());
+        return UUID.fromString(jwt.getSubject());
     }
 }

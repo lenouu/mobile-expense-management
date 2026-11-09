@@ -7,6 +7,7 @@ import lombok.Getter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 public class BudgetResponses
 {
@@ -15,8 +16,8 @@ public class BudgetResponses
     @AllArgsConstructor
     public static class BudgetDetails
     {
-        private final Long id;
-        private final Long periodId;
+        private final UUID id;
+        private final UUID periodId;
         private final BigDecimal overallAmount;
         private final BigDecimal totalAllocated;
         private final BigDecimal remainingUnallocated;
@@ -30,8 +31,8 @@ public class BudgetResponses
     @AllArgsConstructor
     public static class AllocationDetails
     {
-        private final Long id;
-        private final Long budgetId;
+        private final UUID id;
+        private final UUID budgetId;
         private final CategoryRef category;
         private final BigDecimal allocatedAmount;
         private final LocalDateTime createdAt;
@@ -43,7 +44,7 @@ public class BudgetResponses
     @AllArgsConstructor
     public static class CategoryRef
     {
-        private final Long id;
+        private final UUID id;
         private final String name;
         private final String icon;
         private final String color;
