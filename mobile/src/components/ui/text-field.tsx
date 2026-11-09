@@ -39,7 +39,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
 
       <View style={styles.inputRow}>
         <TextInput
-          ref={ref}
+          ref={ref as any}
           placeholderTextColor={theme.textMuted}
           secureTextEntry={hidden}
           onFocus={(event) => {

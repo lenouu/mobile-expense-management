@@ -45,17 +45,17 @@ class BudgetAllocationValidationTests {
 	@Test
 	void allocationsSumMayBeLowerThanOverallBudget() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
-		Integer food = categoryId(token, "Food & Groceries");
-		Integer transport = categoryId(token, "Transport");
+		String periodId = currentPeriodId(token);
+		String food = categoryId(token, "Food & Groceries");
+		String transport = categoryId(token, "Transport");
 
-		Long budgetId = createBudget(token, periodId, "1000.00");
+		String budgetId = createBudget(token, periodId, "1000.00");
 
 		// Allocation 1: 300.00 (Total: 300.00 <= 1000.00)
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + food + ",\"allocatedAmount\":300.00}"))
+				.content("{\"categoryId\":\"" + food + "\",\"allocatedAmount\":300.00}"))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.allocatedAmount").value(300.00));
 
@@ -63,7 +63,7 @@ class BudgetAllocationValidationTests {
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + transport + ",\"allocatedAmount\":400.00}"))
+				.content("{\"categoryId\":\"" + transport + "\",\"allocatedAmount\":400.00}"))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.allocatedAmount").value(400.00));
 
@@ -79,59 +79,58 @@ class BudgetAllocationValidationTests {
 	@Test
 	void allocationsSumCannotExceedOverallBudget() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
-		Integer food = categoryId(token, "Food & Groceries");
-		Integer transport = categoryId(token, "Transport");
-		Integer housing = categoryId(token, "Housing");
+		String periodId = currentPeriodId(token);
+		String food = categoryId(token, "Food & Groceries");
+		String transport = categoryId(token, "Transport");
+		String housing = categoryId(token, "Housing");
 
-		Long budgetId = createBudget(token, periodId, "1000.00");
+		String budgetId = createBudget(token, periodId, "1000.00");
 
 		// Allocate 600.00
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + food + ",\"allocatedAmount\":600.00}"))
+				.content("{\"categoryId\":\"" + food + "\",\"allocatedAmount\":600.00}"))
 			.andExpect(status().isCreated());
 
 		// Allocate 300.00 (Total: 900.00)
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + transport + ",\"allocatedAmount\":300.00}"))
+				.content("{\"categoryId\":\"" + transport + "\",\"allocatedAmount\":300.00}"))
 			.andExpect(status().isCreated());
 
 		// Attempt to allocate 150.00 (Total would be 1050.00 > 1000.00) -> MUST FAIL (400)
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + housing + ",\"allocatedAmount\":150.00}"))
+				.content("{\"categoryId\":\"" + housing + "\",\"allocatedAmount\":150.00}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.error").value("invalid_request"))
+			.andExpect(jsonPath("$.code").value("invalid_request"))
 			.andExpect(jsonPath("$.message").value("Total category allocations (1050.00) cannot exceed overall budget (1000.00)"));
 	}
 
 	@Test
 	void allocationsSumCanExactlyEqualOverallBudget() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
-		Integer food = categoryId(token, "Food & Groceries");
-		Integer transport = categoryId(token, "Transport");
+		String periodId = currentPeriodId(token);
+		String food = categoryId(token, "Food & Groceries");
+		String transport = categoryId(token, "Transport");
 
-		Long budgetId = createBudget(token, periodId, "1000.00");
+		String budgetId = createBudget(token, periodId, "1000.00");
 
 		// Allocate 600.00
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + food + ",\"allocatedAmount\":600.00}"))
+				.content("{\"categoryId\":\"" + food + "\",\"allocatedAmount\":600.00}"))
 			.andExpect(status().isCreated());
 
 		// Allocate 400.00 (Total: exactly 1000.00 == 1000.00)
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + transport + ",\"allocatedAmount\":400.00}"))
+				.content("{\"categoryId\":\"" + transport + "\",\"allocatedAmount\":400.00}"))
 			.andExpect(status().isCreated());
 
 		// Verify remainingUnallocated is 0.00
@@ -145,26 +144,26 @@ class BudgetAllocationValidationTests {
 	@Test
 	void updateAllocationDoesNotDoubleCountExistingAmount() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
-		Integer food = categoryId(token, "Food & Groceries");
-		Integer transport = categoryId(token, "Transport");
+		String periodId = currentPeriodId(token);
+		String food = categoryId(token, "Food & Groceries");
+		String transport = categoryId(token, "Transport");
 
-		Long budgetId = createBudget(token, periodId, "1000.00");
+		String budgetId = createBudget(token, periodId, "1000.00");
 
 		// Food: 400.00
 		String foodResp = mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + food + ",\"allocatedAmount\":400.00}"))
+				.content("{\"categoryId\":\"" + food + "\",\"allocatedAmount\":400.00}"))
 			.andExpect(status().isCreated())
 			.andReturn().getResponse().getContentAsString();
-		Integer foodAllocId = JsonPath.read(foodResp, "$.id");
+		String foodAllocId = JsonPath.read(foodResp, "$.id");
 
 		// Transport: 400.00 (Total = 800.00)
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + transport + ",\"allocatedAmount\":400.00}"))
+				.content("{\"categoryId\":\"" + transport + "\",\"allocatedAmount\":400.00}"))
 			.andExpect(status().isCreated());
 
 		// Update Food from 400.00 to 500.00 (New total: (800 - 400) + 500 = 900.00 <= 1000.00)
@@ -182,30 +181,29 @@ class BudgetAllocationValidationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"allocatedAmount\":700.00}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.error").value("invalid_request"))
+			.andExpect(jsonPath("$.code").value("invalid_request"))
 			.andExpect(jsonPath("$.message").value("Total category allocations (1100.00) cannot exceed overall budget (1000.00)"));
 	}
 
 	@Test
 	void updatingOverallBudgetBelowCurrentAllocationsFails() throws Exception {
 		String token = registerAndLogin();
-		Long periodId = currentPeriodId(token);
-		Integer food = categoryId(token, "Food & Groceries");
-		Integer transport = categoryId(token, "Transport");
+		String periodId = currentPeriodId(token);
+		String food = categoryId(token, "Food & Groceries");
+		String transport = categoryId(token, "Transport");
 
-		Long budgetId = createBudget(token, periodId, "1000.00");
+		String budgetId = createBudget(token, periodId, "1000.00");
 
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + food + ",\"allocatedAmount\":400.00}"))
+				.content("{\"categoryId\":\"" + food + "\",\"allocatedAmount\":400.00}"))
 			.andExpect(status().isCreated());
 
 		mockMvc.perform(post("/api/budgets/" + budgetId + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + transport + ",\"allocatedAmount\":350.00}"))
+				.content("{\"categoryId\":\"" + transport + "\",\"allocatedAmount\":350.00}"))
 			.andExpect(status().isCreated());
 
 		// Total allocations is 750.00. Attempt to lower budget to 700.00 -> MUST FAIL (400)
@@ -214,8 +212,7 @@ class BudgetAllocationValidationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"overallAmount\":700.00}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.error").value("invalid_request"));
+			.andExpect(jsonPath("$.code").value("invalid_request"));
 
 		// Lowering budget to 800.00 (>= 750.00) -> SUCCEEDS (200)
 		mockMvc.perform(put("/api/budgets/" + budgetId)
@@ -233,26 +230,25 @@ class BudgetAllocationValidationTests {
 		String user1Token = registerAndLogin();
 		String user2Token = registerAndLogin();
 
-		Long period1 = currentPeriodId(user1Token);
-		Long budget1 = createBudget(user1Token, period1, "1000.00");
+		String period1 = currentPeriodId(user1Token);
+		String budget1 = createBudget(user1Token, period1, "1000.00");
 
-		Integer user2Category = categoryId(user2Token, "Food & Groceries");
+		String user2Category = categoryId(user2Token, "Food & Groceries");
 
 		// User 2 cannot access or allocate to User 1's budget (404)
 		mockMvc.perform(post("/api/budgets/" + budget1 + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, user2Token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + user2Category + ",\"allocatedAmount\":200.00}"))
+				.content("{\"categoryId\":\"" + user2Category + "\",\"allocatedAmount\":200.00}"))
 			.andExpect(status().isNotFound());
 
 		// User 1 cannot use User 2's category in User 1's budget (400)
 		mockMvc.perform(post("/api/budgets/" + budget1 + "/allocations")
 				.header(HttpHeaders.AUTHORIZATION, user1Token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"categoryId\":" + user2Category + ",\"allocatedAmount\":200.00}"))
+				.content("{\"categoryId\":\"" + user2Category + "\",\"allocatedAmount\":200.00}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.error").value("invalid_request"));
+			.andExpect(jsonPath("$.code").value("invalid_request"));
 	}
 
 	@Test
@@ -262,35 +258,33 @@ class BudgetAllocationValidationTests {
 			.andExpect(status().isUnauthorized());
 	}
 
-	private Long createBudget(String token, Long periodId, String overallAmount) throws Exception {
+	private String createBudget(String token, String periodId, String overallAmount) throws Exception {
 		String body = mockMvc.perform(post("/api/budgets")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"periodId\":" + periodId + ",\"overallAmount\":" + overallAmount + "}"))
+				.content("{\"periodId\":\"" + periodId + "\",\"overallAmount\":" + overallAmount + "}"))
 			.andExpect(status().isCreated())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		Integer id = JsonPath.read(body, "$.id");
-		return id.longValue();
+		return JsonPath.read(body, "$.id");
 	}
 
-	private Long currentPeriodId(String token) throws Exception {
+	private String currentPeriodId(String token) throws Exception {
 		String body = mockMvc.perform(get("/api/periods/current").header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		Integer id = JsonPath.read(body, "$.id");
-		return id.longValue();
+		return JsonPath.read(body, "$.id");
 	}
 
-	private Integer categoryId(String token, String name) throws Exception {
+	private String categoryId(String token, String name) throws Exception {
 		String body = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		java.util.List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
+		java.util.List<String> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
 		return ids.get(0);
 	}
 

@@ -27,7 +27,7 @@ export type SignUpDetails = {
 /**
  * POST /auth/register.
  *
- * Rejects with an `ApiRequestError` carrying `fieldErrors` on a 400 (validation) and a plain
+ * Rejects with an `ApiRequestError` carrying `fields` on a 400 (validation) and a plain
  * message on a 409 (username or email already taken).
  */
 export function register(details: SignUpDetails): Promise<Account> {

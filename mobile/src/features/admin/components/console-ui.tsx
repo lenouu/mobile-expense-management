@@ -105,17 +105,27 @@ export function MetricTile({
         style,
       ]}>
       <View style={styles.metricTop}>
-        <ThemedText type="small" style={onLead ? styles.onLeadMuted : undefined} themeColor={onLead ? undefined : 'textSecondary'}>
+        {/*
+          The label has to be able to shrink. React Native defaults flexShrink to 0, so a long
+          label like "Default Categories" would hold its full width, push the fixed-size icon out
+          of the row and leave it hanging over the card's border.
+        */}
+        <ThemedText
+          type="small"
+          style={[styles.metricLabel, onLead ? styles.onLeadMuted : undefined]}
+          themeColor={onLead ? undefined : 'textSecondary'}>
           {label}
         </ThemedText>
         {icon ? (
-          <IconTile
-            name={icon}
-            size={34}
-            iconSize={17}
-            tint={onLead ? 'rgba(255,255,255,0.14)' : undefined}
-            color={onLead ? '#FFFFFF' : undefined}
-          />
+          <View style={styles.metricIcon}>
+            <IconTile
+              name={icon}
+              size={34}
+              iconSize={17}
+              tint={onLead ? 'rgba(255,255,255,0.14)' : undefined}
+              color={onLead ? '#FFFFFF' : undefined}
+            />
+          </View>
         ) : null}
       </View>
 
@@ -437,6 +447,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: Spacing.two,
+  },
+  /** Shrinks so a long label wraps instead of pushing the icon out of the card. */
+  metricLabel: {
+    flexShrink: 1,
+  },
+  /** Fixed size: the icon must never be squeezed by a long label beside it. */
+  metricIcon: {
+    flexShrink: 0,
   },
   metricValueRow: {
     flexDirection: 'row',

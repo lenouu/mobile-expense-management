@@ -1,10 +1,11 @@
 import { ReactNode, useState } from 'react';
 import { StyleSheet, TextInput, TextInputProps, View } from 'react-native';
 
-import { Button, DANGER_COLOR } from '@/components/ui/primitives';
+import { Button, Chip, DANGER_COLOR } from '@/components/ui/primitives';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, Status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { DEFAULT_CURRENCY, type Money } from '@/types/api';
 import { describeError as describeSharedError } from '@/utils/errors';
 
 // Pieces shared by the Expenses and Incomes screens (S2-TECH-2).
@@ -43,8 +44,41 @@ export function validateAmountAndDate(amount: string, date: string): Record<stri
   return errors;
 }
 
-export function formatAmount(amount: number): string {
+/** Currencies the app offers. The backend accepts any ISO 4217 code. */
+export const SUPPORTED_CURRENCIES = [DEFAULT_CURRENCY, 'EUR', 'USD'] as const;
+
+function formatAmount(amount: number): string {
   return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Renders a money object as e.g. "12,500.00 XAF".
+ *
+ * The code is shown next to the number rather than as a glyph, because XAF has no widely
+ * supported symbol. A bare number is still tolerated, so an older payload renders instead of
+ * crashing the list.
+ */
+export function formatMoney(money: Money | number | null | undefined): string {
+  if (money === null || money === undefined) return '—';
+  if (typeof money === 'number') return `${formatAmount(money)} ${DEFAULT_CURRENCY}`;
+  return `${formatAmount(money.amount)} ${money.currency || DEFAULT_CURRENCY}`;
+}
+
+/** Builds the request body's money object from what the user typed, or null when invalid. */
+export function toMoney(text: string, currency: string): Money | null {
+  const value = parseAmount(text);
+  return value === null ? null : { amount: value, currency: currency || DEFAULT_CURRENCY };
+}
+
+/**
+ * The message for the amount field.
+ *
+ * The backend validates money as a nested object, so it reports the failure at `amount.amount`;
+ * our own client-side checks use the plain key. Both are accepted so the message lands under the
+ * input either way.
+ */
+export function moneyFieldError(fields: Record<string, string>): string | undefined {
+  return fields['amount.amount'] ?? fields.amount;
 }
 
 export function formatDate(iso: string): string {
@@ -80,6 +114,23 @@ export function Field({ label, error, children }: { label: string; error?: strin
           {error}
         </ThemedText>
       )}
+    </View>
+  );
+}
+
+/** A small currency selector; XAF is what the backend assumes when a client omits it. */
+export function CurrencyPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (code: string) => void;
+}) {
+  return (
+    <View style={styles.row}>
+      {SUPPORTED_CURRENCIES.map((code) => (
+        <Chip key={code} label={code} selected={value === code} onPress={() => onChange(code)} onCard />
+      ))}
     </View>
   );
 }

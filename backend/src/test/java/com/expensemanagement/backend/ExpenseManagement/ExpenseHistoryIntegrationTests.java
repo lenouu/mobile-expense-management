@@ -33,6 +33,8 @@ import com.jayway.jsonpath.JsonPath;
  * Additional safe defaults:
  * - Only the authenticated user's own expenses are returned; unauthenticated requests are rejected.
  * - Ordering is by expense date descending, with created time descending as tiebreaker.
+ * - Envelope follows PageResponse (data, page, size, totalElements, totalPages), UUID string IDs,
+ *   Money {amount, currency}, and error responses use $.code.
  */
 @org.junit.jupiter.api.condition.EnabledIf("isDockerAvailable")
 @Import(TestcontainersConfiguration.class)
@@ -57,8 +59,8 @@ class ExpenseHistoryIntegrationTests {
 	@DisplayName("AC 1: Recorded expenses are listed with amount, category, date, description, and id - newest first")
 	void givenRecordedExpenses_whenUserViewsHistory_thenExpensesAreListedWithAllFieldsAndMostRecentFirst() throws Exception {
 		String token = registerAndLogin();
-		Integer food = categoryId(token, "Food & Groceries");
-		Integer transport = categoryId(token, "Transport");
+		String food = categoryId(token, "Food & Groceries");
+		String transport = categoryId(token, "Transport");
 
 		// Record three expenses on different dates
 		create(token, "15.00", "2026-09-01", food, "Supermarket");
@@ -67,25 +69,30 @@ class ExpenseHistoryIntegrationTests {
 
 		mockMvc.perform(get("/api/expenses").header(HttpHeaders.AUTHORIZATION, token))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content", hasSize(3)))
+				.andExpect(jsonPath("$.data", hasSize(3)))
 				// Item 0: newest date (2026-09-28)
-				.andExpect(jsonPath("$.content[0].id").isNumber())
-				.andExpect(jsonPath("$.content[0].amount").value(8.25))
-				.andExpect(jsonPath("$.content[0].date").value("2026-09-28"))
-				.andExpect(jsonPath("$.content[0].description").value("Bakery breakfast"))
-				.andExpect(jsonPath("$.content[0].category.id").value(food))
-				.andExpect(jsonPath("$.content[0].category.name").value("Food & Groceries"))
-				.andExpect(jsonPath("$.content[0].category.color").value(notNullValue()))
+				.andExpect(jsonPath("$.data[0].id").isString())
+				.andExpect(jsonPath("$.data[0].amount.amount").value(8.25))
+				.andExpect(jsonPath("$.data[0].amount.currency").value("XAF"))
+				.andExpect(jsonPath("$.data[0].date").value("2026-09-28"))
+				.andExpect(jsonPath("$.data[0].description").value("Bakery breakfast"))
+				.andExpect(jsonPath("$.data[0].category.id").value(food))
+				.andExpect(jsonPath("$.data[0].category.name").value("Food & Groceries"))
+				.andExpect(jsonPath("$.data[0].category.color").value(notNullValue()))
 				// Item 1: middle date (2026-09-15)
-				.andExpect(jsonPath("$.content[1].amount").value(45.5))
-				.andExpect(jsonPath("$.content[1].date").value("2026-09-15"))
-				.andExpect(jsonPath("$.content[1].description").value("Bus monthly pass"))
-				.andExpect(jsonPath("$.content[1].category.id").value(transport))
+				.andExpect(jsonPath("$.data[1].id").isString())
+				.andExpect(jsonPath("$.data[1].amount.amount").value(45.5))
+				.andExpect(jsonPath("$.data[1].amount.currency").value("XAF"))
+				.andExpect(jsonPath("$.data[1].date").value("2026-09-15"))
+				.andExpect(jsonPath("$.data[1].description").value("Bus monthly pass"))
+				.andExpect(jsonPath("$.data[1].category.id").value(transport))
 				// Item 2: oldest date (2026-09-01)
-				.andExpect(jsonPath("$.content[2].amount").value(15.0))
-				.andExpect(jsonPath("$.content[2].date").value("2026-09-01"))
-				.andExpect(jsonPath("$.content[2].description").value("Supermarket"))
-				.andExpect(jsonPath("$.page.totalElements").value(3));
+				.andExpect(jsonPath("$.data[2].id").isString())
+				.andExpect(jsonPath("$.data[2].amount.amount").value(15.0))
+				.andExpect(jsonPath("$.data[2].amount.currency").value("XAF"))
+				.andExpect(jsonPath("$.data[2].date").value("2026-09-01"))
+				.andExpect(jsonPath("$.data[2].description").value("Supermarket"))
+				.andExpect(jsonPath("$.totalElements").value(3));
 	}
 
 	@Test
@@ -95,29 +102,29 @@ class ExpenseHistoryIntegrationTests {
 
 		mockMvc.perform(get("/api/expenses").header(HttpHeaders.AUTHORIZATION, token))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content", hasSize(0)))
-				.andExpect(jsonPath("$.page.totalElements").value(0))
-				.andExpect(jsonPath("$.page.totalPages").value(0));
+				.andExpect(jsonPath("$.data", hasSize(0)))
+				.andExpect(jsonPath("$.totalElements").value(0))
+				.andExpect(jsonPath("$.totalPages").value(0));
 	}
 
 	@Test
 	@DisplayName("Safe default: Same date expenses use created time descending as tiebreaker")
 	void givenSameDateExpenses_thenCreatedAtTieBreakerOrdersMostRecentFirst() throws Exception {
 		String token = registerAndLogin();
-		Integer food = categoryId(token, "Food & Groceries");
+		String food = categoryId(token, "Food & Groceries");
 
 		// Both recorded on the same date: 2026-10-10
-		Integer firstId = create(token, "10.00", "2026-10-10", food, "First created");
-		Integer secondId = create(token, "20.00", "2026-10-10", food, "Second created");
+		String firstId = create(token, "10.00", "2026-10-10", food, "First created");
+		String secondId = create(token, "20.00", "2026-10-10", food, "Second created");
 
 		// Second created should come first because createdAt is descending
 		mockMvc.perform(get("/api/expenses").header(HttpHeaders.AUTHORIZATION, token))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content", hasSize(2)))
-				.andExpect(jsonPath("$.content[0].id").value(secondId))
-				.andExpect(jsonPath("$.content[0].description").value("Second created"))
-				.andExpect(jsonPath("$.content[1].id").value(firstId))
-				.andExpect(jsonPath("$.content[1].description").value("First created"));
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[0].id").value(secondId))
+				.andExpect(jsonPath("$.data[0].description").value("Second created"))
+				.andExpect(jsonPath("$.data[1].id").value(firstId))
+				.andExpect(jsonPath("$.data[1].description").value("First created"));
 	}
 
 	@Test
@@ -133,25 +140,35 @@ class ExpenseHistoryIntegrationTests {
 		String userA = registerAndLogin();
 		String userB = registerAndLogin();
 
-		Integer categoryA = categoryId(userA, "Health");
+		String categoryA = categoryId(userA, "Health");
 		create(userA, "100.00", "2026-11-01", categoryA, "User A medical expense");
 
 		// User A sees their expense
 		mockMvc.perform(get("/api/expenses").header(HttpHeaders.AUTHORIZATION, userA))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content", hasSize(1)))
-				.andExpect(jsonPath("$.content[0].description").value("User A medical expense"));
+				.andExpect(jsonPath("$.data", hasSize(1)))
+				.andExpect(jsonPath("$.data[0].description").value("User A medical expense"));
 
 		// User B cannot see User A's expense
 		mockMvc.perform(get("/api/expenses").header(HttpHeaders.AUTHORIZATION, userB))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content", hasSize(0)))
-				.andExpect(jsonPath("$.page.totalElements").value(0));
+				.andExpect(jsonPath("$.data", hasSize(0)))
+				.andExpect(jsonPath("$.totalElements").value(0));
+	}
+
+	@Test
+	@DisplayName("Safe default: Inverted date range returns 400 Bad Request with $.code = invalid_request")
+	void invalidDateRangeReturnsBadRequestWithCode() throws Exception {
+		String token = registerAndLogin();
+
+		mockMvc.perform(get("/api/expenses?from=2026-12-01&to=2026-11-01").header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("invalid_request"));
 	}
 
 	// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-	private Integer create(String token, String amount, String date, Integer categoryId, String description) throws Exception {
+	private String create(String token, String amount, String date, String categoryId, String description) throws Exception {
 		String body = mockMvc
 				.perform(post("/api/expenses").header(HttpHeaders.AUTHORIZATION, token)
 						.contentType(MediaType.APPLICATION_JSON)
@@ -163,17 +180,17 @@ class ExpenseHistoryIntegrationTests {
 		return JsonPath.read(body, "$.id");
 	}
 
-	private static String expenseJson(String amount, String date, Integer categoryId, String description) {
-		return "{\"amount\":" + amount + ",\"date\":\"" + date + "\",\"categoryId\":" + categoryId
-				+ (description != null ? ",\"description\":\"" + description + "\"" : "") + "}";
+	private static String expenseJson(String amount, String date, String categoryId, String description) {
+		return "{\"amount\":{\"amount\":" + amount + ",\"currency\":\"XAF\"},\"date\":\"" + date + "\",\"categoryId\":\""
+				+ categoryId + "\"" + (description != null ? ",\"description\":\"" + description + "\"" : "") + "}";
 	}
 
-	private Integer categoryId(String token, String name) throws Exception {
+	private String categoryId(String token, String name) throws Exception {
 		String body = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
 				.andReturn()
 				.getResponse()
 				.getContentAsString();
-		java.util.List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
+		java.util.List<String> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
 		return ids.get(0);
 	}
 

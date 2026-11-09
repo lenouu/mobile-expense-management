@@ -11,8 +11,8 @@ import { BottomTabInset, Brand, Radius, Spacing, Status } from '@/constants/them
 import { ApiRequestError } from '@/features/auth/lib/api-client';
 import {
   financeStyles as styles,
-  formatAmount,
   formatDate,
+  formatMoney,
 } from '@/features/finances/components/finance-ui';
 import { Expense, fetchExpense } from '@/features/finances/lib/finances-api';
 import { useTheme } from '@/hooks/use-theme';
@@ -52,7 +52,7 @@ export function ExpenseDetailsScreen() {
 
   const loadDetails = useCallback(async () => {
     if (!session) return;
-    if (!id || Number.isNaN(Number(id)) || Number(id) <= 0) {
+    if (!id || typeof id !== 'string' || !id.trim()) {
       setLoading(false);
       setNotFound(true);
       setError('Invalid expense ID format.');
@@ -174,7 +174,7 @@ export function ExpenseDetailsScreen() {
                   Total Amount
                 </ThemedText>
                 <ThemedText type="title" style={localStyles.heroAmount}>
-                  {formatAmount(expense.amount)}
+                  {formatMoney(expense.amount)}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   Date of expense: {formatDate(expense.date)}

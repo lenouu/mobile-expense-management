@@ -74,7 +74,7 @@ export function AdminUsersScreen({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   /**
    * The intake chart needs the whole window, not just the current page: one page of eight would
@@ -121,11 +121,11 @@ export function AdminUsersScreen({
           fetchUsers(session, { page: 0, size: 100, sort: 'createdAt,desc' }),
         ]);
 
-        setUsers(list.content);
-        setPage(list.page.number);
-        setTotalPages(list.page.totalPages);
-        setTotalElements(list.page.totalElements);
-        setWindowUsers(window.content);
+        setUsers(list.data);
+        setPage(list.page);
+        setTotalPages(list.totalPages);
+        setTotalElements(list.totalElements);
+        setWindowUsers(window.data);
       } catch (error) {
         handleFailure(error);
       } finally {

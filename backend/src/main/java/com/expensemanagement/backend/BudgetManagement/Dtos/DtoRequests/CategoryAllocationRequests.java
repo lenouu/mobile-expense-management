@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public class CategoryAllocationRequests
 {
@@ -17,7 +18,7 @@ public class CategoryAllocationRequests
     public static class SaveAllocation
     {
         @NotNull(message = "Category ID is required")
-        private Long categoryId;
+        private UUID categoryId;
 
         @NotNull(message = "Allocated amount is required")
         @DecimalMin(value = "0.01", message = "Allocated amount must be greater than 0")

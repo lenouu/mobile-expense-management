@@ -52,7 +52,7 @@ export function AccountActions({
   onFailure,
 }: {
   session: AdminSession;
-  userId: number;
+  userId: string;
   onChanged: (updated: Account) => void;
   onFailure: (error: unknown) => void;
 }) {

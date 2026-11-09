@@ -1,14 +1,13 @@
 package com.expensemanagement.backend.IncomeManagement.Dtos.DtoRequests;
 
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Digits;
+import com.expensemanagement.backend.Shared.Money;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class IncomeRequests {
@@ -21,10 +20,10 @@ public class IncomeRequests {
     @AllArgsConstructor
     public static class SaveIncome {
 
+        /** {@code {"amount": 250000.00, "currency": "XAF"}} - never a bare number. */
+        @Valid
         @NotNull(message = "Amount is required")
-        @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
-        @Digits(integer = 10, fraction = 2, message = "Amount can have at most 10 digits and 2 decimals")
-        private BigDecimal amount;
+        private Money amount;
 
         @NotNull(message = "Date is required")
         @PastOrPresent(message = "Date cannot be in the future")

@@ -6,13 +6,14 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface BudgetRepository extends JpaRepository<Budget, Long>
+public interface BudgetRepository extends JpaRepository<Budget, UUID>
 {
-    Optional<Budget> findByIdAndUserId(Long id, Long userId);
+    Optional<Budget> findByIdAndUserId(UUID id, UUID userId);
 
-    Optional<Budget> findByUserIdAndPeriodId(Long userId, Long periodId);
+    Optional<Budget> findByUserIdAndPeriodId(UUID userId, UUID periodId);
 
-    List<Budget> findAllByUserId(Long userId);
+    List<Budget> findAllByUserId(UUID userId);
 }

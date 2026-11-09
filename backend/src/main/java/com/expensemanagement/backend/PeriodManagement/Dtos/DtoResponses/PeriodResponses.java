@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Outgoing payloads for financial periods (S4-TECH-1). Same shape as {@code UserResponses}.
@@ -24,7 +25,7 @@ public class PeriodResponses
     @AllArgsConstructor
     public static class Period
     {
-        private final Long id;
+        private final UUID id;
         private final int sequence;
         private final LocalDate startDate;
         /** Inclusive. */

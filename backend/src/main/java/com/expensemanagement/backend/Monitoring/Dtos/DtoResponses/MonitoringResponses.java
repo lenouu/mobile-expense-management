@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Outgoing payloads for the monitoring API (US10).
@@ -79,7 +80,7 @@ public class MonitoringResponses
     @AllArgsConstructor
     public static class ErrorLogEntry
     {
-        private final Long id;
+        private final UUID id;
         private final Instant occurredAt;
         private final String httpMethod;
         private final String path;

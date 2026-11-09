@@ -15,10 +15,10 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-
+import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long>
+public interface UserRepository extends JpaRepository<User, UUID>
 {
     // ---------------------------------------------------------------------
     // Authentication / login lookups
@@ -72,7 +72,7 @@ public interface UserRepository extends JpaRepository<User, Long>
     long countByType(UserType type);
 
     /** Guard for acting on a live user, e.g. suspend/activate. */
-    Optional<User> findByIdAndStatus(Long id, UserAccountState status);
+    Optional<User> findByIdAndStatus(UUID id, UserAccountState status);
 
     boolean existsByEmailAndStatusNot(String email, UserAccountState status);
 
@@ -92,6 +92,5 @@ public interface UserRepository extends JpaRepository<User, Long>
     List<User> findAllByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
     long countByCreatedAtAfter(LocalDateTime from);
-
 
 }

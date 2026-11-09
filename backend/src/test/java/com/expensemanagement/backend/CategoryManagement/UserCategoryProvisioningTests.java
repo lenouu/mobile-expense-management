@@ -61,7 +61,7 @@ class UserCategoryProvisioningTests {
 
 		String mine = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, userToken))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0].id").isNumber())
+			.andExpect(jsonPath("$[0].id").isString())
 			.andExpect(jsonPath("$[0].defaultCategoryId").value(notNullValue()))
 			.andReturn()
 			.getResponse()
@@ -74,7 +74,7 @@ class UserCategoryProvisioningTests {
 	void inactiveDefaultIsNotCopied() throws Exception {
 		String adminToken = bearer(ADMIN);
 		String hidden = uniqueName("Hidden");
-		Integer id = createDefault(adminToken, hidden);
+		String id = createDefault(adminToken, hidden);
 		mockMvc
 			.perform(patch("/api/admin/categories/" + id + "/status").header(HttpHeaders.AUTHORIZATION, adminToken)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -94,7 +94,7 @@ class UserCategoryProvisioningTests {
 
 		// A default added after the first registration reaches only later accounts.
 		String added = uniqueName("Gym");
-		Integer id = createDefault(adminToken, added);
+		String id = createDefault(adminToken, added);
 		String secondToken = registerAndLogin();
 
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, firstToken))
@@ -114,8 +114,8 @@ class UserCategoryProvisioningTests {
 			.andExpect(jsonPath("$[*].name").value(not(hasItem(added + " renamed"))));
 
 		// Both users have a "Transport", but each sees only their own row.
-		List<Integer> firstIds = ids(firstToken);
-		List<Integer> secondIds = ids(secondToken);
+		List<String> firstIds = ids(firstToken);
+		List<String> secondIds = ids(secondToken);
 		assertThat(firstIds).isNotEmpty().doesNotContainAnyElementsOf(secondIds);
 	}
 
@@ -145,7 +145,7 @@ class UserCategoryProvisioningTests {
 		return bearer(userName);
 	}
 
-	private Integer createDefault(String adminToken, String name) throws Exception {
+	private String createDefault(String adminToken, String name) throws Exception {
 		String body = mockMvc
 			.perform(post("/api/admin/categories").header(HttpHeaders.AUTHORIZATION, adminToken)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -157,7 +157,7 @@ class UserCategoryProvisioningTests {
 		return JsonPath.read(body, "$.id");
 	}
 
-	private List<Integer> ids(String token) throws Exception {
+	private List<String> ids(String token) throws Exception {
 		String body = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
 			.andReturn()
 			.getResponse()

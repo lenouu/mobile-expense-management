@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.UserManagement.Services.ServiceImplements;
 
+import java.util.UUID;
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.UserCategoryService;
 import com.expensemanagement.backend.Exceptions.DuplicateResourceException;
 import com.expensemanagement.backend.Exceptions.InvalidCredentialsException;
@@ -132,7 +133,7 @@ public class UserServiceImpl implements UserService
     // ------------------------------------------------------------------
 
     @Override
-    public UserResponses.Details findById(Long id)
+    public UserResponses.Details findById(UUID id)
     {
         return UserMappers.toDetails(getUserOrThrow(id));
     }
@@ -160,6 +161,7 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<UserResponses.Summary> searchByName(String name, Pageable pageable)
     {
         // Two-parameter derived query again: one search box feeds both name fields.
@@ -174,7 +176,7 @@ public class UserServiceImpl implements UserService
 
     @Override
     @Transactional
-    public UserResponses.Details updateAccount(Long id, UserRequests.UpdateAccount request)
+    public UserResponses.Details updateAccount(UUID id, UserRequests.UpdateAccount request)
     {
         User user = getUserOrThrow(id);
 
@@ -194,7 +196,7 @@ public class UserServiceImpl implements UserService
 
     @Override
     @Transactional
-    public void changePassword(Long id, UserRequests.ChangePassword request)
+    public void changePassword(UUID id, UserRequests.ChangePassword request)
     {
         User user = getUserOrThrow(id);
 
@@ -224,7 +226,7 @@ public class UserServiceImpl implements UserService
     @Override
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
-    public UserResponses.Details updateStatus(Long id, UserRequests.UpdateAccountStatus request)
+    public UserResponses.Details updateStatus(UUID id, UserRequests.UpdateAccountStatus request)
     {
         User user = getUserOrThrow(id);
         UserMappers.applyStatus(user, request);
@@ -242,7 +244,7 @@ public class UserServiceImpl implements UserService
     @Override
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
-    public UserResponses.Details changeType(Long id, UserType type)
+    public UserResponses.Details changeType(UUID id, UserType type)
     {
         User user = getUserOrThrow(id);
 
@@ -264,7 +266,7 @@ public class UserServiceImpl implements UserService
 
     @Override
     @Transactional
-    public void deleteAccount(Long id, UserRequests.DeleteAccount request)
+    public void deleteAccount(UUID id, UserRequests.DeleteAccount request)
     {
         User user = getUserOrThrow(id);
 
@@ -284,7 +286,7 @@ public class UserServiceImpl implements UserService
 
     // ------------------------------------------------------------------
 
-    private User getUserOrThrow(Long id)
+    private User getUserOrThrow(UUID id)
     {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No user with id " + id));

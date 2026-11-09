@@ -92,14 +92,14 @@ class FinancialPeriodTests {
 		// The history runs from the current period back to the first, newest first.
 		String body = mockMvc.perform(get("/api/periods").param("size", "100").header(HttpHeaders.AUTHORIZATION, user.token()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.content[0].status").value("CURRENT"))
+			.andExpect(jsonPath("$.data[0].status").value("CURRENT"))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		Integer total = JsonPath.read(body, "$.page.totalElements");
-		Integer firstSequenceListed = JsonPath.read(body, "$.content[0].sequence");
+		Integer total = JsonPath.read(body, "$.totalElements");
+		Integer firstSequenceListed = JsonPath.read(body, "$.data[0].sequence");
 		assertThat(total).isEqualTo(firstSequenceListed);
-		String oldest = JsonPath.read(body, "$.content[" + (total - 1) + "].startDate");
+		String oldest = JsonPath.read(body, "$.data[" + (total - 1) + "].startDate");
 		assertThat(oldest).isEqualTo("2026-01-31");
 	}
 
@@ -133,7 +133,7 @@ class FinancialPeriodTests {
 
 	@Test
 	void lengthsShorterThanOneWeekOrLongerThanOneYearAreRefused() throws Exception {
-		Long userId = registerAndLogin().id();
+		UUID userId = registerAndLogin().id();
 
 		assertThatThrownBy(() -> periodService.changeLength(userId, 6, PeriodUnit.DAYS))
 			.isInstanceOf(InvalidRequestException.class)
@@ -162,7 +162,7 @@ class FinancialPeriodTests {
 
 	@Test
 	void datesFarInTheFutureAreRefused() throws Exception {
-		Long userId = registerAndLogin().id();
+		UUID userId = registerAndLogin().id();
 
 		assertThatThrownBy(() -> periodService.containing(userId, LocalDate.now().plusYears(2)))
 			.isInstanceOf(InvalidRequestException.class);
@@ -178,14 +178,14 @@ class FinancialPeriodTests {
 			.andExpect(jsonPath("$.lengthUnit").value("MONTHS"))
 			.andExpect(jsonPath("$.defaultLength").value(true));
 		mockMvc.perform(get("/api/periods").header(HttpHeaders.AUTHORIZATION, second.token()))
-			.andExpect(jsonPath("$.page.totalElements").value(1));
+			.andExpect(jsonPath("$.totalElements").value(1));
 
 		mockMvc.perform(get("/api/periods/current")).andExpect(status().isUnauthorized());
 		mockMvc.perform(get("/api/periods")).andExpect(status().isUnauthorized());
 		mockMvc.perform(get("/api/periods/settings")).andExpect(status().isUnauthorized());
 	}
 
-	private record User(Long id, String token) {
+	private record User(UUID id, String token) {
 	}
 
 	private User registerAndLogin() throws Exception {
@@ -205,8 +205,8 @@ class FinancialPeriodTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		Integer id = JsonPath.read(registered, "$.id");
-		return new User(id.longValue(), "Bearer " + JsonPath.read(body, "$.accessToken"));
+		String id = JsonPath.read(registered, "$.id");
+		return new User(UUID.fromString(id), "Bearer " + JsonPath.read(body, "$.accessToken"));
 	}
 
 }

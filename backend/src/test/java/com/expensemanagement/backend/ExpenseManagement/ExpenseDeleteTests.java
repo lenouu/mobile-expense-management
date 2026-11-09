@@ -42,27 +42,27 @@ class ExpenseDeleteTests {
 	void deletingRemovesExactlyThatExpenseAndKeepsEverythingElse() throws Exception {
 		String token = registerAndLogin();
 		String otherUser = registerAndLogin();
-		Integer food = categoryId(token, "Food & Groceries");
-		Integer wrong = create(token, "999", "2026-09-10", food);
-		Integer kept = create(token, "12.50", "2026-09-11", food);
-		Integer othersExpense = create(otherUser, "40", "2026-09-10", categoryId(otherUser, "Food & Groceries"));
+		String food = categoryId(token, "Food & Groceries");
+		String wrong = create(token, "999", "2026-09-10", food);
+		String kept = create(token, "12.50", "2026-09-11", food);
+		String othersExpense = create(otherUser, "40", "2026-09-10", categoryId(otherUser, "Food & Groceries"));
 
 		mockMvc.perform(delete("/api/expenses/" + wrong).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isNoContent());
 
 		// Gone from the list and the count: it no longer weighs on anything computed from expenses.
 		mockMvc.perform(get("/api/expenses").header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.content", hasSize(1)))
-			.andExpect(jsonPath("$.content[0].id").value(kept))
-			.andExpect(jsonPath("$.content[0].amount").value(12.5))
-			.andExpect(jsonPath("$.page.totalElements").value(1));
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].id").value(kept))
+			.andExpect(jsonPath("$.data[0].amount.amount").value(12.5))
+			.andExpect(jsonPath("$.totalElements").value(1));
 		mockMvc.perform(get("/api/expenses/" + wrong).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isNotFound());
 
 		// Another user's expenses are untouched.
 		mockMvc.perform(get("/api/expenses/" + othersExpense).header(HttpHeaders.AUTHORIZATION, otherUser))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.amount").value(40));
+			.andExpect(jsonPath("$.amount.amount").value(40));
 
 		// The category stays: deleting an expense never deletes the category it was filed under.
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
@@ -72,26 +72,26 @@ class ExpenseDeleteTests {
 	@Test
 	void deletingTheSameExpenseTwiceIsNotFoundTheSecondTime() throws Exception {
 		String token = registerAndLogin();
-		Integer id = create(token, "5", "2026-09-10", categoryId(token, "Other"));
+		String id = create(token, "5", "2026-09-10", categoryId(token, "Other"));
 
 		mockMvc.perform(delete("/api/expenses/" + id).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isNoContent());
 		mockMvc.perform(delete("/api/expenses/" + id).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error").value("not_found"));
+			.andExpect(jsonPath("$.code").value("not_found"));
 	}
 
 	@Test
 	void deletingAnExpenseThatDoesNotExistIsNotFound() throws Exception {
-		mockMvc.perform(delete("/api/expenses/999999999").header(HttpHeaders.AUTHORIZATION, registerAndLogin()))
+		mockMvc.perform(delete("/api/expenses/00000000-0000-0000-0000-000000000000").header(HttpHeaders.AUTHORIZATION, registerAndLogin()))
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error").value("not_found"));
+			.andExpect(jsonPath("$.code").value("not_found"));
 	}
 
 	@Test
 	void deletingRequiresAToken() throws Exception {
 		String token = registerAndLogin();
-		Integer id = create(token, "5", "2026-09-10", categoryId(token, "Other"));
+		String id = create(token, "5", "2026-09-10", categoryId(token, "Other"));
 
 		mockMvc.perform(delete("/api/expenses/" + id)).andExpect(status().isUnauthorized());
 
@@ -100,11 +100,11 @@ class ExpenseDeleteTests {
 			.andExpect(status().isOk());
 	}
 
-	private Integer create(String token, String amount, String date, Integer categoryId) throws Exception {
+	private String create(String token, String amount, String date, String categoryId) throws Exception {
 		String body = mockMvc
 			.perform(post("/api/expenses").header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":" + amount + ",\"date\":\"" + date + "\",\"categoryId\":" + categoryId + "}"))
+				.content("{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"categoryId\":\"" + categoryId + "\"" + "}"))
 			.andExpect(status().isCreated())
 			.andReturn()
 			.getResponse()
@@ -112,12 +112,12 @@ class ExpenseDeleteTests {
 		return JsonPath.read(body, "$.id");
 	}
 
-	private Integer categoryId(String token, String name) throws Exception {
+	private String categoryId(String token, String name) throws Exception {
 		String body = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
+		List<String> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
 		return ids.get(0);
 	}
 
