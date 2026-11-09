@@ -1,8 +1,10 @@
 package com.expensemanagement.backend.CategoryManagement.Controllers;
 
+import java.util.UUID;
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoRequests.CategoryRequests;
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoResponses.CategoryResponses;
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.DefaultCategoryService;
+import com.expensemanagement.backend.Shared.PageResponse;
 import com.expensemanagement.backend.Swagger.SwaggerConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,9 +16,9 @@ import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,8 +38,10 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code ROLE_ADMIN} for {@code /api/admin/**}, and the class-level {@code @PreAuthorize} travels
  * with the code if the route ever moves.
  *
- * <p>There is no DELETE on purpose: a category is deactivated instead, so it disappears for new
- * users without breaking anything already built from it.
+ * <p>Administrators can create, replace, deactivate and delete defaults. Deletion is safe for
+ * existing accounts because a user's categories are snapshots copied at sign-up, not references
+ * to these rows; deactivation remains the gentler option, keeping the row visible to
+ * administrators while no longer offering it to new users.
  */
 @RestController
 @RequestMapping("/api/admin/categories")
@@ -61,19 +65,19 @@ public class AdminCategoryController
                     Example: `?active=true&page=0&size=20&sort=name,asc`""")
     @ApiResponse(responseCode = "200", description = "Page of categories")
     @ApiResponse(responseCode = "403", description = "Caller is not an ADMIN", content = @Content)
-    public PagedModel<CategoryResponses.Details> list(
+    public PageResponse<CategoryResponses.Details> list(
             @Parameter(description = "Filter by active flag; omit for all")
             @RequestParam(required = false) Boolean active,
             @ParameterObject @PageableDefault(size = 20, sort = "name") Pageable pageable)
     {
-        return new PagedModel<>(categoryService.findAll(active, pageable));
+        return PageResponse.of(categoryService.findAll(active, pageable));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get one default category")
     @ApiResponse(responseCode = "200", description = "Category found")
     @ApiResponse(responseCode = "404", description = "No such id", content = @Content)
-    public CategoryResponses.Details getById(@PathVariable Long id)
+    public CategoryResponses.Details getById(@PathVariable UUID id)
     {
         return categoryService.findById(id);
     }
@@ -101,10 +105,28 @@ public class AdminCategoryController
     @ApiResponse(responseCode = "400", description = "Validation failed", content = @Content)
     @ApiResponse(responseCode = "404", description = "No such id", content = @Content)
     @ApiResponse(responseCode = "409", description = "Name already used", content = @Content)
-    public CategoryResponses.Details update(@PathVariable Long id,
+    public CategoryResponses.Details update(@PathVariable UUID id,
                                             @Valid @RequestBody CategoryRequests.SaveCategory request)
     {
         return categoryService.update(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete a default category",
+            description = """
+                    Removes the default permanently. Accounts that already have it keep their own
+                    copy - user categories are snapshots, not references - and new accounts simply
+                    no longer start with it.
+
+                    Prefer `PATCH /{id}/status` when you only want to stop offering it to new
+                    users while keeping it visible to administrators.""")
+    @ApiResponse(responseCode = "204", description = "Category deleted")
+    @ApiResponse(responseCode = "403", description = "Caller is not an ADMIN", content = @Content)
+    @ApiResponse(responseCode = "404", description = "No such id", content = @Content)
+    public void delete(@PathVariable UUID id)
+    {
+        categoryService.delete(id);
     }
 
     @PatchMapping("/{id}/status")
@@ -112,7 +134,7 @@ public class AdminCategoryController
             description = "A deactivated category is no longer offered to new users.")
     @ApiResponse(responseCode = "200", description = "Status changed")
     @ApiResponse(responseCode = "404", description = "No such id", content = @Content)
-    public CategoryResponses.Details changeStatus(@PathVariable Long id,
+    public CategoryResponses.Details changeStatus(@PathVariable UUID id,
                                                   @Valid @RequestBody CategoryRequests.UpdateCategoryStatus request)
     {
         return categoryService.changeStatus(id, request.getActive());

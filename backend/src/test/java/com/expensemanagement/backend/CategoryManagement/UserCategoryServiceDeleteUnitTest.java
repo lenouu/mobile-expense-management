@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,6 @@ import com.expensemanagement.backend.CategoryManagement.Repositories.UserCategor
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceImplements.UserCategoryServiceImpl;
 import com.expensemanagement.backend.Exceptions.OperationNotAllowedException;
 import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
-import com.expensemanagement.backend.ExpenseManagement.Repositories.ExpenseRepository;
 import com.expensemanagement.backend.UserManagement.Entities.User;
 import com.expensemanagement.backend.UserManagement.Repositories.UserRepository;
 
@@ -35,9 +35,6 @@ class UserCategoryServiceDeleteUnitTest {
 	@Mock
 	private UserRepository userRepository;
 
-	@Mock
-	private ExpenseRepository expenseRepository;
-
 	private UserCategoryServiceImpl userCategoryService;
 
 	@BeforeEach
@@ -45,15 +42,14 @@ class UserCategoryServiceDeleteUnitTest {
 		userCategoryService = new UserCategoryServiceImpl(
 				userCategoryRepository,
 				defaultCategoryRepository,
-				userRepository,
-				expenseRepository
+				userRepository
 		);
 	}
 
 	@Test
 	void delete_whenCategoryExistsAndNoExpensesLinked_deletesSuccessfully() {
-		Long userId = 1L;
-		Long categoryId = 42L;
+		UUID userId = UUID.randomUUID();
+		UUID categoryId = UUID.randomUUID();
 
 		User user = new User();
 		user.setId(userId);
@@ -64,19 +60,19 @@ class UserCategoryServiceDeleteUnitTest {
 		category.setName("Custom Hobbies");
 
 		when(userCategoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.of(category));
-		when(expenseRepository.existsByCategoryId(categoryId)).thenReturn(false);
+		when(userCategoryRepository.countExpensesUsing(categoryId)).thenReturn(0L);
 
 		userCategoryService.delete(userId, categoryId);
 
 		verify(userCategoryRepository).findByIdAndUserId(categoryId, userId);
-		verify(expenseRepository).existsByCategoryId(categoryId);
+		verify(userCategoryRepository).countExpensesUsing(categoryId);
 		verify(userCategoryRepository).delete(category);
 	}
 
 	@Test
 	void delete_whenCategoryHasLinkedExpenses_throwsOperationNotAllowedException() {
-		Long userId = 1L;
-		Long categoryId = 42L;
+		UUID userId = UUID.randomUUID();
+		UUID categoryId = UUID.randomUUID();
 
 		User user = new User();
 		user.setId(userId);
@@ -87,46 +83,29 @@ class UserCategoryServiceDeleteUnitTest {
 		category.setName("Groceries");
 
 		when(userCategoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.of(category));
-		when(expenseRepository.existsByCategoryId(categoryId)).thenReturn(true);
+		when(userCategoryRepository.countExpensesUsing(categoryId)).thenReturn(3L);
 
 		assertThatThrownBy(() -> userCategoryService.delete(userId, categoryId))
 				.isInstanceOf(OperationNotAllowedException.class)
-				.hasMessageContaining("Cannot delete category because it has active linked expenses");
+				.hasMessageContaining("Category 'Groceries' is still used by 3 expense(s)");
 
 		verify(userCategoryRepository).findByIdAndUserId(categoryId, userId);
-		verify(expenseRepository).existsByCategoryId(categoryId);
+		verify(userCategoryRepository).countExpensesUsing(categoryId);
 		verify(userCategoryRepository, never()).delete(category);
 	}
 
 	@Test
-	void delete_whenCategoryDoesNotExist_throwsResourceNotFoundException() {
-		Long userId = 1L;
-		Long nonExistentId = 999L;
+	void delete_whenCategoryNotFound_throwsResourceNotFoundException() {
+		UUID userId = UUID.randomUUID();
+		UUID categoryId = UUID.randomUUID();
 
-		when(userCategoryRepository.findByIdAndUserId(nonExistentId, userId)).thenReturn(Optional.empty());
+		when(userCategoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> userCategoryService.delete(userId, nonExistentId))
+		assertThatThrownBy(() -> userCategoryService.delete(userId, categoryId))
 				.isInstanceOf(ResourceNotFoundException.class)
-				.hasMessageContaining("No category with id " + nonExistentId);
+				.hasMessageContaining("No category with id " + categoryId);
 
-		verify(userCategoryRepository).findByIdAndUserId(nonExistentId, userId);
-		verify(expenseRepository, never()).existsByCategoryId(nonExistentId);
-		verify(userCategoryRepository, never()).delete(org.mockito.ArgumentMatchers.any());
-	}
-
-	@Test
-	void delete_whenCategoryBelongsToDifferentUser_throwsResourceNotFoundException() {
-		Long currentUserId = 1L;
-		Long otherUserCategoryId = 50L;
-
-		when(userCategoryRepository.findByIdAndUserId(otherUserCategoryId, currentUserId)).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> userCategoryService.delete(currentUserId, otherUserCategoryId))
-				.isInstanceOf(ResourceNotFoundException.class)
-				.hasMessageContaining("No category with id " + otherUserCategoryId);
-
-		verify(userCategoryRepository).findByIdAndUserId(otherUserCategoryId, currentUserId);
-		verify(expenseRepository, never()).existsByCategoryId(otherUserCategoryId);
+		verify(userCategoryRepository).findByIdAndUserId(categoryId, userId);
 		verify(userCategoryRepository, never()).delete(org.mockito.ArgumentMatchers.any());
 	}
 }

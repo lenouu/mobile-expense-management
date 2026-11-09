@@ -10,7 +10,6 @@ import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterfac
 import com.expensemanagement.backend.Exceptions.DuplicateResourceException;
 import com.expensemanagement.backend.Exceptions.OperationNotAllowedException;
 import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
-import com.expensemanagement.backend.ExpenseManagement.Repositories.ExpenseRepository;
 import com.expensemanagement.backend.UserManagement.Entities.User;
 import com.expensemanagement.backend.UserManagement.Repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Each user's own categories: copied from the defaults at sign-up (S2-TECH-1), or created by
@@ -35,17 +35,14 @@ public class UserCategoryServiceImpl implements UserCategoryService
     private final UserCategoryRepository userCategoryRepository;
     private final DefaultCategoryRepository defaultCategoryRepository;
     private final UserRepository userRepository;
-    private final ExpenseRepository expenseRepository;
 
     public UserCategoryServiceImpl(UserCategoryRepository userCategoryRepository,
                                    DefaultCategoryRepository defaultCategoryRepository,
-                                   UserRepository userRepository,
-                                   ExpenseRepository expenseRepository)
+                                   UserRepository userRepository)
     {
         this.userCategoryRepository = userCategoryRepository;
         this.defaultCategoryRepository = defaultCategoryRepository;
         this.userRepository = userRepository;
-        this.expenseRepository = expenseRepository;
     }
 
     @Override
@@ -66,7 +63,7 @@ public class UserCategoryServiceImpl implements UserCategoryService
     }
 
     @Override
-    public List<CategoryResponses.Owned> findMine(Long userId)
+    public List<CategoryResponses.Owned> findMine(UUID userId)
     {
         return userCategoryRepository.findAllByUserIdOrderByNameAsc(userId).stream()
                 .map(CategoryMappers::toOwned)
@@ -75,7 +72,7 @@ public class UserCategoryServiceImpl implements UserCategoryService
 
     @Override
     @Transactional
-    public CategoryResponses.Owned create(Long userId, CategoryRequests.SaveCategory request)
+    public CategoryResponses.Owned create(UUID userId, CategoryRequests.SaveCategory request)
     {
         String name = request.getName().trim();
 
@@ -95,19 +92,61 @@ public class UserCategoryServiceImpl implements UserCategoryService
         return CategoryMappers.toOwned(saved);
     }
 
+    /**
+     * Full replace of one of the caller's own categories.
+     *
+     * <p>{@code defaultCategoryId} is deliberately left alone by the mapper: renaming a category
+     * a user inherited from the defaults only rewrites their own snapshot, so the default and
+     * every other user's copy stay untouched.
+     */
     @Override
     @Transactional
-    public void delete(Long userId, Long id)
+    public CategoryResponses.Owned update(UUID userId, UUID id, CategoryRequests.SaveCategory request)
     {
-        UserCategory category = userCategoryRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("No category with id " + id));
+        UserCategory category = getOwnCategoryOrThrow(userId, id);
+        String name = request.getName().trim();
 
-        if (expenseRepository.existsByCategoryId(id))
+        // Excluding this id lets a user change only the case of a name ("food" -> "Food").
+        if (userCategoryRepository.existsByUserIdAndNameIgnoreCaseAndIdNot(userId, name, id))
         {
-            throw new OperationNotAllowedException("Cannot delete category because it has active linked expenses");
+            throw new DuplicateResourceException("You already have a category named '" + name + "'");
+        }
+
+        UserCategory saved = userCategoryRepository.save(CategoryMappers.apply(category, request));
+
+        log.info("User id={} updated category id={} name={}", userId, id, saved.getName());
+        return CategoryMappers.toOwned(saved);
+    }
+
+    /**
+     * Deletes one of the caller's own categories.
+     *
+     * <p>Refused while expenses still reference it: deleting the row would strip the category off
+     * those expenses and quietly corrupt the spending history the whole product reports on. The
+     * user has to recategorise or delete those expenses first.
+     */
+    @Override
+    @Transactional
+    public void delete(UUID userId, UUID id)
+    {
+        UserCategory category = getOwnCategoryOrThrow(userId, id);
+
+        long used = userCategoryRepository.countExpensesUsing(id);
+        if (used > 0)
+        {
+            throw new OperationNotAllowedException(
+                    "Category '" + category.getName() + "' is still used by " + used
+                            + " expense(s). Move or delete them first.");
         }
 
         userCategoryRepository.delete(category);
-        log.info("User id={} deleted category id={} name={}", userId, id, category.getName());
+        log.info("User id={} deleted category id={}", userId, id);
+    }
+
+    /** 404 for both "does not exist" and "belongs to someone else", so ids cannot be probed. */
+    private UserCategory getOwnCategoryOrThrow(UUID userId, UUID id)
+    {
+        return userCategoryRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No category with id " + id));
     }
 }

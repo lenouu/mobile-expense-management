@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ class BudgetControllerUnitTests {
 
 	private BudgetController budgetController;
 
-	private static final Long USER_ID = 5L;
+	private static final UUID USER_ID = id(5);
 
 	@BeforeEach
 	void setUp() {
@@ -42,18 +43,18 @@ class BudgetControllerUnitTests {
 	void createDelegatesToServiceWithCallerUserId() {
 		when(jwt.getSubject()).thenReturn(String.valueOf(USER_ID));
 		BudgetRequests.CreateBudget request = BudgetRequests.CreateBudget.builder()
-				.periodId(1L)
+				.periodId(id(1))
 				.overallAmount(new BigDecimal("1000.00"))
 				.build();
 
 		BudgetResponses.BudgetDetails expected = BudgetResponses.BudgetDetails.builder()
-				.id(10L)
+				.id(id(10))
 				.overallAmount(new BigDecimal("1000.00"))
 				.build();
 		when(budgetService.createBudget(USER_ID, request)).thenReturn(expected);
 
 		BudgetResponses.BudgetDetails result = budgetController.create(jwt, request);
-		assertThat(result.getId()).isEqualTo(10L);
+		assertThat(result.getId()).isEqualTo(id(10));
 		verify(budgetService).createBudget(USER_ID, request);
 	}
 
@@ -61,20 +62,20 @@ class BudgetControllerUnitTests {
 	void allocateCategoryDelegatesToService() {
 		when(jwt.getSubject()).thenReturn(String.valueOf(USER_ID));
 		CategoryAllocationRequests.SaveAllocation request = CategoryAllocationRequests.SaveAllocation.builder()
-				.categoryId(2L)
+				.categoryId(id(2))
 				.allocatedAmount(new BigDecimal("300.00"))
 				.build();
 
 		BudgetResponses.AllocationDetails expected = BudgetResponses.AllocationDetails.builder()
-				.id(20L)
-				.budgetId(10L)
+				.id(id(20))
+				.budgetId(id(10))
 				.allocatedAmount(new BigDecimal("300.00"))
 				.build();
-		when(budgetService.addOrUpdateAllocation(USER_ID, 10L, request)).thenReturn(expected);
+		when(budgetService.addOrUpdateAllocation(USER_ID, id(10), request)).thenReturn(expected);
 
-		BudgetResponses.AllocationDetails result = budgetController.allocateCategory(jwt, 10L, request);
+		BudgetResponses.AllocationDetails result = budgetController.allocateCategory(jwt, id(10), request);
 		assertThat(result.getAllocatedAmount()).isEqualByComparingTo("300.00");
-		verify(budgetService).addOrUpdateAllocation(USER_ID, 10L, request);
+		verify(budgetService).addOrUpdateAllocation(USER_ID, id(10), request);
 	}
 
 	@Test
@@ -85,32 +86,37 @@ class BudgetControllerUnitTests {
 				.build();
 
 		BudgetResponses.AllocationDetails expected = BudgetResponses.AllocationDetails.builder()
-				.id(20L)
-				.budgetId(10L)
+				.id(id(20))
+				.budgetId(id(10))
 				.allocatedAmount(new BigDecimal("450.00"))
 				.build();
-		when(budgetService.updateAllocation(USER_ID, 10L, 20L, request)).thenReturn(expected);
+		when(budgetService.updateAllocation(USER_ID, id(10), id(20), request)).thenReturn(expected);
 
-		BudgetResponses.AllocationDetails result = budgetController.updateAllocation(jwt, 10L, 20L, request);
+		BudgetResponses.AllocationDetails result = budgetController.updateAllocation(jwt, id(10), id(20), request);
 		assertThat(result.getAllocatedAmount()).isEqualByComparingTo("450.00");
-		verify(budgetService).updateAllocation(USER_ID, 10L, 20L, request);
+		verify(budgetService).updateAllocation(USER_ID, id(10), id(20), request);
 	}
 
 	@Test
 	void deleteAllocationDelegatesToService() {
 		when(jwt.getSubject()).thenReturn(String.valueOf(USER_ID));
 
-		budgetController.deleteAllocation(jwt, 10L, 20L);
-		verify(budgetService).deleteAllocation(USER_ID, 10L, 20L);
+		budgetController.deleteAllocation(jwt, id(10), id(20));
+		verify(budgetService).deleteAllocation(USER_ID, id(10), id(20));
 	}
 
 	@Test
 	void getAllocationsDelegatesToService() {
 		when(jwt.getSubject()).thenReturn(String.valueOf(USER_ID));
-		when(budgetService.getAllocations(USER_ID, 10L)).thenReturn(List.of());
+		when(budgetService.getAllocations(USER_ID, id(10))).thenReturn(List.of());
 
-		List<BudgetResponses.AllocationDetails> result = budgetController.getAllocations(jwt, 10L);
+		List<BudgetResponses.AllocationDetails> result = budgetController.getAllocations(jwt, id(10));
 		assertThat(result).isEmpty();
-		verify(budgetService).getAllocations(USER_ID, 10L);
+		verify(budgetService).getAllocations(USER_ID, id(10));
 	}
+
+	private static UUID id(long value) {
+		return new UUID(0L, value);
+	}
+
 }

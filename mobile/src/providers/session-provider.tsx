@@ -14,10 +14,13 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 /**
  * Holds the signed-in user's session for the whole app.
  *
- * Deliberately in-memory: the token is dropped when the app restarts, which is the safe default
- * while there is no secure storage wired up. To persist it later, add `expo-secure-store` and
- * read the token back in an effect here - nothing else has to change, because every screen asks
- * this provider rather than touching storage itself.
+ * Deliberately in-memory: the token is dropped when the app restarts, so launching always starts
+ * at the login screen. To persist it later, add `expo-secure-store` and read the token back in an
+ * effect here - nothing else has to change, because every screen asks this provider rather than
+ * touching storage itself.
+ *
+ * Persisting is deferred on purpose until the backend can revoke a token. Remembering a session
+ * the server cannot invalidate is the wrong trade for a financial app.
  */
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);

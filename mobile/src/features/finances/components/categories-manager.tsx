@@ -96,7 +96,7 @@ export function CategoriesManager({
       if (e instanceof ApiRequestError && e.status === 401) {
         setCategoryToDelete(null);
         handleError(e);
-      } else if (e instanceof ApiRequestError && e.status === 409) {
+      } else if (e instanceof ApiRequestError && (e.status === 422 || e.status === 409)) {
         const errorMsg = e.message || 'Cannot delete category because it has active linked expenses.';
         setModalError(errorMsg);
         setMessage(errorMsg);
@@ -305,7 +305,7 @@ function CategoryForm({
         // "You already have a category named ..." belongs next to the name.
         setFieldErrors({ name: e.message });
       } else {
-        setFieldErrors(e instanceof ApiRequestError ? e.fieldErrors : {});
+        setFieldErrors(e instanceof ApiRequestError ? e.fields : {});
         setError(describeError(e));
       }
     } finally {

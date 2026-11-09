@@ -23,8 +23,8 @@ import com.expensemanagement.backend.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
 
 /**
- * US18 end to end: deleting an unused category with {@code DELETE /api/categories/{id}}.
- * Rejects deletion if any active expenses are linked to the category (409 Conflict).
+ * US19 end to end: deleting an unused category with {@code DELETE /api/categories/{id}}.
+ * Rejects deletion if any active expenses are linked to the category (422 Unprocessable Entity).
  * Every test registers its own users, so records never leak between tests.
  */
 @Import(TestcontainersConfiguration.class)
@@ -40,7 +40,7 @@ class UserCategoryDeleteTests {
 	@Test
 	void deletingUnusedCategoryRemovesIt() throws Exception {
 		String token = registerAndLogin();
-		Integer categoryId = createCategory(token, "Temporary Category");
+		String categoryId = createCategory(token, "Temporary Category");
 
 		// Category is present.
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
@@ -58,18 +58,18 @@ class UserCategoryDeleteTests {
 	}
 
 	@Test
-	void deletingCategoryWithLinkedExpensesReturns409Conflict() throws Exception {
+	void deletingCategoryWithLinkedExpensesReturns422UnprocessableEntity() throws Exception {
 		String token = registerAndLogin();
-		Integer categoryId = createCategory(token, "Active Category");
+		String categoryId = createCategory(token, "Active Category");
 
 		// Create an expense linked to this category.
 		createExpense(token, "25.00", "2026-09-15", categoryId);
 
-		// Attempt to delete category with active expenses -> 409 Conflict.
+		// Attempt to delete category with active expenses -> 422 Unprocessable Entity.
 		mockMvc.perform(delete("/api/categories/" + categoryId).header(HttpHeaders.AUTHORIZATION, token))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.error").value("operation_not_allowed"))
-				.andExpect(jsonPath("$.message").value("Cannot delete category because it has active linked expenses"));
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.code").value("business_rule_violation"))
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("is still used by")));
 
 		// Category still exists.
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
@@ -80,14 +80,14 @@ class UserCategoryDeleteTests {
 	@Test
 	void deletingCategoryTwiceReturns404NotFoundTheSecondTime() throws Exception {
 		String token = registerAndLogin();
-		Integer categoryId = createCategory(token, "Double Delete");
+		String categoryId = createCategory(token, "Double Delete");
 
 		mockMvc.perform(delete("/api/categories/" + categoryId).header(HttpHeaders.AUTHORIZATION, token))
 				.andExpect(status().isNoContent());
 
 		mockMvc.perform(delete("/api/categories/" + categoryId).header(HttpHeaders.AUTHORIZATION, token))
 				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.error").value("not_found"));
+				.andExpect(jsonPath("$.code").value("not_found"));
 	}
 
 	@Test
@@ -95,12 +95,12 @@ class UserCategoryDeleteTests {
 		String ownerToken = registerAndLogin();
 		String otherToken = registerAndLogin();
 
-		Integer categoryId = createCategory(ownerToken, "Owner Category");
+		String categoryId = createCategory(ownerToken, "Owner Category");
 
 		// Other user cannot delete owner's category.
 		mockMvc.perform(delete("/api/categories/" + categoryId).header(HttpHeaders.AUTHORIZATION, otherToken))
 				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.error").value("not_found"));
+				.andExpect(jsonPath("$.code").value("not_found"));
 
 		// Category still exists for owner.
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, ownerToken))
@@ -111,7 +111,7 @@ class UserCategoryDeleteTests {
 	@Test
 	void deletingCategoryRequiresToken() throws Exception {
 		String token = registerAndLogin();
-		Integer categoryId = createCategory(token, "Unprotected Attempt");
+		String categoryId = createCategory(token, "Unprotected Attempt");
 
 		mockMvc.perform(delete("/api/categories/" + categoryId))
 				.andExpect(status().isUnauthorized());
@@ -124,7 +124,7 @@ class UserCategoryDeleteTests {
 
 	// ── Helpers ──────────────────────────────────────────────────────────────
 
-	private Integer createCategory(String token, String name) throws Exception {
+	private String createCategory(String token, String name) throws Exception {
 		String body = mockMvc
 				.perform(post("/api/categories").header(HttpHeaders.AUTHORIZATION, token)
 						.contentType(MediaType.APPLICATION_JSON)
@@ -136,11 +136,11 @@ class UserCategoryDeleteTests {
 		return JsonPath.read(body, "$.id");
 	}
 
-	private Integer createExpense(String token, String amount, String date, Integer categoryId) throws Exception {
+	private String createExpense(String token, String amount, String date, String categoryId) throws Exception {
 		String body = mockMvc
 				.perform(post("/api/expenses").header(HttpHeaders.AUTHORIZATION, token)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"amount\":" + amount + ",\"date\":\"" + date + "\",\"categoryId\":" + categoryId + "}"))
+						.content("{\"amount\":{\"amount\":" + amount + ",\"currency\":\"XAF\"},\"date\":\"" + date + "\",\"categoryId\":\"" + categoryId + "\"}"))
 				.andExpect(status().isCreated())
 				.andReturn()
 				.getResponse()

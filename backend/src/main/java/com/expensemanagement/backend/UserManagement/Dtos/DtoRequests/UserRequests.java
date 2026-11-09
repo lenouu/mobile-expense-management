@@ -59,8 +59,6 @@ public class UserRequests {
 
         @Past(message = "Date of birth must be in the past")
         private LocalDate dateOfBirth;
-
-        private String profilePictureReference;
     }
 
     @Getter
@@ -119,6 +117,26 @@ public class UserRequests {
         private UserType type;
 
         private String reason;
+    }
+
+    /**
+     * Body of `POST /users/me/photo`.
+     *
+     * <p>The picture travels base64-encoded in JSON rather than as a multipart part. A React Native
+     * multipart upload failed before the request reached the server on a real device, while plain
+     * JSON POSTs from the same app work - so the upload uses the transport that is known to work.
+     * The server decodes it, re-checks the real size and re-encodes the image.
+     */
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UploadPicture {
+
+        /** The image file, base64-encoded (no data-URI prefix). */
+        @NotBlank(message = "Image data is required")
+        private String image;
     }
 
     @Getter

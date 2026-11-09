@@ -1,31 +1,33 @@
-import { ApiRequestError, authRequest, login, PagedModel, Session } from '@/features/auth/lib/api-client';
+import { ApiRequestError, authRequest, login, Session } from '@/features/auth/lib/api-client';
+import type { Money, Page } from '@/types/api';
 
 // Shapes of /categories (S2-TECH-1), /expenses and /incomes (S2-TECH-2) for a signed-in user.
 
 export type MyCategory = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   icon: string | null;
   color: string | null;
-  defaultCategoryId: number | null;
+  defaultCategoryId: string | null;
 };
 
 export type Expense = {
-  id: number;
-  /** JSON number; the backend stores it as an exact decimal with 2 places. */
-  amount: number;
+  id: string;
+  /** `{ amount, currency }`; the backend never sends money as a bare number. */
+  amount: Money;
   /** YYYY-MM-DD */
   date: string;
   description: string | null;
-  category: { id: number; name: string; icon: string | null; color: string | null };
+  category: { id: string; name: string; icon: string | null; color: string | null };
   createdAt: string;
   updatedAt: string;
 };
 
 export type Income = {
-  id: number;
-  amount: number;
+  id: string;
+  /** `{ amount, currency }`; the backend never sends money as a bare number. */
+  amount: Money;
   date: string;
   source: string;
   description: string | null;
@@ -34,9 +36,9 @@ export type Income = {
 };
 
 /** Body of POST and PUT. PUT is a full replace: an omitted description is cleared. */
-export type SaveExpense = { amount: number; date: string; categoryId: number; description?: string };
+export type SaveExpense = { amount: Money; date: string; categoryId: string; description?: string };
 
-export type SaveIncome = { amount: number; date: string; source: string; description?: string };
+export type SaveIncome = { amount: Money; date: string; source: string; description?: string };
 
 /**
  * Logs in a regular user. Admin accounts have no categories or money of their own, so they are
@@ -61,7 +63,7 @@ export function createMyCategory(session: Session, category: NewCategory) {
   return authRequest<MyCategory>('/categories', session, { method: 'POST', body: category });
 }
 
-export function deleteMyCategory(session: Session, id: number) {
+export function deleteMyCategory(session: Session, id: string) {
   return authRequest<void>(`/categories/${id}`, session, { method: 'DELETE' });
 }
 
@@ -70,24 +72,24 @@ function pageParams(options: { page?: number; size?: number }) {
 }
 
 export function fetchExpenses(session: Session, options: { page?: number; size?: number } = {}) {
-  return authRequest<PagedModel<Expense>>(`/expenses?${pageParams(options)}`, session);
+  return authRequest<Page<Expense>>(`/expenses?${pageParams(options)}`, session);
 }
 
 export function createExpense(session: Session, expense: SaveExpense) {
   return authRequest<Expense>('/expenses', session, { method: 'POST', body: expense });
 }
 
-export function updateExpense(session: Session, id: number, expense: SaveExpense) {
+export function updateExpense(session: Session, id: string, expense: SaveExpense) {
   return authRequest<Expense>(`/expenses/${id}`, session, { method: 'PUT', body: expense });
 }
 
-export function deleteExpense(session: Session, id: number) {
+export function deleteExpense(session: Session, id: string) {
   return authRequest<void>(`/expenses/${id}`, session, { method: 'DELETE' });
 }
 
 /** One financial period of the signed-in user (S4-TECH-1). Dates are YYYY-MM-DD, both inclusive. */
 export type FinancialPeriod = {
-  id: number;
+  id: string;
   sequence: number;
   startDate: string;
   endDate: string;
@@ -98,31 +100,31 @@ export type FinancialPeriod = {
 };
 
 /** GET /expenses/total (US39). */
-export type ExpenseTotal = { period: FinancialPeriod; total: number; count: number };
+export type ExpenseTotal = { period: FinancialPeriod; total: Money; count: number };
 
 /** GET /periods - newest first, so index 0 is the current period. */
 export function fetchPeriods(session: Session, options: { page?: number; size?: number } = {}) {
-  return authRequest<PagedModel<FinancialPeriod>>(`/periods?${pageParams(options)}`, session);
+  return authRequest<Page<FinancialPeriod>>(`/periods?${pageParams(options)}`, session);
 }
 
 /** Total of my expenses for a period; the current one when `periodId` is omitted. */
-export function fetchExpenseTotal(session: Session, periodId?: number) {
+export function fetchExpenseTotal(session: Session, periodId?: string) {
   const query = periodId !== undefined ? `?periodId=${periodId}` : '';
   return authRequest<ExpenseTotal>(`/expenses/total${query}`, session);
 }
 
 export function fetchIncomes(session: Session, options: { page?: number; size?: number } = {}) {
-  return authRequest<PagedModel<Income>>(`/incomes?${pageParams(options)}`, session);
+  return authRequest<Page<Income>>(`/incomes?${pageParams(options)}`, session);
 }
 
 export function createIncome(session: Session, income: SaveIncome) {
   return authRequest<Income>('/incomes', session, { method: 'POST', body: income });
 }
 
-export function updateIncome(session: Session, id: number, income: SaveIncome) {
+export function updateIncome(session: Session, id: string, income: SaveIncome) {
   return authRequest<Income>(`/incomes/${id}`, session, { method: 'PUT', body: income });
 }
 
-export function deleteIncome(session: Session, id: number) {
+export function deleteIncome(session: Session, id: string) {
   return authRequest<void>(`/incomes/${id}`, session, { method: 'DELETE' });
 }

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,16 +48,20 @@ class CategoryControllerDeleteUnitTest {
 
 	private MockMvc mockMvc;
 
-	private final Jwt mockJwt = new Jwt(
-			"token",
-			Instant.now(),
-			Instant.now().plusSeconds(3600),
-			Map.of("alg", "none"),
-			Map.of("sub", "123")
-	);
+	private final UUID userId = UUID.randomUUID();
+
+	private Jwt mockJwt;
 
 	@BeforeEach
 	void setUp() {
+		mockJwt = new Jwt(
+				"token",
+				Instant.now(),
+				Instant.now().plusSeconds(3600),
+				Map.of("alg", "none"),
+				Map.of("sub", userId.toString())
+		);
+
 		CategoryController controller = new CategoryController(defaultCategoryService, userCategoryService);
 		GlobalExceptionHandler exceptionHandler = new GlobalExceptionHandler(errorLogService);
 
@@ -82,42 +87,40 @@ class CategoryControllerDeleteUnitTest {
 
 	@Test
 	void delete_whenCategoryIsUnused_returns204NoContent() throws Exception {
-		Long categoryId = 42L;
-		doNothing().when(userCategoryService).delete(123L, categoryId);
+		UUID categoryId = UUID.randomUUID();
+		doNothing().when(userCategoryService).delete(userId, categoryId);
 
 		mockMvc.perform(delete("/api/categories/" + categoryId))
 				.andExpect(status().isNoContent());
 
-		verify(userCategoryService).delete(123L, categoryId);
+		verify(userCategoryService).delete(userId, categoryId);
 	}
 
 	@Test
-	void delete_whenCategoryHasLinkedExpenses_returns409Conflict() throws Exception {
-		Long categoryId = 42L;
-		doThrow(new OperationNotAllowedException("Cannot delete category because it has active linked expenses"))
-				.when(userCategoryService).delete(123L, categoryId);
+	void delete_whenCategoryHasLinkedExpenses_returns422UnprocessableEntity() throws Exception {
+		UUID categoryId = UUID.randomUUID();
+		doThrow(new OperationNotAllowedException("Category 'Groceries' is still used by 2 expense(s). Move or delete them first."))
+				.when(userCategoryService).delete(userId, categoryId);
 
 		mockMvc.perform(delete("/api/categories/" + categoryId))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.status").value(409))
-				.andExpect(jsonPath("$.error").value("operation_not_allowed"))
-				.andExpect(jsonPath("$.message").value("Cannot delete category because it has active linked expenses"));
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.code").value("business_rule_violation"))
+				.andExpect(jsonPath("$.message").value("Category 'Groceries' is still used by 2 expense(s). Move or delete them first."));
 
-		verify(userCategoryService).delete(123L, categoryId);
+		verify(userCategoryService).delete(userId, categoryId);
 	}
 
 	@Test
 	void delete_whenCategoryNotFound_returns404NotFound() throws Exception {
-		Long categoryId = 999L;
+		UUID categoryId = UUID.randomUUID();
 		doThrow(new ResourceNotFoundException("No category with id " + categoryId))
-				.when(userCategoryService).delete(123L, categoryId);
+				.when(userCategoryService).delete(userId, categoryId);
 
 		mockMvc.perform(delete("/api/categories/" + categoryId))
 				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.status").value(404))
-				.andExpect(jsonPath("$.error").value("not_found"))
+				.andExpect(jsonPath("$.code").value("not_found"))
 				.andExpect(jsonPath("$.message").value("No category with id " + categoryId));
 
-		verify(userCategoryService).delete(123L, categoryId);
+		verify(userCategoryService).delete(userId, categoryId);
 	}
 }

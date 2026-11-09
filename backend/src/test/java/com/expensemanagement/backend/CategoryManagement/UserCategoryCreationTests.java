@@ -46,7 +46,7 @@ class UserCategoryCreationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\"  Pets  \",\"description\":\"Food and vet\",\"icon\":\"paw\",\"color\":\"#AABBCC\"}"))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.id").isNumber())
+			.andExpect(jsonPath("$.id").isString())
 			.andExpect(jsonPath("$.name").value("Pets"))
 			.andExpect(jsonPath("$.description").value("Food and vet"))
 			.andExpect(jsonPath("$.icon").value("paw"))
@@ -56,7 +56,7 @@ class UserCategoryCreationTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		Integer id = JsonPath.read(created, "$.id");
+		String id = JsonPath.read(created, "$.id");
 
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(jsonPath("$[*].name").value(hasItem("Pets")));
@@ -64,7 +64,7 @@ class UserCategoryCreationTests {
 		mockMvc
 			.perform(post("/api/expenses").header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":25,\"date\":\"2026-09-15\",\"categoryId\":" + id + "}"))
+				.content("{\"amount\":{\"amount\":25},\"date\":\"2026-09-15\",\"categoryId\":\"" + id + "\"}"))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.category.id").value(id))
 			.andExpect(jsonPath("$.category.name").value("Pets"));
@@ -94,7 +94,7 @@ class UserCategoryCreationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\"PETS\"}"))
 			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.error").value("conflict"));
+			.andExpect(jsonPath("$.code").value("conflict"));
 
 		// Clashing with a starter category the user already has -> 409 too.
 		mockMvc
@@ -116,16 +116,16 @@ class UserCategoryCreationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\" \",\"color\":\"green\"}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error").value("validation_failed"))
-			.andExpect(jsonPath("$.fieldErrors.name").exists())
-			.andExpect(jsonPath("$.fieldErrors.color").exists());
+			.andExpect(jsonPath("$.code").value("validation_failed"))
+			.andExpect(jsonPath("$.fields.name").exists())
+			.andExpect(jsonPath("$.fields.color").exists());
 
 		mockMvc
 			.perform(post("/api/categories").header(HttpHeaders.AUTHORIZATION, registerAndLogin())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\"" + "x".repeat(51) + "\"}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.fieldErrors.name").exists());
+			.andExpect(jsonPath("$.fields.name").exists());
 	}
 
 	@Test

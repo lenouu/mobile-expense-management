@@ -83,23 +83,23 @@ class AdminMonitoringControllerTests {
 
 		mockMvc.perform(post("/api/admin/monitoring/simulate-error").header(HttpHeaders.AUTHORIZATION, adminToken))
 			.andExpect(status().isInternalServerError())
-			.andExpect(jsonPath("$.error").value("internal_error"))
+			.andExpect(jsonPath("$.code").value("internal_error"))
 			.andExpect(jsonPath("$.message").value("An unexpected error occurred"));
 
 		mockMvc.perform(get("/api/admin/logs/errors").header(HttpHeaders.AUTHORIZATION, adminToken))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.content", hasSize(1)))
-			.andExpect(jsonPath("$.content[0].id").isNumber())
-			.andExpect(jsonPath("$.content[0].occurredAt").isNotEmpty())
-			.andExpect(jsonPath("$.content[0].httpMethod").value("POST"))
-			.andExpect(jsonPath("$.content[0].path").value("/api/admin/monitoring/simulate-error"))
-			.andExpect(jsonPath("$.content[0].status").value(500))
-			.andExpect(jsonPath("$.content[0].exceptionType").value("java.lang.IllegalStateException"))
-			.andExpect(jsonPath("$.content[0].message").value("Simulated error for monitoring test"))
-			.andExpect(jsonPath("$.content[0].stackTrace").isNotEmpty())
-			.andExpect(jsonPath("$.page.number").value(0))
-			.andExpect(jsonPath("$.page.size").value(20))
-			.andExpect(jsonPath("$.page.totalElements").value(1));
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].id").isString())
+			.andExpect(jsonPath("$.data[0].occurredAt").isNotEmpty())
+			.andExpect(jsonPath("$.data[0].httpMethod").value("POST"))
+			.andExpect(jsonPath("$.data[0].path").value("/api/admin/monitoring/simulate-error"))
+			.andExpect(jsonPath("$.data[0].status").value(500))
+			.andExpect(jsonPath("$.data[0].exceptionType").value("java.lang.IllegalStateException"))
+			.andExpect(jsonPath("$.data[0].message").value("Simulated error for monitoring test"))
+			.andExpect(jsonPath("$.data[0].stackTrace").isNotEmpty())
+			.andExpect(jsonPath("$.page").value(0))
+			.andExpect(jsonPath("$.size").value(20))
+			.andExpect(jsonPath("$.totalElements").value(1));
 
 		mockMvc.perform(get("/api/admin/health").header(HttpHeaders.AUTHORIZATION, adminToken))
 			.andExpect(jsonPath("$.errorsLast24Hours").value(1));
@@ -117,7 +117,7 @@ class AdminMonitoringControllerTests {
 			.andExpect(status().isBadRequest());
 
 		mockMvc.perform(get("/api/admin/logs/errors").header(HttpHeaders.AUTHORIZATION, adminToken))
-			.andExpect(jsonPath("$.page.totalElements").value(0));
+			.andExpect(jsonPath("$.totalElements").value(0));
 	}
 
 	@Test
@@ -132,8 +132,8 @@ class AdminMonitoringControllerTests {
 				.param("to", "2026-04-01T00:00:00Z")
 				.header(HttpHeaders.AUTHORIZATION, bearer(ADMIN)))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.content", hasSize(1)))
-			.andExpect(jsonPath("$.content[0].message").value("new"));
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].message").value("new"));
 	}
 
 	@Test
@@ -149,17 +149,17 @@ class AdminMonitoringControllerTests {
 				.param("size", "2")
 				.header(HttpHeaders.AUTHORIZATION, adminToken))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.content", hasSize(2)))
-			.andExpect(jsonPath("$.content[0].message").value("day 3"))
-			.andExpect(jsonPath("$.page.totalElements").value(3))
-			.andExpect(jsonPath("$.page.totalPages").value(2));
+			.andExpect(jsonPath("$.data", hasSize(2)))
+			.andExpect(jsonPath("$.data[0].message").value("day 3"))
+			.andExpect(jsonPath("$.totalElements").value(3))
+			.andExpect(jsonPath("$.totalPages").value(2));
 
 		mockMvc
 			.perform(get("/api/admin/logs/errors").param("page", "1")
 				.param("size", "2")
 				.header(HttpHeaders.AUTHORIZATION, adminToken))
-			.andExpect(jsonPath("$.content", hasSize(1)))
-			.andExpect(jsonPath("$.content[0].message").value("day 1"));
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].message").value("day 1"));
 	}
 
 	@Test
@@ -169,7 +169,7 @@ class AdminMonitoringControllerTests {
 				.param("to", "2026-04-01T00:00:00Z")
 				.header(HttpHeaders.AUTHORIZATION, bearer(ADMIN)))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error").value("invalid_request"));
+			.andExpect(jsonPath("$.code").value("invalid_request"));
 	}
 
 	private String bearer(String userName) throws Exception {

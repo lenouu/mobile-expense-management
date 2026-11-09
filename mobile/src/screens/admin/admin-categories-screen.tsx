@@ -46,7 +46,7 @@ export function AdminCategoriesScreen({
   const [message, setMessage] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
   const handleFailure = useCallback(
@@ -77,8 +77,8 @@ export function AdminCategoriesScreen({
         // One unfiltered read: the list is short, and filtering locally means the counts in the
         // pills and the rows on screen can never disagree.
         const result = await fetchDefaultCategories(session, { page: 0, size: 100 });
-        setCategories(result.content);
-        onCategoriesLoaded?.(result.content);
+        setCategories(result.data);
+        onCategoriesLoaded?.(result.data);
       } catch (error) {
         handleFailure(error);
       } finally {
@@ -395,7 +395,7 @@ function CategoryForm({
       } else if (error instanceof ApiRequestError && error.status === 409) {
         setErrors({ name: error.message });
       } else if (error instanceof ApiRequestError) {
-        setErrors({ ...error.fieldErrors, form: error.message });
+        setErrors({ ...error.fields, form: error.message });
       } else {
         setErrors({ form: describeError(error) });
       }

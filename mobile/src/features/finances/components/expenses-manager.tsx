@@ -3,14 +3,16 @@ import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-nativ
 
 import { Button, Chip } from '@/components/ui/primitives';
 import {
+  CurrencyPicker,
   DeleteButton,
   Field,
   financeStyles as styles,
-  formatAmount,
   formatDate,
-  parseAmount,
+  formatMoney,
+  moneyFieldError,
   TextField,
   todayIso,
+  toMoney,
   validateAmountAndDate,
 } from '@/features/finances/components/finance-ui';
 import { ExpenseTotalCard } from '@/features/finances/components/expense-total-card';
@@ -20,6 +22,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { ApiRequestError } from '@/features/auth/lib/api-client';
 import { describeError } from '@/utils/errors';
 import type { Session } from '@/types/api';
+import { DEFAULT_CURRENCY } from '@/types/api';
 import {
   createExpense,
   deleteExpense,
@@ -34,7 +37,7 @@ import {
 const PAGE_SIZE = 20;
 
 /** null: form closed. 'new': adding. A number: editing that expense. */
-type Editing = null | 'new' | number;
+type Editing = null | 'new' | string;
 
 /**
  * S2-TECH-2: the signed-in user's expenses - list, add, edit and delete.
@@ -62,7 +65,7 @@ export function ExpensesManager({
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   // Bumped on every reload so the total card (US39) refetches after an add, edit or delete.
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -95,10 +98,10 @@ export function ExpensesManager({
         fetchExpenses(session, { page: 0, size: PAGE_SIZE }),
         fetchMyCategories(session),
       ]);
-      setExpenses(list.content);
+      setExpenses(list.data);
       setPage(0);
-      setTotalPages(list.page.totalPages);
-      setTotal(list.page.totalElements);
+      setTotalPages(list.totalPages);
+      setTotal(list.totalElements);
       setCategories(mine);
     } catch (e) {
       handleError(e);
@@ -115,9 +118,9 @@ export function ExpensesManager({
     setLoadingMore(true);
     try {
       const next = await fetchExpenses(session, { page: page + 1, size: PAGE_SIZE });
-      setExpenses((current) => [...current, ...next.content]);
-      setPage(next.page.number);
-      setTotalPages(next.page.totalPages);
+      setExpenses((current) => [...current, ...next.data]);
+      setPage(next.page);
+      setTotalPages(next.totalPages);
     } catch (e) {
       handleError(e);
     } finally {
@@ -137,7 +140,7 @@ export function ExpensesManager({
     setNotice(null);
     try {
       await deleteExpense(session, expense.id);
-      setNotice(`Expense of ${formatAmount(expense.amount)} deleted.`);
+      setNotice(`Expense of ${formatMoney(expense.amount)} deleted.`);
       load();
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 404) {
@@ -222,7 +225,7 @@ export function ExpensesManager({
             <ThemedView key={expense.id} type="backgroundElement" style={styles.card}>
               <View style={styles.headerRow}>
                 <ThemedText type="smallBold" style={styles.amount}>
-                  {formatAmount(expense.amount)}
+                  {formatMoney(expense.amount)}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {formatDate(expense.date)}
@@ -274,9 +277,10 @@ function ExpenseForm({
   onCancel: () => void;
   onAuthError: (e: unknown) => void;
 }) {
-  const [amount, setAmount] = useState(expense ? String(expense.amount) : '');
+  const [amount, setAmount] = useState(expense ? String(expense.amount.amount) : '');
+  const [currency, setCurrency] = useState(expense?.amount.currency ?? DEFAULT_CURRENCY);
   const [date, setDate] = useState(expense?.date ?? todayIso());
-  const [categoryId, setCategoryId] = useState<number | null>(expense?.category.id ?? null);
+  const [categoryId, setCategoryId] = useState<string | null>(expense?.category.id ?? null);
   const [description, setDescription] = useState(expense?.description ?? '');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -290,7 +294,7 @@ function ExpenseForm({
     if (Object.keys(errors).length > 0 || categoryId === null) return;
 
     const body: SaveExpense = {
-      amount: parseAmount(amount)!,
+      amount: toMoney(amount, currency)!,
       date: date.trim(),
       categoryId,
       description: description.trim() || undefined,
@@ -309,7 +313,7 @@ function ExpenseForm({
       if (e instanceof ApiRequestError && e.status === 401) {
         onAuthError(e);
       } else {
-        setFieldErrors(e instanceof ApiRequestError ? e.fieldErrors : {});
+        setFieldErrors(e instanceof ApiRequestError ? e.fields : {});
         setError(describeError(e));
       }
     } finally {
@@ -321,8 +325,12 @@ function ExpenseForm({
     <ThemedView type="backgroundElement" style={styles.card}>
       <ThemedText type="smallBold">{expense ? 'Edit expense' : 'New expense'}</ThemedText>
 
-      <Field label="Amount" error={fieldErrors.amount}>
+      <Field label="Amount" error={moneyFieldError(fieldErrors)}>
         <TextField placeholder="e.g. 12.50" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+      </Field>
+
+      <Field label="Currency">
+        <CurrencyPicker value={currency} onChange={setCurrency} />
       </Field>
 
       <Field label="Date (YYYY-MM-DD)" error={fieldErrors.date}>
