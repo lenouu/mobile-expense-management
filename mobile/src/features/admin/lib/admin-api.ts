@@ -60,8 +60,9 @@ export type ErrorLogEntry = {
 export type UserSummary = {
   id: string;
   userName: string;
-  firstName: string;
-  lastName: string;
+  /** Null for an account whose owner has not filled a name in yet. */
+  firstName: string | null;
+  lastName: string | null;
   profilePictureReference: string | null;
   status: AccountState;
   type: AccountType;

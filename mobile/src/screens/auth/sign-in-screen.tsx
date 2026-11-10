@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { BackButton } from '@/components/ui/back-button';
 import { BrandLockup } from '@/components/ui/brand-lockup';
 import { Card } from '@/components/ui/card';
+import { FadeIn } from '@/components/ui/fade-in';
 import { Button } from '@/components/ui/primitives';
 import { TextField } from '@/components/ui/text-field';
 import { WelcomeModal } from '@/components/ui/welcome-modal';
@@ -69,11 +70,21 @@ export function SignInScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen withTabInset={false} contentStyle={styles.content}>
-        <View style={styles.header}>
-          <BackButton onPress={goBack} />
-        </View>
+        <FadeIn>
+          <View style={styles.header}>
+            <BackButton onPress={goBack} />
+          </View>
+        </FadeIn>
 
-        <BrandLockup title="Welcome back" subtitle="Sign in to pick up where you left off." />
+        <FadeIn delay={60}>
+          <BrandLockup
+            floating
+            title="Welcome back"
+            subtitle="Sign in to pick up where you left off."
+          />
+        </FadeIn>
+
+        <FadeIn delay={120}>
 
         <Card style={styles.formCard}>
           <View style={styles.form}>
@@ -122,20 +133,23 @@ export function SignInScreen() {
             />
           </View>
         </Card>
+        </FadeIn>
 
-        <View style={styles.footer}>
-          <ThemedText type="caption" themeColor="textSecondary">
-            Don&apos;t have an account?{' '}
-          </ThemedText>
-          <Pressable
-            onPress={() => router.replace('/auth/sign-up')}
-            accessibilityRole="link"
-            hitSlop={Spacing.two}>
-            <ThemedText type="caption" style={styles.link}>
-              Create one
+        <FadeIn delay={180}>
+          <View style={styles.footer}>
+            <ThemedText type="caption" themeColor="textSecondary">
+              Don&apos;t have an account?{' '}
             </ThemedText>
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={() => router.push('/auth/sign-up')}
+              accessibilityRole="link"
+              hitSlop={Spacing.two}>
+              <ThemedText type="caption" style={styles.link}>
+                Create one
+              </ThemedText>
+            </Pressable>
+          </View>
+        </FadeIn>
       </Screen>
 
       <WelcomeModal

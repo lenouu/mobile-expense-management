@@ -14,15 +14,7 @@ import { describeError } from '@/utils/errors';
 import type { Account, Session } from '@/types/api';
 
 /** Every field name the backend can report in `fields`, plus the password misspelling. */
-const FORM_FIELDS: SignUpField[] = [
-  'firstName',
-  'lastName',
-  'userName',
-  'email',
-  'dateOfBirth',
-  'password',
-  'acceptedTerms',
-];
+const FORM_FIELDS: SignUpField[] = ['userName', 'email', 'password', 'acceptedTerms'];
 
 function isFormField(name: string): name is SignUpField {
   return (FORM_FIELDS as string[]).includes(name);

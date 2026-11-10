@@ -12,6 +12,9 @@ export type { Account } from '@/types/api';
  * Field names are the Java field names from `UserRequests.CreateAccount`, and `dateOfBirth` is
  * a plain `YYYY-MM-DD` string because that is what Jackson accepts for a `LocalDate`.
  *
+ * `firstName` and `lastName` are optional: the account exists without them, and the profile
+ * screen is where a name is filled in. They stay in the type for callers that already know it.
+ *
  * There is deliberately no `status` or `type`: the backend sets both server-side, so sending
  * them would be ignored.
  */
@@ -19,8 +22,8 @@ export type SignUpDetails = {
   userName: string;
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   dateOfBirth?: string;
 };
 

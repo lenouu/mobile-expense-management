@@ -8,8 +8,8 @@ import { Brand, Radius, Shadows, Spacing } from '@/constants/theme';
 /** One full up-and-down cycle: slow enough to read as breathing rather than as movement. */
 const FLOAT_HALF_CYCLE_MS = 1500;
 
-/** How far the emblem rises, in points. Deliberately small - the logo should not drift away. */
-const FLOAT_DISTANCE = 6;
+/** How far the emblem rises, in points. Far enough to be noticed, small enough not to drift. */
+const FLOAT_DISTANCE = 10;
 
 /**
  * The logo emblem and page title from the top of the Figma sign-up screen.
