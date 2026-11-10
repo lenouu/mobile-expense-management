@@ -96,8 +96,43 @@ function pageParams(options: { page?: number; size?: number }) {
   return new URLSearchParams({ page: String(options.page ?? 0), size: String(options.size ?? 20) });
 }
 
-export function fetchExpenses(session: Session, options: { page?: number; size?: number } = {}) {
-  return authRequest<Page<Expense>>(`/expenses?${pageParams(options)}`, session);
+/**
+ * The filters a listing and a total both accept. All optional, and they combine - which is why
+ * one shape is used for both: the total must describe exactly the rows the list would return.
+ */
+export type ExpenseFilters = {
+  periodId?: string;
+  /** YYYY-MM-DD, inclusive. */
+  from?: string;
+  to?: string;
+  categoryId?: string;
+  q?: string;
+};
+
+function expenseQuery(filters: ExpenseFilters, page?: { page?: number; size?: number }) {
+  const params = new URLSearchParams();
+
+  if (filters.periodId) params.set('periodId', filters.periodId);
+  if (filters.from) params.set('from', filters.from);
+  if (filters.to) params.set('to', filters.to);
+  if (filters.categoryId) params.set('categoryId', filters.categoryId);
+  // Blank would become "%%": a filter matching only rows that have a description.
+  if (filters.q?.trim()) params.set('q', filters.q.trim());
+
+  if (page) {
+    params.set('page', String(page.page ?? 0));
+    params.set('size', String(page.size ?? 20));
+  }
+
+  return params.toString();
+}
+
+export function fetchExpenses(
+  session: Session,
+  options: ExpenseFilters & { page?: number; size?: number } = {},
+) {
+  const { page, size, ...filters } = options;
+  return authRequest<Page<Expense>>(`/expenses?${expenseQuery(filters, { page, size })}`, session);
 }
 
 export function createExpense(session: Session, expense: SaveExpense) {
@@ -124,18 +159,36 @@ export type FinancialPeriod = {
   status: 'PAST' | 'CURRENT' | 'UPCOMING';
 };
 
-/** GET /expenses/total (US39). */
-export type ExpenseTotal = { period: FinancialPeriod; total: Money; count: number };
+/** GET /expenses/total (US39): the same filters as the listing, summed. */
+export type ExpenseTotal = {
+  /** First day covered, inclusive. */
+  from: string;
+  /** Last day covered, inclusive. */
+  to: string;
+  total: Money;
+  count: number;
+  /** Null when the window was given as dates only - a reporting window is not a period. */
+  period: FinancialPeriod | null;
+};
 
 /** GET /periods - newest first, so index 0 is the current period. */
 export function fetchPeriods(session: Session, options: { page?: number; size?: number } = {}) {
   return authRequest<Page<FinancialPeriod>>(`/periods?${pageParams(options)}`, session);
 }
 
-/** Total of my expenses for a period; the current one when `periodId` is omitted. */
-export function fetchExpenseTotal(session: Session, periodId?: string) {
-  const query = periodId !== undefined ? `?periodId=${periodId}` : '';
-  return authRequest<ExpenseTotal>(`/expenses/total${query}`, session);
+/** GET /periods/current - the period containing today, created on first use. */
+export function fetchCurrentPeriod(session: Session) {
+  return authRequest<FinancialPeriod>('/periods/current', session);
+}
+
+/**
+ * Total of my expenses over a window.
+ *
+ * With no filters at all the backend answers for the current period; with `from`/`to` it answers
+ * for exactly that window, and `period` comes back null because a window is not a period.
+ */
+export function fetchExpenseTotal(session: Session, filters: ExpenseFilters = {}) {
+  return authRequest<ExpenseTotal>(`/expenses/total?${expenseQuery(filters)}`, session);
 }
 
 export function fetchIncomes(session: Session, options: { page?: number; size?: number } = {}) {

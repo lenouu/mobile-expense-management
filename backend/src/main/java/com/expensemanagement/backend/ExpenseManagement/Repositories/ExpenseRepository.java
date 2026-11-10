@@ -67,4 +67,21 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID>
             from Expense e
             where e.user.id = :userId and e.date between :from and :to""")
     Totals totalsBetween(@Param("userId") UUID userId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /**
+     * The same filters as {@link #search}, summed instead of paged, so a total shown above a list
+     * always describes that list and not some other set of rows.
+     */
+    @Query("""
+            select coalesce(sum(e.amount), 0) as total, count(e) as count
+            from Expense e
+            where e.user.id = :userId
+              and e.date between :from and :to
+              and (:categoryId is null or e.category.id = :categoryId)
+              and (:pattern is null or lower(e.description) like :pattern)""")
+    Totals totalsMatching(@Param("userId") UUID userId,
+                          @Param("from") LocalDate from,
+                          @Param("to") LocalDate to,
+                          @Param("categoryId") UUID categoryId,
+                          @Param("pattern") String pattern);
 }

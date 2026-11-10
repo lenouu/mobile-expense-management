@@ -105,6 +105,9 @@ export default function TabsLayout() {
         }}
       />
 
+      {/* Reachable from the Expenses header; never on the bar. */}
+      <Tabs.Screen name="categories" options={{ href: null }} />
+
       {/* Reachable from Home's Administrative Controls; never on the bar. */}
       <Tabs.Screen name="admin-logs" options={{ href: null }} />
     </Tabs>

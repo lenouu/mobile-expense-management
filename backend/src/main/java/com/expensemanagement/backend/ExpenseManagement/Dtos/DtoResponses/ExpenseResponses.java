@@ -36,12 +36,19 @@ public class ExpenseResponses
     @AllArgsConstructor
     public static class Total
     {
-        /** The financial period the total covers. */
-        private final PeriodResponses.Period period;
-        /** Sum of the expenses dated inside the period; 0 when there are none. */
+        /** First day the total covers, inclusive. */
+        private final LocalDate from;
+        /** Last day the total covers, inclusive. */
+        private final LocalDate to;
+        /** Sum of the matching expenses; 0 when there are none. */
         private final Money total;
         /** How many expenses make up the total. */
         private final long count;
+        /**
+         * The financial period the window belongs to, or null when the request named dates
+         * only - a reporting window is not necessarily a period (section 6.2 of the vision).
+         */
+        private final PeriodResponses.Period period;
     }
 
     /** Just enough of the category to display it next to the expense. */

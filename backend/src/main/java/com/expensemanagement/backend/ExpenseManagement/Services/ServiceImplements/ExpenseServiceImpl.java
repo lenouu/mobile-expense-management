@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Locale;
 import java.util.UUID;
@@ -91,8 +92,16 @@ public class ExpenseServiceImpl implements ExpenseService
         }
 
         // Answers 404 for another user's period, exactly like a period that does not exist.
-        FinancialPeriod period = periodService.findMine(userId, periodId);
+        return narrowToPeriod(requested, periodService.findMine(userId, periodId));
+    }
 
+    /**
+     * Intersects a requested window with a period's dates.
+     *
+     * @return null when they do not overlap, which the caller turns into an empty result
+     */
+    private static DateRanges.Range narrowToPeriod(DateRanges.Range requested, FinancialPeriod period)
+    {
         LocalDate start = requested.from().isAfter(period.getStartDate())
                 ? requested.from()
                 : period.getStartDate();
@@ -156,23 +165,46 @@ public class ExpenseServiceImpl implements ExpenseService
     }
 
     /**
-     * Not read-only, unlike the other reads: asking for the current period may create it (see
-     * {@code FinancialPeriodService}), and a read-only transaction would refuse that insert.
+     * Not read-only, unlike the other reads: the window may resolve to the current period, which
+     * can have to be created first, and a read-only transaction would refuse that insert.
      * Nothing is cached, so an added, edited or deleted expense counts on the very next call.
      */
     @Override
     @Transactional
-    public ExpenseResponses.Total totalForPeriod(UUID userId, UUID periodId)
+    public ExpenseResponses.Total totals(UUID userId, UUID periodId, LocalDate from, LocalDate to,
+                                         UUID categoryId, String q)
     {
+        // DateRanges.of runs first, so an inverted from/to is still a 400 even with a period.
+        DateRanges.Range requested = DateRanges.of(from, to);
+
         FinancialPeriod period = periodId == null
-                ? periodService.current(userId)
+                ? (from == null && to == null ? periodService.current(userId) : null)
                 : periodService.findMine(userId, periodId);
 
-        ExpenseRepository.Totals totals =
-                expenseRepository.totalsBetween(userId, period.getStartDate(), period.getEndDate());
+        // With neither a period nor dates given, the current period is the window.
+        DateRanges.Range range = period == null
+                ? requested
+                : narrowToPeriod(requested, period);
+
+        if (range == null)
+        {
+            // The period and the explicit dates do not overlap: a real zero, not an error.
+            return ExpenseResponses.Total.builder()
+                    .from(requested.from())
+                    .to(requested.to())
+                    .period(null)
+                    .total(Money.of(BigDecimal.ZERO))
+                    .count(0)
+                    .build();
+        }
+
+        ExpenseRepository.Totals totals = expenseRepository.totalsMatching(
+                userId, range.from(), range.to(), categoryId, likePattern(q));
 
         return ExpenseResponses.Total.builder()
-                .period(PeriodMappers.toPeriod(period, LocalDate.now()))
+                .from(range.from())
+                .to(range.to())
+                .period(period == null ? null : PeriodMappers.toPeriod(period, LocalDate.now()))
                 // Already two decimals in the column, so the sum is exact; no rounding needed.
                 .total(Money.of(totals.getTotal()))
                 .count(totals.getCount())

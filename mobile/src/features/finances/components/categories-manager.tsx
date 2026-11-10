@@ -121,18 +121,6 @@ export function CategoriesManager({
       refreshControl={<RefreshControl refreshing={loading && categories.length > 0} onRefresh={load} />}>
       <View style={financeStyles.page}>
         {header}
-        <View style={financeStyles.headerRow}>
-          <View>
-            <ThemedText type="subtitle">Categories</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Signed in as {session.userName}
-            </ThemedText>
-          </View>
-          <View style={financeStyles.row}>
-            <Button label="Refresh" onPress={load} disabled={loading} secondary />
-            <Button label="Sign out" onPress={() => onSignOut()} secondary />
-          </View>
-        </View>
 
         {message && <ThemedText style={financeStyles.errorText}>{message}</ThemedText>}
         {notice && <ThemedText style={financeStyles.noticeText}>{notice}</ThemedText>}

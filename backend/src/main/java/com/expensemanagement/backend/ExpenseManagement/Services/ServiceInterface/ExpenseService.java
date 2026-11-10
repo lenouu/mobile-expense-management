@@ -47,11 +47,18 @@ public interface ExpenseService
     void delete(UUID userId, UUID id);
 
     /**
-     * Total of the caller's expenses for a financial period (US39): the current period when
-     * {@code periodId} is null, otherwise that period, which must be the caller's.
+     * Total of the caller's expenses over a window (US39).
+     *
+     * <p>The window is resolved exactly like the listing: {@code periodId} supplies the bounds and
+     * {@code from}/{@code to} narrow them, and with neither it is the current period. The same
+     * {@code categoryId} and {@code q} filters apply, so the total always matches the rows the
+     * list would return for the same query.
      *
      * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if the period
      *         does not exist or belongs to someone else
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if {@code from} is
+     *         after {@code to}
      */
-    ExpenseResponses.Total totalForPeriod(UUID userId, UUID periodId);
+    ExpenseResponses.Total totals(UUID userId, UUID periodId, LocalDate from, LocalDate to,
+                                  UUID categoryId, String q);
 }

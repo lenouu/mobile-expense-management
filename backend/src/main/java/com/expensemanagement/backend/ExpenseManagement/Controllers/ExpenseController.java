@@ -93,19 +93,35 @@ public class ExpenseController
 
     /** Declared before {@code /{id}} for readability; the literal path wins either way. */
     @GetMapping("/total")
-    @Operation(summary = "Total of my expenses for a financial period (US39)",
+    @Operation(summary = "Total of my expenses over a window (US39)",
             description = """
-                    Sum of the expenses dated inside the period, both ends included, and how many
-                    there are. Without `periodId` it is the current period; past periods come
-                    from `GET /api/periods`. A period without expenses totals 0.""")
-    @ApiResponse(responseCode = "200", description = "The period, its total and the number of expenses")
+                    Sum and count of the expenses the same query would list, so a total shown above
+                    a list always describes that list.
+
+                    The window works exactly like `GET /api/expenses`: `periodId` supplies the
+                    bounds, `from`/`to` narrow them, and with neither it is the current period.
+                    `categoryId` and `q` filter the sum the same way they filter the list.
+
+                    `from` and `to` are echoed back, and `period` is null when only dates were
+                    given - a reporting window is not necessarily a financial period. A window
+                    with nothing in it totals 0, not an error.""")
+    @ApiResponse(responseCode = "200", description = "The window, its total and the expense count")
+    @ApiResponse(responseCode = "400", description = "Invalid date, or 'from' after 'to'", content = @Content)
     @ApiResponse(responseCode = "404", description = "No such period among yours", content = @Content)
     public ExpenseResponses.Total total(
             @AuthenticationPrincipal Jwt jwt,
-            @Parameter(description = "One of your periods; omit for the current one")
-            @RequestParam(required = false) UUID periodId)
+            @Parameter(description = "One of your periods; omit to use the current one")
+            @RequestParam(required = false) UUID periodId,
+            @Parameter(description = "Only expenses on or after this date")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Only expenses on or before this date")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @Parameter(description = "Only expenses in this category; must be one of yours")
+            @RequestParam(required = false) UUID categoryId,
+            @Parameter(description = "Case-insensitive text to look for in the description")
+            @RequestParam(required = false) String q)
     {
-        return expenseService.totalForPeriod(currentUserId(jwt), periodId);
+        return expenseService.totals(currentUserId(jwt), periodId, from, to, categoryId, q);
     }
 
     @GetMapping("/{id}")
