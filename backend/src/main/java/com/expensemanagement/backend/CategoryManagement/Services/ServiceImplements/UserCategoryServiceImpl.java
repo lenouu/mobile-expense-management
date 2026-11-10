@@ -13,10 +13,14 @@ import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
 import com.expensemanagement.backend.UserManagement.Entities.User;
 import com.expensemanagement.backend.UserManagement.Repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -63,11 +67,14 @@ public class UserCategoryServiceImpl implements UserCategoryService
     }
 
     @Override
-    public List<CategoryResponses.Owned> findMine(UUID userId)
+    public Page<CategoryResponses.Owned> findMine(UUID userId, String q, Pageable pageable)
     {
-        return userCategoryRepository.findAllByUserIdOrderByNameAsc(userId).stream()
-                .map(CategoryMappers::toOwned)
-                .toList();
+        String pattern = StringUtils.hasText(q)
+                ? "%" + q.trim().toLowerCase(Locale.ROOT) + "%"
+                : null;
+
+        return userCategoryRepository.search(userId, pattern, pageable)
+                .map(CategoryMappers::toOwned);
     }
 
     @Override

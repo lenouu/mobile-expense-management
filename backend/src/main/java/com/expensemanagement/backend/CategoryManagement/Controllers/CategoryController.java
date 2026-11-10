@@ -4,13 +4,18 @@ import com.expensemanagement.backend.CategoryManagement.Dtos.DtoRequests.Categor
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoResponses.CategoryResponses;
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.DefaultCategoryService;
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.UserCategoryService;
+import com.expensemanagement.backend.Shared.PageResponse;
 import com.expensemanagement.backend.Swagger.SwaggerConfig;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -21,6 +26,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -51,16 +57,27 @@ public class CategoryController
      * claim, never from the request, so nobody can read another user's categories.
      */
     @GetMapping
-    @Operation(summary = "My categories",
+    @Operation(summary = "My categories (paged, searchable)",
             description = """
                     The caller's own categories, sorted by name. A new account starts with a copy
                     of every active default category; later admin changes to the defaults do not
-                    affect these copies.""")
-    @ApiResponse(responseCode = "200", description = "The caller's categories")
+                    affect these copies.
+
+                    Paged like every other listing: `?page=0&size=20`. A picker that needs the
+                    whole list asks for one large page rather than paging through it.
+
+                    `q` matches part of the name, ignoring case, across every page - so a search
+                    finds a category that is not on the page currently loaded.""")
+    @ApiResponse(responseCode = "200", description = "Page of the caller's categories")
     @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
-    public List<CategoryResponses.Owned> mine(@AuthenticationPrincipal Jwt jwt)
+    public PageResponse<CategoryResponses.Owned> mine(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Part of a category name, case-insensitive")
+            @RequestParam(required = false) String q,
+            @ParameterObject @PageableDefault(size = 20, sort = "name") Pageable pageable)
     {
-        return userCategoryService.findMine(UUID.fromString(jwt.getSubject()));
+        return PageResponse.of(
+                userCategoryService.findMine(UUID.fromString(jwt.getSubject()), q, pageable));
     }
 
     @PostMapping

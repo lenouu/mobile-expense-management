@@ -1,6 +1,8 @@
 package com.expensemanagement.backend.CategoryManagement.Repositories;
 
 import com.expensemanagement.backend.CategoryManagement.Entities.UserCategory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +14,27 @@ import java.util.UUID;
 public interface UserCategoryRepository extends JpaRepository<UserCategory, UUID>
 {
     List<UserCategory> findAllByUserIdOrderByNameAsc(UUID userId);
+
+    /**
+     * The paged form, for the categories screen. The sort comes from the `Pageable`, so callers
+     * that need the whole list (the expense form's picker) simply ask for one large page.
+     */
+    Page<UserCategory> findAllByUserId(UUID userId, Pageable pageable);
+
+    /**
+     * The same page, narrowed to names containing {@code pattern}.
+     *
+     * <p>A null pattern means "no text filter", which is why a blank q must not become {@code %%}:
+     * that would exclude any category whose name is somehow empty. The pattern is lower-cased and
+     * wrapped by the service, so wildcards are never interpreted from user input.
+     */
+    @Query("""
+            select c from UserCategory c
+            where c.user.id = :userId
+              and (:pattern is null or lower(c.name) like :pattern)""")
+    Page<UserCategory> search(@Param("userId") UUID userId,
+                              @Param("pattern") String pattern,
+                              Pageable pageable);
 
     /** Scoped by owner, so another user's category is simply not found. */
     Optional<UserCategory> findByIdAndUserId(UUID id, UUID userId);

@@ -52,8 +52,26 @@ export async function userLogin(usernameOrEmail: string, password: string): Prom
   return session;
 }
 
-export function fetchMyCategories(session: Session) {
-  return authRequest<MyCategory[]>('/categories', session);
+/**
+ * GET /categories - the caller's own categories, paged and sorted by name.
+ *
+ * `q` searches names on the server, so a match is found even when it is on another page - which is
+ * what makes "is this category already there?" an honest question.
+ *
+ * A picker that needs every category asks for a single large page rather than walking the pages.
+ */
+export function fetchMyCategories(
+  session: Session,
+  options: { page?: number; size?: number; q?: string } = {},
+) {
+  const params = new URLSearchParams({
+    page: String(options.page ?? 0),
+    size: String(options.size ?? 20),
+  });
+  // A blank q would become a filter that matches nothing useful; leave it out instead.
+  if (options.q?.trim()) params.set('q', options.q.trim());
+
+  return authRequest<Page<MyCategory>>(`/categories?${params.toString()}`, session);
 }
 
 /** Body of POST and PUT /categories. Only the name is required; PUT is a full replace. */

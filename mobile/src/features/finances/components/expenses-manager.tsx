@@ -176,12 +176,13 @@ export function ExpensesManager({
     try {
       const [list, mine] = await Promise.all([
         fetchExpenses(session, { ...filters, page: 0, size: PAGE_SIZE }),
-        fetchMyCategories(session),
+        // One large page: the form needs every category to offer as a chip, not the first twenty.
+        fetchMyCategories(session, { size: 200 }),
       ]);
       setExpenses(list.data);
       setPage(0);
       setTotalPages(list.totalPages);
-      setCategories(mine);
+      setCategories(mine.data);
     } catch (e) {
       handleError(e);
     } finally {
