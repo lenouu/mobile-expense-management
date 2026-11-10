@@ -37,7 +37,8 @@ export type IconName =
   | 'car'
   | 'heart'
   | 'heartPulse'
-  | 'camera';
+  | 'camera'
+  | 'person';
 
 /**
  * `ios` is an SF Symbol name; `md` is a Material Symbols ligature.
@@ -75,6 +76,7 @@ export const ICONS = {
   heart: { ios: 'heart.fill', md: 'favorite' },
   heartPulse: { ios: 'heart.text.square.fill', md: 'monitor_heart' },
   camera: { ios: 'camera.fill', md: 'photo_camera' },
+  person: { ios: 'person.fill', md: 'person' },
 } as const satisfies Record<IconName, { ios: string; md: string }>;
 
 /** One symbol, sized and tinted. */

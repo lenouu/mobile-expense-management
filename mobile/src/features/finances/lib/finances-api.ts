@@ -56,11 +56,40 @@ export function fetchMyCategories(session: Session) {
   return authRequest<MyCategory[]>('/categories', session);
 }
 
-/** Body of POST /categories (US17). Only the name is required. */
+/** Body of POST and PUT /categories. Only the name is required; PUT is a full replace. */
 export type NewCategory = { name: string; description?: string; icon?: string; color?: string };
 
+/**
+ * POST /categories (US17) - a category that belongs to the caller alone.
+ *
+ * @throws ApiRequestError 409 when the caller already has a category with that name
+ */
 export function createMyCategory(session: Session, category: NewCategory) {
   return authRequest<MyCategory>('/categories', session, { method: 'POST', body: category });
+}
+
+/**
+ * PUT /categories/{id} (US18) - full replace of one of the caller's own categories.
+ *
+ * Editing a category inherited from the defaults rewrites only the caller's copy; the platform
+ * default and every other account keep theirs.
+ *
+ * @throws ApiRequestError 404 when the id is not one of the caller's categories
+ * @throws ApiRequestError 409 when another of the caller's categories already uses the name
+ */
+export function updateMyCategory(session: Session, id: string, category: NewCategory) {
+  return authRequest<MyCategory>(`/categories/${id}`, session, { method: 'PUT', body: category });
+}
+
+/**
+ * DELETE /categories/{id} (US19) - removes one of the caller's own categories.
+ *
+ * @throws ApiRequestError 404 when the id is not one of the caller's categories
+ * @throws ApiRequestError 422 while expenses still reference the category, so spending history
+ *         is never orphaned - the message says how many
+ */
+export function deleteMyCategory(session: Session, id: string) {
+  return authRequest<void>(`/categories/${id}`, session, { method: 'DELETE' });
 }
 
 function pageParams(options: { page?: number; size?: number }) {

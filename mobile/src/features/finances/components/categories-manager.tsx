@@ -2,14 +2,21 @@ import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/primitives';
-import { Field, financeStyles, TextField } from '@/features/finances/components/finance-ui';
+import { DeleteButton, Field, financeStyles, TextField } from '@/features/finances/components/finance-ui';
 import { describeError } from '@/utils/errors';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiRequestError } from '@/features/auth/lib/api-client';
 import type { Session } from '@/types/api';
-import { createMyCategory, fetchMyCategories, type MyCategory, type NewCategory } from '@/features/finances/lib/finances-api';
+import {
+  createMyCategory,
+  deleteMyCategory,
+  fetchMyCategories,
+  type MyCategory,
+  type NewCategory,
+  updateMyCategory,
+} from '@/features/finances/lib/finances-api';
 
 /** Quick picks for the color field; any #RRGGBB value can still be typed. */
 const COLOR_PRESETS = ['#1F9D55', '#2D7FF9', '#E67E22', '#8E44AD', '#D93025', '#F1C40F', '#16A085', '#7F8C8D'];
@@ -37,6 +44,9 @@ export function CategoriesManager({
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  /** The category being edited, or null. Never opened at the same time as the create form. */
+  const [editing, setEditing] = useState<MyCategory | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleError = useCallback(
     (e: unknown) => {
@@ -65,10 +75,41 @@ export function CategoriesManager({
     load();
   }, [load]);
 
-  const onCreated = (created: MyCategory) => {
+  const onSaved = (saved: MyCategory, created: boolean) => {
     setCreating(false);
-    setNotice(`“${created.name}” created. You can now use it when adding an expense.`);
+    setEditing(null);
+    setNotice(
+      created
+        ? `“${saved.name}” created. You can now use it when adding an expense.`
+        : `“${saved.name}” updated.`,
+    );
     load();
+  };
+
+  /**
+   * Deletes one of the caller's own categories.
+   *
+   * The backend refuses while expenses still reference it (422) and says how many, so that answer
+   * is shown as-is rather than being collapsed into a generic failure.
+   */
+  const remove = async (category: MyCategory) => {
+    setDeletingId(category.id);
+    setMessage(null);
+    setNotice(null);
+    try {
+      await deleteMyCategory(session, category.id);
+      setNotice(`“${category.name}” deleted.`);
+      if (editing?.id === category.id) setEditing(null);
+      load();
+    } catch (e) {
+      if (e instanceof ApiRequestError && (e.status === 422 || e.status === 409 || e.status === 404)) {
+        setMessage(e.message);
+      } else {
+        handleError(e);
+      }
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -99,8 +140,16 @@ export function CategoriesManager({
         {creating ? (
           <CategoryForm
             session={session}
-            onCreated={onCreated}
+            onSaved={onSaved}
             onCancel={() => setCreating(false)}
+            onAuthError={handleError}
+          />
+        ) : editing ? (
+          <CategoryForm
+            session={session}
+            category={editing}
+            onSaved={onSaved}
+            onCancel={() => setEditing(null)}
             onAuthError={handleError}
           />
         ) : (
@@ -108,6 +157,7 @@ export function CategoriesManager({
             label="New category"
             onPress={() => {
               setNotice(null);
+              setEditing(null);
               setCreating(true);
             }}
           />
@@ -133,6 +183,24 @@ export function CategoriesManager({
                 {category.description}
               </ThemedText>
             )}
+
+            <View style={financeStyles.row}>
+              <Button
+                label="Edit"
+                secondary
+                onCard
+                onPress={() => {
+                  setNotice(null);
+                  setMessage(null);
+                  setCreating(false);
+                  setEditing(category);
+                }}
+              />
+              <DeleteButton
+                onConfirm={() => remove(category)}
+                busy={deletingId === category.id}
+              />
+            </View>
           </ThemedView>
         ))}
       </View>
@@ -142,20 +210,23 @@ export function CategoriesManager({
 
 function CategoryForm({
   session,
-  onCreated,
+  category,
+  onSaved,
   onCancel,
   onAuthError,
 }: {
   session: Session;
-  onCreated: (created: MyCategory) => void;
+  /** Present when editing an existing category; absent when creating a new one. */
+  category?: MyCategory | null;
+  onSaved: (saved: MyCategory, created: boolean) => void;
   onCancel: () => void;
   onAuthError: (e: unknown) => void;
 }) {
   const theme = useTheme();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [icon, setIcon] = useState('');
-  const [color, setColor] = useState('');
+  const [name, setName] = useState(category?.name ?? '');
+  const [description, setDescription] = useState(category?.description ?? '');
+  const [icon, setIcon] = useState(category?.icon ?? '');
+  const [color, setColor] = useState(category?.color ?? '');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -178,7 +249,12 @@ function CategoryForm({
     setSaving(true);
     setError(null);
     try {
-      onCreated(await createMyCategory(session, body));
+      // PUT is a full replace, which is why every field is prefilled above: an omitted description
+      // would otherwise clear it.
+      const saved = category
+        ? await updateMyCategory(session, category.id, body)
+        : await createMyCategory(session, body);
+      onSaved(saved, category === undefined || category === null);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 401) {
         onAuthError(e);
@@ -196,7 +272,7 @@ function CategoryForm({
 
   return (
     <ThemedView type="backgroundElement" style={financeStyles.card}>
-      <ThemedText type="smallBold">New category</ThemedText>
+      <ThemedText type="smallBold">{category ? 'Edit category' : 'New category'}</ThemedText>
 
       <Field label="Name" error={fieldErrors.name}>
         <TextField placeholder="e.g. Pets" maxLength={50} value={name} onChangeText={setName} />

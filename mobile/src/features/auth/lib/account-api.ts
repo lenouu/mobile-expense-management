@@ -22,6 +22,12 @@ export type PasswordChange = {
   confirmNewPassword: string;
 };
 
+/** Body of `DELETE /users/me`. */
+export type AccountDeletion = {
+  password: string;
+  reason?: string;
+};
+
 /** GET /users/me - the caller's own profile, never including the password hash. */
 export function fetchMyProfile(session: Session) {
   return authRequest<Account>('/users/me', session);
@@ -83,4 +89,18 @@ export function uploadMyPhoto(session: Session, base64: string) {
 /** DELETE /users/me/photo - 204. The account falls back to its initials. */
 export function deleteMyPhoto(session: Session) {
   return authRequest<void>('/users/me/photo', session, { method: 'DELETE' });
+}
+
+/**
+ * DELETE /users/me - soft delete, 204.
+ *
+ * The password is a re-authentication guard, so a phone left unlocked cannot destroy the account.
+ * The row and its history are kept; the account can no longer sign in and its username and email
+ * stay reserved.
+ *
+ * @throws ApiRequestError 401 when the password is wrong
+ * @throws ApiRequestError 422 when the account is already deleted
+ */
+export function deleteMyAccount(session: Session, deletion: AccountDeletion) {
+  return authRequest<void>('/users/me', session, { method: 'DELETE', body: deletion });
 }

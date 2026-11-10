@@ -40,6 +40,7 @@ export function DashboardScreen() {
           userName={session.userName}
           showWelcome={!!params.welcome}
           onSignOut={signOut}
+          onOpenProfile={() => router.push('/profile')}
         />
       ) : (
         <SignedOutCard />
@@ -53,10 +54,13 @@ function SignedInCard({
   userName,
   showWelcome,
   onSignOut,
+  onOpenProfile,
 }: {
   userName: string;
   showWelcome: boolean;
   onSignOut: () => void;
+  /** Opens the account screen, where the name, password and picture are edited. */
+  onOpenProfile: () => void;
 }) {
   return (
     <Card style={styles.card}>
@@ -70,6 +74,7 @@ function SignedInCard({
 
       <View style={styles.actions}>
         <Button label="Go to Money" primary onPress={() => router.replace('/finances')} />
+        <Button label="My profile" onPress={onOpenProfile} />
         <Button label="Sign out" onPress={onSignOut} />
       </View>
 
