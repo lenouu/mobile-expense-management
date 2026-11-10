@@ -29,10 +29,11 @@ public class User
     @Column(nullable = false)
     private String passwordHash;
 
-    @Column(nullable = false)
+    // Optional: an account can be created with only credentials, and the name is filled in
+    // from the profile screen afterwards. Anything that displays a user falls back to the
+    // username when these are null.
     private String firstName;
 
-    @Column(nullable = false)
     private String lastName;
 
     private LocalDate dateOfBirth;

@@ -26,6 +26,10 @@ export default function RootLayout() {
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: theme.background },
+            // Crossing between the auth screens and the signed-in app is a replace on this stack:
+            // a crossfade turns the swap into a dissolve instead of a cut.
+            animation: 'fade',
+            animationDuration: 280,
           }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="auth" />

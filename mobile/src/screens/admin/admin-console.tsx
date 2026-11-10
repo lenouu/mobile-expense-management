@@ -10,8 +10,8 @@ import { AdminCategoriesScreen } from '@/screens/admin/admin-categories-screen';
 import { AdminGuard } from '@/screens/admin/admin-guard';
 import { AdminHomeScreen } from '@/screens/admin/admin-home-screen';
 import { AdminLogsScreen } from '@/screens/admin/admin-logs-screen';
-import { AdminProfileScreen } from '@/screens/admin/admin-profile-screen';
 import { AdminUsersScreen } from '@/screens/admin/admin-users-screen';
+import { ProfileScreen } from '@/screens/profile/profile-screen';
 import type { Session } from '@/types/api';
 
 export type ConsoleTab = 'home' | 'analytics' | 'users' | 'categories' | 'logs';
@@ -97,7 +97,7 @@ export function AdminConsole({ tab }: { tab: ConsoleTab }) {
       {(session) => (
         <ConsoleNavProvider openProfile={openProfile}>
           {profileOpen ? (
-            <AdminProfileScreen session={session} onAuthError={onAuthError} onBack={closeProfile} />
+            <ProfileScreen session={session} onAuthError={onAuthError} onBack={closeProfile} />
           ) : (
             screen(session)
           )}

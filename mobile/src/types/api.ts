@@ -50,8 +50,9 @@ export type Account = {
   id: string;
   userName: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  /** Null until the user fills their name in from the profile screen. */
+  firstName: string | null;
+  lastName: string | null;
   /** YYYY-MM-DD, or null when the user skipped it. */
   dateOfBirth: string | null;
   profilePictureReference: string | null;

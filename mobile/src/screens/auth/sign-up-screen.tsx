@@ -7,10 +7,10 @@ import { ThemedText } from '@/components/themed-text';
 import { BackButton } from '@/components/ui/back-button';
 import { BrandLockup } from '@/components/ui/brand-lockup';
 import { Card } from '@/components/ui/card';
+import { FadeIn } from '@/components/ui/fade-in';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PasswordChecklist } from '@/components/ui/password-checklist';
 import { Button } from '@/components/ui/primitives';
-import { StepBadge } from '@/components/ui/step-badge';
 import { TextField } from '@/components/ui/text-field';
 import { Radius, Spacing, Status } from '@/constants/theme';
 import { useSignUpForm } from '@/features/auth/hooks/use-sign-up-form';
@@ -20,18 +20,17 @@ import type { Account, Session } from '@/types/api';
 /**
  * Account creation, laid out to match the FinFlow sign-up design (see figmaInspiration/).
  *
- * The fields are exactly the ones `POST /auth/register` accepts - first name, last name,
- * username, email, password and an optional date of birth. The design's phone-number and
- * base-currency rows are deliberately absent because the backend has no columns for them; add
- * them here once `UserRequests.CreateAccount` grows those fields.
+ * Only what the account cannot exist without: email, username, password and the terms. First
+ * name, last name and date of birth are optional on the server and are filled in later from the
+ * Profile screen, so the first screen a new user sees is four answers rather than eight.
  */
 export function SignUpScreen() {
   const onSignedIn = useCallback(({ account, session }: { account: Account; session: Session }) => {
-    // `session` is stored by the dashboard, which reads it from the session provider. Passing the
-    // first name through the URL keeps the confirmation personal without another request.
+    // `session` is stored by the dashboard, which reads it from the session provider. The name is
+    // usually empty at sign-up now, so the greeting falls back to the username.
     router.replace({
       pathname: '/',
-      params: { welcome: account.firstName, user: session.userName },
+      params: { welcome: account.firstName || session.userName, user: session.userName },
     });
   }, []);
 
@@ -51,49 +50,23 @@ export function SignUpScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen withTabInset={false} contentStyle={styles.content}>
-        <View style={styles.header}>
-          <BackButton onPress={goBack} />
-          <StepBadge step={1} total={2} />
-          {/* Balances the back button so the badge stays centred. */}
-          <View style={styles.headerSpacer} />
-        </View>
+        <FadeIn>
+          <View style={styles.header}>
+            <BackButton onPress={goBack} />
+          </View>
+        </FadeIn>
 
-        <BrandLockup
-          title="Create Account"
-          subtitle="Start tracking, understanding, and improving your financial life."
-        />
+        <FadeIn delay={60}>
+          <BrandLockup
+            floating
+            title="Create Account"
+            subtitle="Start tracking, understanding, and improving your financial life."
+          />
+        </FadeIn>
 
+        <FadeIn delay={120}>
         <Card style={styles.formCard}>
           <View style={styles.form}>
-            <View style={styles.nameRow}>
-              <View style={styles.nameField}>
-                <TextField
-                  label="First name"
-                  placeholder="e.g. Amara"
-                  autoCapitalize="words"
-                  autoComplete="given-name"
-                  textContentType="givenName"
-                  returnKeyType="next"
-                  value={form.firstName}
-                  onChangeText={(value) => setField('firstName', value)}
-                  error={errors.firstName}
-                />
-              </View>
-              <View style={styles.nameField}>
-                <TextField
-                  label="Last name"
-                  placeholder="e.g. Johnson"
-                  autoCapitalize="words"
-                  autoComplete="family-name"
-                  textContentType="familyName"
-                  returnKeyType="next"
-                  value={form.lastName}
-                  onChangeText={(value) => setField('lastName', value)}
-                  error={errors.lastName}
-                />
-              </View>
-            </View>
-
             <TextField
               label="Email address"
               placeholder="name@example.com"
@@ -120,17 +93,6 @@ export function SignUpScreen() {
               onChangeText={(value) => setField('userName', value)}
               error={errors.userName}
               hint={errors.userName ? undefined : 'At least 3 characters, no spaces'}
-            />
-
-            <TextField
-              label="Date of birth (optional)"
-              placeholder="DD/MM/YYYY"
-              keyboardType={Platform.OS === 'web' ? undefined : 'numbers-and-punctuation'}
-              maxLength={10}
-              value={form.dateOfBirth}
-              onChangeText={(value) => setField('dateOfBirth', value)}
-              error={errors.dateOfBirth}
-              hint={errors.dateOfBirth ? undefined : 'Used for age-based insights. You can add it later.'}
             />
 
             <TextField
@@ -190,20 +152,23 @@ export function SignUpScreen() {
             />
           </View>
         </Card>
+        </FadeIn>
 
-        <View style={styles.footer}>
-          <ThemedText type="caption" themeColor="textSecondary">
-            Already have an account?{' '}
-          </ThemedText>
-          <Pressable
-            onPress={() => router.replace('/auth/sign-in')}
-            accessibilityRole="link"
-            hitSlop={Spacing.two}>
-            <ThemedText type="caption" style={styles.link}>
-              Log In
+        <FadeIn delay={180}>
+          <View style={styles.footer}>
+            <ThemedText type="caption" themeColor="textSecondary">
+              Already have an account?{' '}
             </ThemedText>
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={() => router.push('/auth/sign-in')}
+              accessibilityRole="link"
+              hitSlop={Spacing.two}>
+              <ThemedText type="caption" style={styles.link}>
+                Log In
+              </ThemedText>
+            </Pressable>
+          </View>
+        </FadeIn>
       </Screen>
     </KeyboardAvoidingView>
   );
@@ -222,25 +187,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerSpacer: {
-    width: 40,
   },
   formCard: {
     gap: 0,
   },
   form: {
     gap: Spacing.three,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  nameField: {
-    flex: 1,
-    // Keeps both halves usable on a narrow phone instead of squeezing them to nothing.
-    minWidth: 130,
   },
   link: {
     color: '#01916D',

@@ -284,7 +284,7 @@ class BudgetAllocationValidationTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		java.util.List<String> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
+		java.util.List<String> ids = JsonPath.read(body, "$.data[?(@.name == '" + name + "')].id");
 		return ids.get(0);
 	}
 

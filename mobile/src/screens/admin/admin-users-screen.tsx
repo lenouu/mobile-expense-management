@@ -296,7 +296,7 @@ export function AdminUsersScreen({
                 <View style={styles.userCopy}>
                   <View style={styles.userNameRow}>
                     <ThemedText type="smallBold" numberOfLines={1}>
-                      {user.firstName} {user.lastName}
+                      {[user.firstName, user.lastName].filter(Boolean).join(' ') || user.userName}
                     </ThemedText>
                     <ThemedText type="caption" style={{ color: Status.success }}>
                       {user.status === 'ACTIVE' ? '✓' : ''}

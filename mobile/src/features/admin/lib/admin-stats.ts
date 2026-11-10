@@ -190,7 +190,11 @@ export function formatUptime(totalSeconds: number): string {
 }
 
 /** `Amina Haddad` -> `AH`, for the avatar circles in the reference design. */
-export function initialsOf(firstName: string, lastName: string, fallback = '?'): string {
-  const letters = `${firstName.charAt(0)}${lastName.charAt(0)}`.trim();
+export function initialsOf(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  fallback = '?',
+): string {
+  const letters = `${firstName?.charAt(0) ?? ''}${lastName?.charAt(0) ?? ''}`.trim();
   return letters ? letters.toUpperCase() : fallback.toUpperCase();
 }

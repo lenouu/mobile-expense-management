@@ -31,10 +31,12 @@ public class UserRequests {
         @Size(min = 8, message = "Password must be at least 8 characters")
         private String password;
 
-        @NotBlank(message = "First name is required")
+        // Optional on purpose: the account is created with only credentials, and the profile
+        // screen is where the user fills in their name afterwards.
+        @Size(max = 50)
         private String firstName;
 
-        @NotBlank(message = "Last name is required")
+        @Size(max = 50)
         private String lastName;
 
         @Past(message = "Date of birth must be in the past")

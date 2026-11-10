@@ -59,7 +59,7 @@ class UserCategoryCreationTests {
 		String id = JsonPath.read(created, "$.id");
 
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$[*].name").value(hasItem("Pets")));
+			.andExpect(jsonPath("$.data[*].name").value(hasItem("Pets")));
 
 		mockMvc
 			.perform(post("/api/expenses").header(HttpHeaders.AUTHORIZATION, token)
@@ -105,7 +105,7 @@ class UserCategoryCreationTests {
 
 		// Another user may use the same name, and does not see the first user's category.
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, second))
-			.andExpect(jsonPath("$[*].name").value(not(hasItem("Pets"))));
+			.andExpect(jsonPath("$.data[*].name").value(not(hasItem("Pets"))));
 		createCategory(second, "Pets");
 	}
 

@@ -66,7 +66,7 @@ class ExpenseDeleteTests {
 
 		// The category stays: deleting an expense never deletes the category it was filed under.
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$[*].id").value(hasItem(food)));
+			.andExpect(jsonPath("$.data[*].id").value(hasItem(food)));
 	}
 
 	@Test
@@ -117,7 +117,7 @@ class ExpenseDeleteTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		List<String> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
+		List<String> ids = JsonPath.read(body, "$.data[?(@.name == '" + name + "')].id");
 		return ids.get(0);
 	}
 

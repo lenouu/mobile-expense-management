@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -14,6 +15,7 @@ import { Pill, SectionCard } from '@/features/admin/components/console-ui';
 import {
   avatarUri,
   changeMyPassword,
+  deleteMyAccount,
   fetchMyProfile,
   updateMyProfile,
   uploadMyPhoto,
@@ -22,6 +24,7 @@ import { ApiRequestError } from '@/features/auth/lib/api-client';
 import { Brand, MaxContentWidth, Radius, Spacing, Status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/providers';
+import { ProfileHeader } from '@/screens/profile/profile-header';
 import type { Account, Session } from '@/types/api';
 import { describeError } from '@/utils/errors';
 
@@ -36,27 +39,36 @@ const PASSWORD_MIN = 8;
 const NOTICE_MS = 4000;
 
 /**
- * The administrator's own account (`/api/users/me`).
+ * The signed-in account's own profile (`/api/users/me`), for either role.
  *
- * Reached by pressing the avatar in the console header. It deliberately shows only the caller's
- * account: the id comes from the token, so this screen cannot be pointed at another user - the
- * admin directory is where other accounts are managed.
+ * It shows only the caller's account: the id comes from the token, so this screen cannot be
+ * pointed at anybody else - managing other accounts happens in the admin directory.
+ *
+ * The same screen serves both roles. `consoleChrome` is the only difference: inside the admin
+ * console it keeps the console header and its darker page background; reached from the normal app
+ * it just draws on the app background, because an ordinary user has no console header to show.
  *
  * Both forms report the backend's answers where the user is looking: a 409 on the username lands
  * under the username field, and a wrong current password lands under the password field.
  */
-export function AdminProfileScreen({
+export function ProfileScreen({
   session,
   onAuthError,
   onBack,
+  consoleChrome = true,
 }: {
   session: Session;
   onAuthError: (message: string) => void;
-  /** Closes the profile and returns to the console tab that was open. */
+  /** Closes the profile and returns to wherever it was opened from. */
   onBack?: () => void;
+  /** True inside the admin console: draws its header and darker page background. */
+  consoleChrome?: boolean;
 }) {
   const theme = useTheme();
   const { signIn, signOut } = useSession();
+
+  // The console sits on its own pale blue; the rest of the app uses the normal page background.
+  const pageBackground = consoleChrome ? theme.adminBackground : theme.background;
 
   const [profile, setProfile] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,9 +76,12 @@ export function AdminProfileScreen({
 
   const [notice, setNotice] = useState<string | null>(null);
 
-  // Username form.
+  // Details form: username and the two name fields save together, so the screen has one place to
+  // change who you are rather than a form per field.
   const [userName, setUserName] = useState(session.userName);
-  const [savingName, setSavingName] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [savingDetails, setSavingDetails] = useState(false);
   const [nameErrors, setNameErrors] = useState<Record<string, string>>({});
 
   // Password form.
@@ -75,6 +90,12 @@ export function AdminProfileScreen({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+
+  // Account deletion, which stays behind an explicit confirm step and a password.
+  const [deleting, setDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   // Profile picture.
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -89,6 +110,8 @@ export function AdminProfileScreen({
       const fetched = await fetchMyProfile(session);
       setProfile(fetched);
       setUserName(fetched.userName);
+      setFirstName(fetched.firstName ?? '');
+      setLastName(fetched.lastName ?? '');
     } catch (error) {
       if (error instanceof ApiRequestError && (error.status === 401 || error.status === 403)) {
         onAuthError(
@@ -115,30 +138,42 @@ export function AdminProfileScreen({
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const saveUserName = async () => {
-    const trimmed = userName.trim();
+  const saveDetails = async () => {
+    const trimmedUserName = userName.trim();
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
     const errors: Record<string, string> = {};
 
-    if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX) {
+    if (trimmedUserName.length < USERNAME_MIN || trimmedUserName.length > USERNAME_MAX) {
       errors.userName = `Use between ${USERNAME_MIN} and ${USERNAME_MAX} characters`;
     }
     setNameErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    if (trimmed === profile?.userName) {
-      setNotice('That is already your username.');
+    const unchanged =
+      trimmedUserName === (profile?.userName ?? '') &&
+      trimmedFirst === (profile?.firstName ?? '') &&
+      trimmedLast === (profile?.lastName ?? '');
+    if (unchanged) {
+      setNotice('Nothing has changed.');
       return;
     }
 
-    setSavingName(true);
+    setSavingDetails(true);
     setNotice(null);
     try {
-      const updated = await updateMyProfile(session, { userName: trimmed });
+      const updated = await updateMyProfile(session, {
+        userName: trimmedUserName,
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
+      });
       setProfile(updated);
       setUserName(updated.userName);
+      setFirstName(updated.firstName ?? '');
+      setLastName(updated.lastName ?? '');
       // The header initials and greeting read the name from the session, so refresh it too.
       signIn({ ...session, userName: updated.userName });
-      setNotice('Username updated.');
+      setNotice('Profile updated.');
     } catch (error) {
       if (error instanceof ApiRequestError) {
         if (error.status === 401) {
@@ -151,13 +186,15 @@ export function AdminProfileScreen({
         }
         setNameErrors({
           ...(error.fields.userName ? { userName: error.fields.userName } : {}),
+          ...(error.fields.firstName ? { firstName: error.fields.firstName } : {}),
+          ...(error.fields.lastName ? { lastName: error.fields.lastName } : {}),
           form: describeError(error),
         });
         return;
       }
       setNameErrors({ form: describeError(error) });
     } finally {
-      setSavingName(false);
+      setSavingDetails(false);
     }
   };
 
@@ -291,13 +328,53 @@ export function AdminProfileScreen({
     router.replace('/auth/sign-in');
   };
 
+  /**
+   * Soft-deletes the account after asking for the password again.
+   *
+   * The backend keeps the row and the history and refuses the credential of a deleted account, so
+   * this is not recoverable from inside the app - which is exactly why it sits behind a confirm
+   * step and a password rather than a single button.
+   */
+  const deleteAccount = async () => {
+    if (!deletePassword) {
+      setDeleteError('Enter your password to confirm');
+      return;
+    }
+
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await deleteMyAccount(session, { password: deletePassword });
+      signOut();
+      router.replace('/auth/sign-in');
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) {
+        setDeleteError('That is not your password.');
+        return;
+      }
+      setDeleteError(describeError(error));
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleting(false);
+    setDeletePassword('');
+    setDeleteError(null);
+  };
+
   return (
     <ScrollView
-      style={{ backgroundColor: theme.adminBackground }}
+      style={{ backgroundColor: pageBackground }}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled">
-      <ConsoleHeader title="My Profile" initials={initialsFrom(session.userName)} />
+      {consoleChrome ? (
+        <ConsoleHeader title="My Profile" initials={initialsFrom(session.userName)} />
+      ) : (
+        <ProfileHeader />
+      )}
       <View style={styles.page}>
         <View style={styles.identity}>
           <ProfileAvatar
@@ -306,8 +383,14 @@ export function AdminProfileScreen({
             busy={uploadingPhoto}
             onPress={pickPhoto}
             onViewPhoto={() => setViewerOpen(true)}
+            chromeColor={pageBackground}
           />
           <ThemedText type="subtitle">{displayName}</ThemedText>
+          {fullName(profile) !== '—' ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {fullName(profile)}
+            </ThemedText>
+          ) : null}
         </View>
 
         {photoError ? (
@@ -318,14 +401,15 @@ export function AdminProfileScreen({
           </View>
         ) : null}
 
-        <View style={styles.backRow}>
-          <Button
-            label="Back"
-            onPress={() => (onBack ? onBack() : router.replace('/admin'))}
-            onCard
-          />
-          <Button label="Sign out" onPress={handleSignOut} secondary onCard />
-        </View>
+        {consoleChrome ? (
+          <View style={styles.backRow}>
+            <Button
+              label="Back"
+              onPress={() => (onBack ? onBack() : router.replace('/admin'))}
+              onCard
+            />
+          </View>
+        ) : null}
 
         {notice ? (
           <View style={[styles.banner, { borderColor: Status.success }]}>
@@ -344,8 +428,8 @@ export function AdminProfileScreen({
         ) : null}
 
         <SectionCard
-          title="Account"
-          subtitle="Read-only. Email and role are not editable from the console."
+          title="Your details"
+          subtitle="Your name and username are yours to change. The email is fixed once the account exists."
           action={
             profile ? (
               <Pill label={profile.type} tint={profile.type === 'ADMIN' ? 'brand' : 'neutral'} />
@@ -354,41 +438,57 @@ export function AdminProfileScreen({
           {loading && !profile ? (
             <ActivityIndicator style={styles.loader} />
           ) : (
-            <View style={styles.details}>
-              <DetailRow label="Username" value={profile?.userName ?? session.userName} />
-              <DetailRow label="Email" value={profile?.email ?? '—'} />
-              <DetailRow label="Full name" value={fullName(profile)} />
-              <DetailRow label="Status" value={profile?.status ?? '—'} />
-              <DetailRow label="Member since" value={memberSince(profile)} />
-            </View>
+            <>
+              <TextField
+                label="Username"
+                placeholder="e.g. sara.mansouri"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={userName}
+                onChangeText={setUserName}
+                error={nameErrors.userName}
+              />
+
+              <TextField
+                label="First name"
+                placeholder="Your first name"
+                autoCapitalize="words"
+                autoCorrect={false}
+                value={firstName}
+                onChangeText={setFirstName}
+                error={nameErrors.firstName}
+              />
+
+              <TextField
+                label="Last name"
+                placeholder="Your last name"
+                autoCapitalize="words"
+                autoCorrect={false}
+                value={lastName}
+                onChangeText={setLastName}
+                error={nameErrors.lastName}
+              />
+
+              {nameErrors.form ? (
+                <ThemedText type="caption" style={{ color: Status.danger }}>
+                  {nameErrors.form}
+                </ThemedText>
+              ) : null}
+
+              <Button
+                label={savingDetails ? 'Saving…' : 'Save changes'}
+                onPress={saveDetails}
+                disabled={savingDetails}
+                onCard
+              />
+
+              <View style={styles.details}>
+                <DetailRow label="Email" value={profile?.email ?? '—'} />
+                <DetailRow label="Status" value={profile?.status ?? '—'} />
+                <DetailRow label="Member since" value={memberSince(profile)} />
+              </View>
+            </>
           )}
-        </SectionCard>
-
-        <SectionCard
-          title="Username"
-          subtitle={`Between ${USERNAME_MIN} and ${USERNAME_MAX} characters, unique across the platform.`}>
-          <TextField
-            label="Username"
-            placeholder="e.g. admin.amina"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={userName}
-            onChangeText={setUserName}
-            error={nameErrors.userName}
-          />
-
-          {nameErrors.form ? (
-            <ThemedText type="caption" style={{ color: Status.danger }}>
-              {nameErrors.form}
-            </ThemedText>
-          ) : null}
-
-          <Button
-            label={savingName ? 'Saving…' : 'Save username'}
-            onPress={saveUserName}
-            disabled={savingName}
-            onCard
-          />
         </SectionCard>
 
         <SectionCard
@@ -444,6 +544,98 @@ export function AdminProfileScreen({
             onCard
           />
         </SectionCard>
+
+        <SectionCard
+          title="Session"
+          subtitle="The only place you are signed in right now."
+        >
+          <View style={styles.details}>
+            <DetailRow label="Signed in as" value={session.userName} />
+            <DetailRow
+              label="Account type"
+              value={session.type === 'ADMIN' ? 'Administrator' : 'User'}
+            />
+          </View>
+
+          <ThemedText type="caption" themeColor="textMuted">
+            The session is held in memory only: closing the app signs you out, and nothing about
+            your account is left behind on the device.
+          </ThemedText>
+
+          <Button label="Sign out" onPress={handleSignOut} secondary onCard />
+        </SectionCard>
+
+        <SectionCard title="Privacy" subtitle="Your finances are yours alone.">
+          <ThemedText type="small" themeColor="textSecondary">
+            Only you can see your income, expenses and budgets. Administrators manage accounts;
+            they never read your financial records.
+          </ThemedText>
+
+          {session.type === 'USER' ? (
+            deleting ? (
+              <>
+                <TextField
+                  label="Your password"
+                  placeholder="Confirm with your password"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  revealable
+                  secureTextEntry
+                  value={deletePassword}
+                  onChangeText={setDeletePassword}
+                  error={deleteError ?? undefined}
+                />
+
+                <ThemedText type="caption" themeColor="textMuted">
+                  This deletes the account for good: you will not be able to sign in again, and
+                  your username and email stay reserved. Your recorded history is kept.
+                </ThemedText>
+
+                <View style={styles.deleteRow}>
+                  <DangerButton
+                    label={deleteBusy ? 'Deleting…' : 'Delete my account'}
+                    onPress={deleteAccount}
+                    disabled={deleteBusy}
+                  />
+                  <Button
+                    label="Cancel"
+                    onPress={cancelDelete}
+                    disabled={deleteBusy}
+                    secondary
+                    onCard
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <ThemedText type="caption" themeColor="textMuted">
+                  Deleting stops you signing in for good. You will be asked for your password.
+                </ThemedText>
+
+                <Button
+                  label="Delete my account"
+                  onPress={() => setDeleting(true)}
+                  secondary
+                  onCard
+                />
+              </>
+            )
+          ) : (
+            <ThemedText type="caption" themeColor="textMuted">
+              An administrator account is deleted from the admin directory rather than from here,
+              so the console can never lose its last administrator by accident.
+            </ThemedText>
+          )}
+        </SectionCard>
+
+        <SectionCard title="About" subtitle="FinFlow">
+          <View style={styles.details}>
+            <DetailRow label="Version" value={Constants.expoConfig?.version ?? '—'} />
+          </View>
+          <ThemedText type="caption" themeColor="textMuted">
+            Track. Understand. Improve.
+          </ThemedText>
+        </SectionCard>
       </View>
 
       {/* A Modal draws in its own window, so keeping it in the scroll content costs nothing. */}
@@ -470,6 +662,7 @@ function ProfileAvatar({
   busy,
   onPress,
   onViewPhoto,
+  chromeColor,
 }: {
   initials: string;
   /** Absolute URI of the stored picture, or null to show the initials. */
@@ -478,6 +671,8 @@ function ProfileAvatar({
   onPress: () => void;
   /** Opens the picture full screen. Only offered when there is a picture to look at. */
   onViewPhoto: () => void;
+  /** The page background, so the badge's border cuts a gap into the circle on either chrome. */
+  chromeColor: string;
 }) {
   const theme = useTheme();
 
@@ -511,7 +706,7 @@ function ProfileAvatar({
         hitSlop={8}
         style={({ pressed }) => [
           styles.cameraBadge,
-          { borderColor: theme.adminBackground },
+          { borderColor: chromeColor },
           (pressed || busy) && styles.pressed,
         ]}>
         {busy ? (
@@ -599,6 +794,35 @@ function memberSince(profile: Account | null): string {
   if (!profile) return '—';
   const date = new Date(profile.createdAt);
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+}
+
+/**
+ * The destructive action on this screen.
+ *
+ * It is the one control that is not the shared `Button`, because the design system has no danger
+ * variant and deleting an account should not look like saving one.
+ */
+function DangerButton({
+  label,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      style={({ pressed }) => [styles.dangerButton, (pressed || disabled) && styles.pressed]}>
+      <ThemedText type="smallBold" style={{ color: Status.danger }}>
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -695,6 +919,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: Spacing.two,
+  },
+  deleteRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  dangerButton: {
+    borderRadius: Radius.field,
+    borderWidth: 1,
+    borderColor: Status.danger,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two + Spacing.half,
   },
   details: {
     gap: Spacing.two,

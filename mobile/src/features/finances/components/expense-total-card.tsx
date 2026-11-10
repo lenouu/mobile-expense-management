@@ -48,7 +48,7 @@ export function ExpenseTotalCard({
       try {
         const history = await fetchPeriods(session, { size: PERIOD_HISTORY_SIZE });
         const selected = history.data[Math.min(index, history.data.length - 1)];
-        const total = await fetchExpenseTotal(session, selected?.id);
+        const total = await fetchExpenseTotal(session, { periodId: selected?.id });
         if (!cancelled) {
           setPeriods(history.data);
           setData(total);

@@ -3,8 +3,9 @@ package com.expensemanagement.backend.CategoryManagement.Services.ServiceInterfa
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoRequests.CategoryRequests;
 import com.expensemanagement.backend.CategoryManagement.Dtos.DtoResponses.CategoryResponses;
 import com.expensemanagement.backend.UserManagement.Entities.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface UserCategoryService
@@ -19,8 +20,12 @@ public interface UserCategoryService
      */
     int provisionDefaults(User user);
 
-    /** The caller's own categories, by name. */
-    List<CategoryResponses.Owned> findMine(UUID userId);
+    /**
+     * The caller's own categories, paged and sorted by the given pageable (name by default).
+     *
+     * @param q optional; matches part of the name, ignoring case. Blank means no filter.
+     */
+    Page<CategoryResponses.Owned> findMine(UUID userId, String q, Pageable pageable);
 
     /**
      * Creates a category of the caller's own (US17). Needs nothing else to exist first - in
