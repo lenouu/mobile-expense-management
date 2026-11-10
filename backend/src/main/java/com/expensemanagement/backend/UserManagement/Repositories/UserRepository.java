@@ -82,8 +82,16 @@ public interface UserRepository extends JpaRepository<User, UUID>
     // Name search (admin / user directory screens)
     // ---------------------------------------------------------------------
 
-    Page<User> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
-            String firstName, String lastName, Pageable pageable);
+    /**
+     * The admin directory's search box: one term, matched against the name fields and the
+     * username.
+     *
+     * <p>The username is included because first and last name are optional now, and a derived
+     * query on them alone cannot match a NULL column - an account without a name would have been
+     * unfindable by search.
+     */
+    Page<User> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrUserNameContainingIgnoreCase(
+            String firstName, String lastName, String userName, Pageable pageable);
 
     // ---------------------------------------------------------------------
     // Reporting / auditing

@@ -181,7 +181,7 @@ class ExpenseTotalTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		List<String> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
+		List<String> ids = JsonPath.read(body, "$.data[?(@.name == '" + name + "')].id");
 		return ids.get(0);
 	}
 

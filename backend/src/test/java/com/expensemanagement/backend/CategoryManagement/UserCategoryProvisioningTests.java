@@ -61,13 +61,13 @@ class UserCategoryProvisioningTests {
 
 		String mine = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, userToken))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0].id").isString())
-			.andExpect(jsonPath("$[0].defaultCategoryId").value(notNullValue()))
+			.andExpect(jsonPath("$.data[0].id").isString())
+			.andExpect(jsonPath("$.data[0].defaultCategoryId").value(notNullValue()))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
 
-		assertThat(names(mine)).containsExactlyElementsOf(defaults).contains("Transport", "Other");
+		assertThat(pageNames(mine)).containsExactlyElementsOf(defaults).contains("Transport", "Other");
 	}
 
 	@Test
@@ -84,7 +84,7 @@ class UserCategoryProvisioningTests {
 		String userToken = registerAndLogin();
 
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, userToken))
-			.andExpect(jsonPath("$[*].name").value(not(hasItem(hidden))));
+			.andExpect(jsonPath("$.data[*].name").value(not(hasItem(hidden))));
 	}
 
 	@Test
@@ -98,9 +98,9 @@ class UserCategoryProvisioningTests {
 		String secondToken = registerAndLogin();
 
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, firstToken))
-			.andExpect(jsonPath("$[*].name").value(not(hasItem(added))));
+			.andExpect(jsonPath("$.data[*].name").value(not(hasItem(added))));
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, secondToken))
-			.andExpect(jsonPath("$[*].name").value(hasItem(added)));
+			.andExpect(jsonPath("$.data[*].name").value(hasItem(added)));
 
 		// Renaming the default afterwards does not touch the copy already given out.
 		mockMvc
@@ -110,8 +110,8 @@ class UserCategoryProvisioningTests {
 			.andExpect(status().isOk());
 
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, secondToken))
-			.andExpect(jsonPath("$[*].name").value(hasItem(added)))
-			.andExpect(jsonPath("$[*].name").value(not(hasItem(added + " renamed"))));
+			.andExpect(jsonPath("$.data[*].name").value(hasItem(added)))
+			.andExpect(jsonPath("$.data[*].name").value(not(hasItem(added + " renamed"))));
 
 		// Both users have a "Transport", but each sees only their own row.
 		List<String> firstIds = ids(firstToken);
@@ -123,11 +123,13 @@ class UserCategoryProvisioningTests {
 	void seededUsersHaveCategoriesButAdminsDoNot() throws Exception {
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, bearer(USER)))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[*].name").value(hasItem("Transport")));
+			.andExpect(jsonPath("$.data[*].name").value(hasItem("Transport")));
 
 		mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, bearer(ADMIN)))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$").value(empty()));
+			// An administrator owns no categories; the page is the empty one.
+			.andExpect(jsonPath("$.data").value(empty()))
+			.andExpect(jsonPath("$.totalElements").value(0));
 	}
 
 	@Test
@@ -162,11 +164,17 @@ class UserCategoryProvisioningTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		return JsonPath.read(body, "$[*].id");
+		return JsonPath.read(body, "$.data[*].id");
 	}
 
+	/** Default categories: {@code GET /api/categories/defaults} is not paged, so this is a plain array. */
 	private static List<String> names(String json) {
 		return JsonPath.read(json, "$[*].name");
+	}
+
+	/** The caller's own categories: paged, so the array lives under {@code data}. */
+	private static List<String> pageNames(String json) {
+		return JsonPath.read(json, "$.data[*].name");
 	}
 
 	private static String uniqueName(String prefix) {

@@ -17,8 +17,10 @@ public class PeriodRequests
     /**
      * Body of `PUT /periods/settings` - the user choosing how long their periods are (US27).
      *
-     * <p>Only the coarse rules are checked here. Whether a length is at least one week and at most
-     * a year depends on the unit, and the service owns that rule together with its exact message.
+     * <p>Only the coarse bounds are checked here: a count has to be a positive whole number. The
+     * rule that actually matters is unit-dependent - {@code count × unit.minimumDays} must be at
+     * least seven days, and at most one year - so it lives in the service, together with the
+     * message that names the real limit. A {@code @Min} on the count cannot express it.
      */
     @Getter
     @Setter
@@ -29,7 +31,7 @@ public class PeriodRequests
 
         /** How many {@code unit}s one period lasts, e.g. 2 WEEKS. */
         @NotNull(message = "A length count is required")
-        @Min(value = 1, message = "A financial period must last at least one day")
+        @Min(value = 1, message = "A length must be at least 1")
         private Integer count;
 
         @NotNull(message = "A period unit is required (DAYS, WEEKS or MONTHS)")

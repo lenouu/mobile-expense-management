@@ -164,10 +164,12 @@ public class UserServiceImpl implements UserService
     @PreAuthorize("hasRole('ADMIN')")
     public Page<UserResponses.Summary> searchByName(String name, Pageable pageable)
     {
-        // Two-parameter derived query again: one search box feeds both name fields.
+        // One search box feeds both name fields and the username. The username matters: names are
+        // optional, and a LIKE against a null column never matches, so a nameless account could
+        // otherwise not be found at all.
         return UserMappers.toSummaryPage(
-                userRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
-                        name, name, pageable));
+                userRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrUserNameContainingIgnoreCase(
+                        name, name, name, pageable));
     }
 
     // ------------------------------------------------------------------
