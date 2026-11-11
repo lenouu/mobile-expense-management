@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { Animated, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -13,6 +13,7 @@ import { PasswordChecklist } from '@/components/ui/password-checklist';
 import { Button } from '@/components/ui/primitives';
 import { TextField } from '@/components/ui/text-field';
 import { Radius, Spacing, Status } from '@/constants/theme';
+import { useShake } from '@/hooks/use-shake';
 import { useSignUpForm } from '@/features/auth/hooks/use-sign-up-form';
 import { passwordRequirements } from '@/features/auth/lib/password';
 import type { Account, Session } from '@/types/api';
@@ -35,6 +36,15 @@ export function SignUpScreen() {
   }, []);
 
   const { form, errors, submitting, setField, submit } = useSignUpForm(onSignedIn);
+
+  // A refused sign-up says no out loud: the card shakes once, the message stays red.
+  const { offset, shake } = useShake();
+  const hasErrors = Object.keys(errors).length > 0;
+
+  useEffect(() => {
+    if (hasErrors) shake();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasErrors]);
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -65,7 +75,8 @@ export function SignUpScreen() {
         </FadeIn>
 
         <FadeIn delay={120}>
-        <Card style={styles.formCard}>
+        <Animated.View style={{ transform: [{ translateX: offset }] }}>
+          <Card style={styles.formCard}>
           <View style={styles.form}>
             <TextField
               label="Email address"
@@ -151,7 +162,8 @@ export function SignUpScreen() {
               disabled={submitting}
             />
           </View>
-        </Card>
+          </Card>
+        </Animated.View>
         </FadeIn>
 
         <FadeIn delay={180}>

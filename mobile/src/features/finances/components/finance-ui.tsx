@@ -87,6 +87,75 @@ export function formatDate(iso: string): string {
   return new Date(year, month - 1, day).toLocaleDateString();
 }
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/**
+ * "Fri 2 May 2026" - the date spelled out.
+ *
+ * The numeric form is fine inside a dense row, but a day header has room to say which day it was,
+ * and a month written as a word is unambiguous where 02/05 is not: the same digits mean February
+ * in one convention and May in another.
+ */
+export function formatLongDate(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  if (!year || !month || !day) return iso;
+
+  const date = new Date(year, month - 1, day);
+  return `${WEEKDAYS[date.getDay()]} ${day} ${MONTHS[month - 1]} ${year}`;
+}
+
+/** "May 2026", for a calendar's heading. */
+export function formatMonthYear(year: number, month: number): string {
+  return `${MONTHS[month]} ${year}`;
+}
+
+/** "a, b and c" - the way a list of durations is written in a sentence. */
+function joinParts(parts: string[]): string {
+  if (parts.length <= 1) return parts.join('');
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * How long a window is, in words: "22 days", "1 month and 2 days", "1 year and 3 months".
+ *
+ * Weeks are deliberately absent: "3 weeks" is read as a month by everyone who has to convert it
+ * back, so the units here are the two that span everything between - days, then months, then years.
+ * Months are counted as thirty days and years as twelve of those, which is a description of the
+ * window rather than a second copy of it; the exact dates are always shown beside the sentence.
+ */
+export function describeDuration(days: number): string {
+  if (days <= 0) return '0 days';
+  if (days < 30) return days === 1 ? '1 day' : `${days} days`;
+
+  const years = Math.floor(days / 365);
+  const afterYears = days - years * 365;
+  const months = Math.floor(afterYears / 30);
+  const leftoverDays = afterYears - months * 30;
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(years === 1 ? '1 year' : `${years} years`);
+  if (months > 0) parts.push(months === 1 ? '1 month' : `${months} months`);
+  if (leftoverDays > 0) parts.push(leftoverDays === 1 ? '1 day' : `${leftoverDays} days`);
+
+  return joinParts(parts);
+}
+
+/** Whole days from one `YYYY-MM-DD` to another, inclusive of both ends. */
+export function daysBetween(from: string, to: string): number {
+  const [fromYear, fromMonth, fromDay] = from.split('-').map(Number);
+  const [toYear, toMonth, toDay] = to.split('-').map(Number);
+  if (!fromYear || !toYear) return 0;
+
+  // UTC so a daylight-saving change cannot turn a 22-day window into 21 or 23.
+  const start = Date.UTC(fromYear, fromMonth - 1, fromDay);
+  const end = Date.UTC(toYear, toMonth - 1, toDay);
+  return Math.round((end - start) / 86_400_000) + 1;
+}
+
 /** Re-exported so existing finance imports keep working; the wording lives in one place. */
 /**
  * "Edited 10/10/2026" when a record was changed after it was created (US14), otherwise null.

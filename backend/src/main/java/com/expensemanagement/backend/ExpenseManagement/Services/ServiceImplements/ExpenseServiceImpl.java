@@ -1,5 +1,8 @@
 package com.expensemanagement.backend.ExpenseManagement.Services.ServiceImplements;
 
+import com.expensemanagement.backend.BudgetManagement.Entities.Budget;
+import com.expensemanagement.backend.BudgetManagement.Enums.BudgetStatus;
+import com.expensemanagement.backend.BudgetManagement.Repositories.BudgetRepository;
 import com.expensemanagement.backend.CategoryManagement.Entities.UserCategory;
 import com.expensemanagement.backend.CategoryManagement.Repositories.UserCategoryRepository;
 import com.expensemanagement.backend.Exceptions.InvalidRequestException;
@@ -13,8 +16,10 @@ import com.expensemanagement.backend.ExpenseManagement.Services.ServiceInterface
 import com.expensemanagement.backend.PeriodManagement.Entities.FinancialPeriod;
 import com.expensemanagement.backend.PeriodManagement.Mappers.PeriodMappers;
 import com.expensemanagement.backend.PeriodManagement.Services.ServiceInterface.FinancialPeriodService;
+import com.expensemanagement.backend.Shared.CurrencyPolicy;
 import com.expensemanagement.backend.Shared.DateRanges;
 import com.expensemanagement.backend.Shared.Money;
+import com.expensemanagement.backend.UserManagement.Entities.User;
 import com.expensemanagement.backend.UserManagement.Repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -43,19 +48,22 @@ public class ExpenseServiceImpl implements ExpenseService
     private final UserCategoryRepository userCategoryRepository;
     private final UserRepository userRepository;
     private final FinancialPeriodService periodService;
+    private final BudgetRepository budgetRepository;
 
     public ExpenseServiceImpl(ExpenseRepository expenseRepository, UserCategoryRepository userCategoryRepository,
-                              UserRepository userRepository, FinancialPeriodService periodService)
+                              UserRepository userRepository, FinancialPeriodService periodService,
+                              BudgetRepository budgetRepository)
     {
         this.expenseRepository = expenseRepository;
         this.userCategoryRepository = userCategoryRepository;
         this.userRepository = userRepository;
         this.periodService = periodService;
+        this.budgetRepository = budgetRepository;
     }
 
     @Override
     public Page<ExpenseResponses.Details> findMine(UUID userId, UUID periodId, LocalDate from, LocalDate to,
-                                                   UUID categoryId, String q, Pageable pageable)
+                                                   UUID categoryId, String q, UUID budgetId, Pageable pageable)
     {
         DateRanges.Range range = resolveRange(userId, periodId, from, to);
         if (range == null)
@@ -65,7 +73,8 @@ public class ExpenseServiceImpl implements ExpenseService
             return Page.empty(pageable);
         }
 
-        return expenseRepository.search(userId, range.from(), range.to(), categoryId, likePattern(q), pageable)
+        return expenseRepository
+                .search(userId, range.from(), range.to(), categoryId, likePattern(q), budgetId, pageable)
                 .map(ExpenseMappers::toDetails);
     }
 
@@ -134,10 +143,14 @@ public class ExpenseServiceImpl implements ExpenseService
     @Transactional
     public ExpenseResponses.Details create(UUID userId, ExpenseRequests.SaveExpense request)
     {
+        User user = getUserOrThrow(userId);
+
         Expense expense = new Expense();
-        // A reference, not a query: the id comes from a verified token, so the user exists.
-        expense.setUser(userRepository.getReferenceById(userId));
+        expense.setUser(user);
         ExpenseMappers.apply(expense, request, getOwnCategoryOrThrow(userId, request.getCategoryId()));
+        expense.setBudget(resolveBudget(userId, request));
+        // The account's unit wins: a request in another currency is refused rather than stored.
+        expense.setCurrency(CurrencyPolicy.resolve(request.getAmount(), user.getBaseCurrency()));
 
         Expense saved = expenseRepository.save(expense);
 
@@ -149,11 +162,21 @@ public class ExpenseServiceImpl implements ExpenseService
     @Transactional
     public ExpenseResponses.Details update(UUID userId, UUID id, ExpenseRequests.SaveExpense request)
     {
+        User user = getUserOrThrow(userId);
+
         Expense expense = getExpenseOrThrow(userId, id);
         ExpenseMappers.apply(expense, request, getOwnCategoryOrThrow(userId, request.getCategoryId()));
+        expense.setBudget(resolveBudget(userId, request));
+        expense.setCurrency(CurrencyPolicy.resolve(request.getAmount(), user.getBaseCurrency()));
 
         // Flushed now so @PreUpdate has stamped updatedAt before the response is built.
         return ExpenseMappers.toDetails(expenseRepository.saveAndFlush(expense));
+    }
+
+    @Override
+    public boolean hasAny(UUID userId)
+    {
+        return expenseRepository.existsByUserId(userId);
     }
 
     @Override
@@ -177,6 +200,9 @@ public class ExpenseServiceImpl implements ExpenseService
         // DateRanges.of runs first, so an inverted from/to is still a 400 even with a period.
         DateRanges.Range requested = DateRanges.of(from, to);
 
+        // The sum is in the account's own unit; without it the label would be a guess.
+        String baseCurrency = getUserOrThrow(userId).getBaseCurrency();
+
         FinancialPeriod period = periodId == null
                 ? (from == null && to == null ? periodService.current(userId) : null)
                 : periodService.findMine(userId, periodId);
@@ -193,7 +219,7 @@ public class ExpenseServiceImpl implements ExpenseService
                     .from(requested.from())
                     .to(requested.to())
                     .period(null)
-                    .total(Money.of(BigDecimal.ZERO))
+                    .total(Money.of(BigDecimal.ZERO, baseCurrency))
                     .count(0)
                     .build();
         }
@@ -206,11 +232,45 @@ public class ExpenseServiceImpl implements ExpenseService
                 .to(range.to())
                 .period(period == null ? null : PeriodMappers.toPeriod(period, LocalDate.now()))
                 // Already two decimals in the column, so the sum is exact; no rounding needed.
-                .total(Money.of(totals.getTotal()))
+                .total(Money.of(totals.getTotal(), baseCurrency))
                 .count(totals.getCount())
                 .build();
     }
 
+    /**
+     * The budget an expense is counted against, or null for a normal expense.
+     *
+     * <p>Three conditions, and each is the reason the link means something: the budget is the
+     * caller's, it has not closed, and the expense's date falls inside its window - an expense from
+     * last month cannot join this week's plan.
+     */
+    private Budget resolveBudget(UUID userId, ExpenseRequests.SaveExpense request)
+    {
+        if (request.getBudgetId() == null)
+        {
+            return null;
+        }
+
+        Budget budget = budgetRepository.findByIdAndUserId(request.getBudgetId(), userId)
+                .orElseThrow(() -> new InvalidRequestException(
+                        "Budget " + request.getBudgetId() + " is not one of your budgets"));
+
+        LocalDate date = request.getDate();
+
+        if (date.isBefore(budget.getStartDate()) || date.isAfter(budget.getEndDate()))
+        {
+            throw new InvalidRequestException("This expense is dated " + date
+                    + ", outside the budget's window (" + budget.getStartDate() + " to "
+                    + budget.getEndDate() + ").");
+        }
+
+        if (budget.getStatus() == BudgetStatus.CLOSED)
+        {
+            throw new InvalidRequestException("That budget has closed, so it cannot take more expenses.");
+        }
+
+        return budget;
+    }
     private Expense getExpenseOrThrow(UUID userId, UUID id)
     {
         return expenseRepository.findByIdAndUserId(id, userId)
@@ -225,5 +285,12 @@ public class ExpenseServiceImpl implements ExpenseService
     {
         return userCategoryRepository.findByIdAndUserId(categoryId, userId)
                 .orElseThrow(() -> new InvalidRequestException("Category " + categoryId + " is not one of your categories"));
+    }
+
+    /** The caller, whose base currency labels every amount this service writes. */
+    private User getUserOrThrow(UUID userId)
+    {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No user with id " + userId));
     }
 }

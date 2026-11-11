@@ -63,7 +63,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 
 type LoginResponse = {
   accessToken: string;
-  user: { userName: string; type: 'USER' | 'ADMIN' };
+  user: { userName: string; type: 'USER' | 'ADMIN'; baseCurrency?: string };
 };
 
 /** POST /auth/login. Callers decide whether the account type suits their screen. */
@@ -73,7 +73,13 @@ export async function login(usernameOrEmail: string, password: string): Promise<
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ usernameOrEmail, password }),
   });
-  return { accessToken: result.accessToken, userName: result.user.userName, type: result.user.type };
+  return {
+    accessToken: result.accessToken,
+    userName: result.user.userName,
+    type: result.user.type,
+    // Older payloads omit it; XAF is the backend's own fallback.
+    baseCurrency: result.user.baseCurrency ?? 'XAF',
+  };
 }
 
 /** Call with the session's Bearer token; a JSON `body` is serialized for you. */

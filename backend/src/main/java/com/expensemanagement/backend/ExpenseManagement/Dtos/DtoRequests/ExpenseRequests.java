@@ -35,5 +35,11 @@ public class ExpenseRequests {
 
         @Size(max = 255, message = "Description must be at most 255 characters")
         private String description;
+
+        /**
+         * Optional: the budget this expense counts against. Its date must fall inside that budget's
+         * window, and a closed budget accepts nobody.
+         */
+        private UUID budgetId;
     }
 }

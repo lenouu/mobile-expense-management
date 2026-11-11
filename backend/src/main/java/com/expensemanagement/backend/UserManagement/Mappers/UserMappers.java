@@ -44,6 +44,7 @@ public final class UserMappers
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .baseCurrency(user.getBaseCurrency())
                 .dateOfBirth(user.getDateOfBirth())
                 .profilePictureReference(user.getProfilePictureReference())
                 .profilePictureUrl(avatarUrl(user.getProfilePictureReference()))

@@ -43,6 +43,8 @@ export type Session = {
   accessToken: string;
   userName: string;
   type: AccountType;
+  /** The unit every amount is recorded in; chosen in Settings. */
+  baseCurrency: string;
 };
 
 /** The user profile shape the backend returns (`UserResponses.Details`), minus any password. */
@@ -53,6 +55,8 @@ export type Account = {
   /** Null until the user fills their name in from the profile screen. */
   firstName: string | null;
   lastName: string | null;
+  /** The unit this account records amounts in, e.g. XAF. */
+  baseCurrency: string;
   /** YYYY-MM-DD, or null when the user skipped it. */
   dateOfBirth: string | null;
   profilePictureReference: string | null;

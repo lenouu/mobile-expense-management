@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -61,6 +62,13 @@ public class UserRequests {
 
         @Past(message = "Date of birth must be in the past")
         private LocalDate dateOfBirth;
+
+        /**
+         * The unit this account records amounts in, e.g. XAF. Only settable while nothing has been
+         * recorded yet: without a conversion rate, changing it later would relabel stored amounts.
+         */
+        @Pattern(regexp = "^[A-Za-z]{3}$", message = "Base currency must be a 3-letter ISO code like XAF")
+        private String baseCurrency;
     }
 
     @Getter

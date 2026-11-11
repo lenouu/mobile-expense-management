@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.ExpenseManagement.Mappers;
 
+import com.expensemanagement.backend.BudgetManagement.Entities.Budget;
 import com.expensemanagement.backend.CategoryManagement.Entities.UserCategory;
 import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoRequests.ExpenseRequests;
 import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoResponses.ExpenseResponses;

@@ -25,8 +25,18 @@ const LEGACY_ICONS: Record<string, IconName> = {
 };
 
 /** True when the stored value is a pictograph rather than a symbol name. */
-function isEmoji(value: string): boolean {
+export function isEmojiIcon(value: string): boolean {
   return [...value].some((character) => (character.codePointAt(0) ?? 0) >= 0x2190);
+}
+
+/**
+ * The symbol a stored legacy name stands for, or undefined when it is not one.
+ *
+ * Exported because the icon picker needs the same translation: a seeded category's icon is a name
+ * like "cart", and the picker must show that mark rather than the word.
+ */
+export function legacyIconName(value: string): IconName | undefined {
+  return isEmojiIcon(value) ? undefined : LEGACY_ICONS[value];
 }
 
 /**
@@ -46,7 +56,7 @@ export function CategoryBadge({
   size?: number;
 }) {
   const glyphSize = Math.round(size * 0.5);
-  const legacy = icon && !isEmoji(icon) ? LEGACY_ICONS[icon] : undefined;
+  const legacy = icon ? legacyIconName(icon) : undefined;
 
   return (
     <View
@@ -60,7 +70,7 @@ export function CategoryBadge({
           borderColor: withAlpha(color, 0.4),
         },
       ]}>
-      {icon && isEmoji(icon) ? (
+      {icon && isEmojiIcon(icon) ? (
         <Text style={{ fontSize: glyphSize, lineHeight: glyphSize + 6 }}>{icon}</Text>
       ) : legacy ? (
         <Icon name={legacy} size={glyphSize} color={color} />

@@ -20,6 +20,8 @@ export type Expense = {
   date: string;
   description: string | null;
   category: { id: string; name: string; icon: string | null; color: string | null };
+  /** The budget it is counted against, or null for a normal expense. */
+  budget: { id: string; name: string | null; startDate: string; endDate: string } | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,7 +38,14 @@ export type Income = {
 };
 
 /** Body of POST and PUT. PUT is a full replace: an omitted description is cleared. */
-export type SaveExpense = { amount: Money; date: string; categoryId: string; description?: string };
+export type SaveExpense = {
+  amount: Money;
+  date: string;
+  categoryId: string;
+  description?: string;
+  /** Optional: the budget this expense counts against. */
+  budgetId?: string;
+};
 
 export type SaveIncome = { amount: Money; date: string; source: string; description?: string };
 

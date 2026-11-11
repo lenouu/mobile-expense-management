@@ -1,39 +1,53 @@
 package com.expensemanagement.backend.BudgetManagement.Services.ServiceInterface;
 
 import com.expensemanagement.backend.BudgetManagement.Dtos.DtoRequests.BudgetRequests;
-import com.expensemanagement.backend.BudgetManagement.Dtos.DtoRequests.CategoryAllocationRequests;
 import com.expensemanagement.backend.BudgetManagement.Dtos.DtoResponses.BudgetResponses;
-import com.expensemanagement.backend.BudgetManagement.Entities.Budget;
+import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoResponses.ExpenseResponses;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
 public interface BudgetService
 {
+    /**
+     * Creates a budget for a window of the caller's choosing.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException when the window is
+     *         invalid, overlaps another budget, or the split does not add up to the total
+     */
     BudgetResponses.BudgetDetails createBudget(UUID userId, BudgetRequests.CreateBudget request);
 
+    /**
+     * Replaces a budget's plan. Accepted only while it is editable and under the edit cap.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException when it is fixed,
+     *         closed, or the new plan is invalid
+     */
     BudgetResponses.BudgetDetails updateBudget(UUID userId, UUID budgetId, BudgetRequests.UpdateBudget request);
 
     BudgetResponses.BudgetDetails getBudget(UUID userId, UUID budgetId);
 
-    BudgetResponses.BudgetDetails getBudgetByPeriod(UUID userId, UUID periodId);
+    /**
+     * The caller's budgets, running first, then upcoming, then history.
+     *
+     * <p>Reading a budget whose window has ended closes it and writes the recap notification, which
+     * is why this is a write-capable operation: there is no scheduler to do it in the background.
+     */
+    List<BudgetResponses.BudgetSummary> listMine(UUID userId);
 
-    BudgetResponses.AllocationDetails addOrUpdateAllocation(UUID userId, UUID budgetId, CategoryAllocationRequests.SaveAllocation request);
-
-    BudgetResponses.AllocationDetails updateAllocation(UUID userId, UUID budgetId, UUID allocationId, CategoryAllocationRequests.UpdateAllocation request);
-
-    void deleteAllocation(UUID userId, UUID budgetId, UUID allocationId);
-
-    List<BudgetResponses.AllocationDetails> getAllocations(UUID userId, UUID budgetId);
+    /** The expenses assigned to a budget - the rows behind its spending figure. */
+    Page<ExpenseResponses.Details> expensesOf(UUID userId, UUID budgetId, Pageable pageable);
 
     /**
-     * Validates that adding or updating an allocation will not cause the total allocated amount
-     * to exceed the overall budget (S4-TECH-2).
+     * Deletes a budget.
      *
-     * @param budget the budget being validated
-     * @param proposedAmount the amount for the category allocation
-     * @param existingAllocationId null if adding a new allocation, or the ID of the allocation being updated (to avoid double-counting)
+     * <p>A future or running budget can go, and taking it away takes the expenses that were
+     * recorded under it: they exist only as part of that plan. A closed budget cannot be deleted -
+     * its verdict is history.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException when it has closed
      */
-    void validateAllocationAgainstBudget(Budget budget, BigDecimal proposedAmount, UUID existingAllocationId);
+    void deleteBudget(UUID userId, UUID budgetId);
 }

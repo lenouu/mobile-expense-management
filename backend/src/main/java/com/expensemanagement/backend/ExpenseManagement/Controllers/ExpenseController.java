@@ -84,11 +84,13 @@ public class ExpenseController
             @RequestParam(required = false) UUID categoryId,
             @Parameter(description = "Case-insensitive text to look for in the description")
             @RequestParam(required = false) String q,
+            @Parameter(description = "Only expenses assigned to this budget; must be one of yours")
+            @RequestParam(required = false) UUID budgetId,
             @ParameterObject @PageableDefault(size = 20, sort = {"date", "id"}, direction = Sort.Direction.DESC)
             Pageable pageable)
     {
         return PageResponse.of(
-                expenseService.findMine(currentUserId(jwt), periodId, from, to, categoryId, q, pageable));
+                expenseService.findMine(currentUserId(jwt), periodId, from, to, categoryId, q, budgetId, pageable));
     }
 
     /** Declared before {@code /{id}} for readability; the literal path wins either way. */

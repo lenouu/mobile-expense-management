@@ -139,6 +139,10 @@ export const Radius = {
  */
 export const Typography = {
   heading: { fontSize: 24, lineHeight: 32, fontWeight: '700', letterSpacing: -0.6 },
+  /** A screen's hero figure - the one number the user came to read. */
+  display: { fontSize: 34, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8 },
+  /** A headline that is important but not the hero: the current window, a period's name. */
+  hero: { fontSize: 22, lineHeight: 30, fontWeight: '700' },
   title: { fontSize: 20, lineHeight: 28, fontWeight: '700' },
   subtitle: { fontSize: 16, lineHeight: 24, fontWeight: '600' },
   body: { fontSize: 16, lineHeight: 24, fontWeight: '400' },

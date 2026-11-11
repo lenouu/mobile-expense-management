@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { FadeIn } from '@/components/ui/fade-in';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
+import { isEmojiIcon, legacyIconName } from '@/features/finances/components/category-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { withAlpha } from '@/utils/color';
 
@@ -111,8 +112,13 @@ export function EmojiPicker({
   const theme = useTheme();
   const [open, setOpen] = useState(false);
 
-  const select = (emoji: string) => {
-    onChange(emoji);
+  // A category seeded before emoji existed stores a symbol name such as "cart". Show the mark it
+  // stands for rather than the word, and let picking an emoji replace it.
+  const legacy = value ? legacyIconName(value) : undefined;
+  const emoji = value && isEmojiIcon(value) ? value : '';
+
+  const select = (emojiValue: string) => {
+    onChange(emojiValue);
     setOpen(false);
   };
 
@@ -121,7 +127,7 @@ export function EmojiPicker({
       <Pressable
         onPress={() => setOpen((current) => !current)}
         accessibilityRole="button"
-        accessibilityLabel={value ? `Icon ${value}, change it` : 'Choose an icon'}
+        accessibilityLabel={value ? 'Change the icon' : 'Choose an icon'}
         accessibilityState={{ expanded: open }}
         style={({ pressed }) => [
           styles.field,
@@ -133,8 +139,10 @@ export function EmojiPicker({
             styles.preview,
             { backgroundColor: withAlpha(accent, 0.18), borderColor: withAlpha(accent, 0.4) },
           ]}>
-          {value ? (
-            <Text style={styles.previewGlyph}>{value}</Text>
+          {emoji ? (
+            <Text style={styles.previewGlyph}>{emoji}</Text>
+          ) : legacy ? (
+            <Icon name={legacy} size={18} color={accent} />
           ) : (
             <View style={[styles.emptyDot, { backgroundColor: accent }]} />
           )}

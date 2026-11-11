@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Animated, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -14,6 +14,7 @@ import { WelcomeModal } from '@/components/ui/welcome-modal';
 import { Radius, Spacing, Status } from '@/constants/theme';
 import { useLoginForm } from '@/features/auth/hooks/use-login-form';
 import { homeRouteFor, welcomeMessageFor } from '@/features/auth/lib/login';
+import { useShake } from '@/hooks/use-shake';
 import { useSession } from '@/providers';
 import type { Session } from '@/types/api';
 
@@ -51,6 +52,15 @@ export function SignInScreen() {
 
   const { form, errors, submitting, setField, submit } = useLoginForm(onAuthenticated);
 
+  // A refused sign-in says no out loud: the card shakes once, the message stays red.
+  const { offset, shake } = useShake();
+  const hasErrors = Object.keys(errors).length > 0;
+
+  useEffect(() => {
+    if (hasErrors) shake();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasErrors]);
+
   const finishRedirect = useCallback(() => {
     if (!pending) return;
     setPending(null);
@@ -86,7 +96,8 @@ export function SignInScreen() {
 
         <FadeIn delay={120}>
 
-        <Card style={styles.formCard}>
+        <Animated.View style={{ transform: [{ translateX: offset }] }}>
+          <Card style={styles.formCard}>
           <View style={styles.form}>
             <TextField
               label="Username or email"
@@ -132,7 +143,8 @@ export function SignInScreen() {
               disabled={submitting}
             />
           </View>
-        </Card>
+          </Card>
+        </Animated.View>
         </FadeIn>
 
         <FadeIn delay={180}>

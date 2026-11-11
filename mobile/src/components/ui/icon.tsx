@@ -44,7 +44,8 @@ export type IconName =
   | 'chevronLeft'
   | 'chevronRight'
   | 'edit'
-  | 'delete';
+  | 'delete'
+  | 'close';
 
 /**
  * `ios` is an SF Symbol name; `md` is a Material Symbols ligature.
@@ -89,6 +90,7 @@ export const ICONS = {
   chevronRight: { ios: 'chevron.right', md: 'keyboard_arrow_right' },
   edit: { ios: 'square.and.pencil', md: 'edit' },
   delete: { ios: 'trash.fill', md: 'delete' },
+  close: { ios: 'xmark', md: 'close' },
 } as const satisfies Record<IconName, { ios: string; md: string }>;
 
 /** One symbol, sized and tinted. */

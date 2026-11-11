@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.ExpenseManagement.Entities;
 
+import com.expensemanagement.backend.BudgetManagement.Entities.Budget;
 import com.expensemanagement.backend.CategoryManagement.Entities.UserCategory;
 import com.expensemanagement.backend.UserManagement.Entities.User;
 import jakarta.persistence.*;
@@ -34,6 +35,17 @@ public class Expense
     private UserCategory category;
 
     /** BigDecimal, never double: money must not pick up rounding errors. */
+    /**
+     * The budget this expense is counted against, or null for a normal expense.
+     *
+     * <p>Optional on purpose: the ledger is continuous, and a budget only sees the expenses the
+     * user chose to put under it. Deleting a budget takes its expenses with it, which is why this
+     * is not a soft link.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "budget_id")
+    private Budget budget;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 

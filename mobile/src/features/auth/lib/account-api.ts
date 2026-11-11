@@ -13,6 +13,8 @@ export type ProfileUpdate = {
   userName?: string;
   firstName?: string;
   lastName?: string;
+  /** Only accepted while nothing has been recorded; see the settings screen. */
+  baseCurrency?: string;
 };
 
 /** Body of `PUT /users/me/password`. All three are required by the backend. */

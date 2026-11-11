@@ -26,6 +26,10 @@ public class ExpenseResponses
         private final LocalDate date;
         private final String description;
         private final CategoryRef category;
+
+        /** The budget this expense is counted against, or null. */
+        private final BudgetRef budget;
+
         private final LocalDateTime createdAt;
         private final LocalDateTime updatedAt;
     }
@@ -52,6 +56,18 @@ public class ExpenseResponses
     }
 
     /** Just enough of the category to display it next to the expense. */
+    /** The budget an expense belongs to. Its name may be null - unnamed budgets go by their dates. */
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class BudgetRef
+    {
+        private final UUID id;
+        private final String name;
+        private final LocalDate startDate;
+        private final LocalDate endDate;
+    }
+
     @Getter
     @Builder
     @AllArgsConstructor

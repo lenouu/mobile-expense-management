@@ -6,9 +6,10 @@ import { ThemedText } from '@/components/themed-text';
 import { AppHeader } from '@/components/ui/app-header';
 import { FadeIn } from '@/components/ui/fade-in';
 import { SegmentedNav, type SegmentItem } from '@/components/ui/segmented-nav';
-import { TopToast, type ToastMessage } from '@/components/ui/top-toast';
+import { TopToast, type ToastKind, type ToastMessage } from '@/components/ui/top-toast';
 import { Spacing } from '@/constants/theme';
 import { CategoriesManager } from '@/features/finances/components/categories-manager';
+import { TransactionsSegment } from '@/features/finances/components/transactions-segment';
 import { useTheme } from '@/hooks/use-theme';
 import { useCurrentSession, useSession } from '@/providers';
 
@@ -43,6 +44,15 @@ export default function ExpensesRoute() {
 
   if (!session) return null;
 
+  const showToast = (kind: ToastKind, message: string) =>
+    setToast({ id: Date.now(), message, kind });
+
+  const handleSessionEnd = (message?: string) => {
+    Alert.alert('Session ended', message ?? 'Please sign in again.');
+    signOut();
+    router.replace('/auth/sign-in');
+  };
+
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <AppHeader title="Expenses" />
@@ -55,19 +65,20 @@ export default function ExpensesRoute() {
           <CategoriesManager
             session={session}
             contentStyle={undefined}
-            onToast={(kind, message) => setToast({ id: Date.now(), message, kind })}
-            onSignOut={(message) => {
-              Alert.alert('Session ended', message ?? 'Please sign in again.');
-              signOut();
-              router.replace('/auth/sign-in');
-            }}
+            onToast={showToast}
+            onSignOut={handleSessionEnd}
+          />
+        ) : segment === 'transactions' ? (
+          <TransactionsSegment
+            session={session}
+            onToast={showToast}
+            onSignOut={handleSessionEnd}
           />
         ) : (
           <View style={styles.pending}>
             <ThemedText type="small" themeColor="textMuted" style={styles.pendingText}>
-              {segment === 'overview'
-                ? 'The overview - this window’s total, its categories and how it compares - is the next piece to build.'
-                : 'The list of recorded expenses is the next piece to build.'}
+              The overview - this window’s total, its categories and how it compares - is the next
+              piece to build.
             </ThemedText>
           </View>
         )}
