@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoResponses.IncomeResponses.TotalIncome;
 import com.expensemanagement.backend.IncomeManagement.Repositories.IncomeRepository;
+import com.expensemanagement.backend.IncomeManagement.Services.ServiceInterface.IncomeSourceService;
 import com.expensemanagement.backend.IncomeManagement.Services.ServiceImplements.IncomeServiceImpl;
 import com.expensemanagement.backend.PeriodManagement.Entities.FinancialPeriod;
 import com.expensemanagement.backend.PeriodManagement.Repositories.FinancialPeriodRepository;
@@ -37,11 +38,14 @@ class IncomeServiceTotalUnitTest {
 	@Mock
 	private FinancialPeriodRepository periodRepository;
 
+	@Mock
+	private IncomeSourceService incomeSourceService;
+
 	private IncomeServiceImpl incomeService;
 
 	@BeforeEach
 	void setUp() {
-		incomeService = new IncomeServiceImpl(incomeRepository, userRepository, periodRepository);
+		incomeService = new IncomeServiceImpl(incomeRepository, userRepository, periodRepository, incomeSourceService);
 	}
 
 	@Test

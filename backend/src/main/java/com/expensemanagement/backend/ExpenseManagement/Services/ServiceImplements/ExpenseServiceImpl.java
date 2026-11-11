@@ -29,8 +29,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -244,6 +250,112 @@ public class ExpenseServiceImpl implements ExpenseService
      * caller's, it has not closed, and the expense's date falls inside its window - an expense from
      * last month cannot join this week's plan.
      */
+    @Override
+    @Transactional
+    public ExpenseResponses.Overview overview(UUID userId, LocalDate from, LocalDate to)
+    {
+        DateRanges.Range window = DateRanges.of(from, to);
+        String baseCurrency = getUserOrThrow(userId).getBaseCurrency();
+
+        // The same length immediately before: a 29-day window compares with the 29 days before it,
+        // which is honest for a custom range as well as for a period.
+        long length = ChronoUnit.DAYS.between(window.from(), window.to()) + 1;
+        LocalDate previousTo = window.from().minusDays(1);
+        LocalDate previousFrom = previousTo.minusDays(length - 1);
+
+        ExpenseRepository.Totals current = expenseRepository
+                .totalsMatching(userId, window.from(), window.to(), null, null);
+        ExpenseRepository.Totals previous = expenseRepository
+                .totalsMatching(userId, previousFrom, previousTo, null, null);
+
+        BigDecimal change = current.getTotal().subtract(previous.getTotal());
+
+        Map<UUID, BigDecimal> previousByCategory = new HashMap<>();
+        for (Object[] row : expenseRepository.sumByCategory(userId, previousFrom, previousTo))
+        {
+            previousByCategory.put((UUID) row[0], (BigDecimal) row[1]);
+        }
+
+        BigDecimal grandTotal = current.getTotal();
+        List<ExpenseResponses.CategorySlice> byCategory = new ArrayList<>();
+
+        for (Object[] row : expenseRepository.sumByCategory(userId, window.from(), window.to()))
+        {
+            UUID categoryId = (UUID) row[0];
+            BigDecimal total = (BigDecimal) row[1];
+            BigDecimal before = previousByCategory.getOrDefault(categoryId, BigDecimal.ZERO);
+
+            byCategory.add(ExpenseResponses.CategorySlice.builder()
+                    .category(categorySlice(userId, categoryId))
+                    .total(Money.of(total, baseCurrency))
+                    .count(0)
+                    .previousTotal(Money.of(before, baseCurrency))
+                    .change(Money.of(total.subtract(before), baseCurrency))
+                    .changePercent(percentOf(total.subtract(before), before))
+                    .share(grandTotal.signum() == 0 ? 0
+                            : total.multiply(BigDecimal.valueOf(100))
+                                    .divide(grandTotal, 1, RoundingMode.HALF_UP)
+                                    .doubleValue())
+                    .build());
+        }
+
+        byCategory.sort((a, b) -> b.getTotal().amount().compareTo(a.getTotal().amount()));
+
+        Map<LocalDate, BigDecimal> byDate = new HashMap<>();
+        for (Object[] row : expenseRepository.sumByDate(userId, window.from(), window.to()))
+        {
+            byDate.put((LocalDate) row[0], (BigDecimal) row[1]);
+        }
+
+        List<ExpenseResponses.DaySlice> daily = new ArrayList<>();
+        for (LocalDate date = window.from(); !date.isAfter(window.to()); date = date.plusDays(1))
+        {
+            daily.add(ExpenseResponses.DaySlice.builder()
+                    .date(date)
+                    .total(Money.of(byDate.getOrDefault(date, BigDecimal.ZERO), baseCurrency))
+                    .build());
+        }
+
+        return ExpenseResponses.Overview.builder()
+                .from(window.from())
+                .to(window.to())
+                .total(Money.of(current.getTotal(), baseCurrency))
+                .count(current.getCount())
+                .previousFrom(previousFrom)
+                .previousTo(previousTo)
+                .previousTotal(Money.of(previous.getTotal(), baseCurrency))
+                .previousCount(previous.getCount())
+                .change(Money.of(change, baseCurrency))
+                .changePercent(percentOf(change, previous.getTotal()))
+                .byCategory(byCategory)
+                .daily(daily)
+                .build();
+    }
+
+    /** Percentage change against a baseline, or null when the baseline is zero. */
+    private static Double percentOf(BigDecimal change, BigDecimal baseline)
+    {
+        if (baseline == null || baseline.signum() == 0)
+        {
+            return null;
+        }
+        return change.multiply(BigDecimal.valueOf(100))
+                .divide(baseline, 1, RoundingMode.HALF_UP)
+                .doubleValue();
+    }
+
+    /** The category behind a slice, looked up once per row - the list is tiny. */
+    private ExpenseResponses.CategoryRef categorySlice(UUID userId, UUID categoryId)
+    {
+        return userCategoryRepository.findByIdAndUserId(categoryId, userId)
+                .map(category -> ExpenseResponses.CategoryRef.builder()
+                        .id(category.getId())
+                        .name(category.getName())
+                        .icon(category.getIcon())
+                        .color(category.getColor())
+                        .build())
+                .orElse(null);
+    }
     private Budget resolveBudget(UUID userId, ExpenseRequests.SaveExpense request)
     {
         if (request.getBudgetId() == null)

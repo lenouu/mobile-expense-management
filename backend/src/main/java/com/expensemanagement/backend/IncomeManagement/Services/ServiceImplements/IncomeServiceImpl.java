@@ -4,7 +4,9 @@ import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoRequests.IncomeRequests;
 import com.expensemanagement.backend.IncomeManagement.Dtos.DtoResponses.IncomeResponses;
 import com.expensemanagement.backend.IncomeManagement.Entities.Income;
+import com.expensemanagement.backend.IncomeManagement.Entities.IncomeSource;
 import com.expensemanagement.backend.IncomeManagement.Mappers.IncomeMappers;
+import com.expensemanagement.backend.IncomeManagement.Services.ServiceInterface.IncomeSourceService;
 import com.expensemanagement.backend.IncomeManagement.Repositories.IncomeRepository;
 import com.expensemanagement.backend.IncomeManagement.Services.ServiceInterface.IncomeService;
 import com.expensemanagement.backend.PeriodManagement.Entities.FinancialPeriod;
@@ -20,7 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.math.RoundingMode;
 
 /**
  * Incomes (S2-TECH-2). Same privacy model as {@code ExpenseServiceImpl}: every query is scoped
@@ -34,13 +39,16 @@ public class IncomeServiceImpl implements IncomeService
     private final IncomeRepository incomeRepository;
     private final UserRepository userRepository;
     private final FinancialPeriodRepository periodRepository;
+    private final IncomeSourceService incomeSourceService;
 
     public IncomeServiceImpl(IncomeRepository incomeRepository, UserRepository userRepository,
-                             FinancialPeriodRepository periodRepository)
+                             FinancialPeriodRepository periodRepository,
+                             IncomeSourceService incomeSourceService)
     {
         this.incomeRepository = incomeRepository;
         this.userRepository = userRepository;
         this.periodRepository = periodRepository;
+        this.incomeSourceService = incomeSourceService;
     }
 
     @Override
@@ -64,7 +72,8 @@ public class IncomeServiceImpl implements IncomeService
         Income income = new Income();
         // A reference, not a query: the id comes from a verified token, so the user exists.
         income.setUser(userRepository.getReferenceById(userId));
-        Income saved = incomeRepository.save(IncomeMappers.apply(income, request));
+        IncomeSource source = incomeSourceService.requireOwned(userId, request.getSourceId());
+        Income saved = incomeRepository.save(IncomeMappers.apply(income, request, source));
 
         log.info("User id={} added income id={}", userId, saved.getId());
         return IncomeMappers.toDetails(saved);
@@ -75,7 +84,8 @@ public class IncomeServiceImpl implements IncomeService
     public IncomeResponses.Details update(UUID userId, UUID id, IncomeRequests.SaveIncome request)
     {
         Income income = getIncomeOrThrow(userId, id);
-        IncomeMappers.apply(income, request);
+        IncomeSource source = incomeSourceService.requireOwned(userId, request.getSourceId());
+        IncomeMappers.apply(income, request, source);
 
         // Flushed now so @PreUpdate has stamped updatedAt before the response is built.
         return IncomeMappers.toDetails(incomeRepository.saveAndFlush(income));
@@ -115,6 +125,55 @@ public class IncomeServiceImpl implements IncomeService
                 .build();
     }
 
+    @Override
+    public IncomeResponses.Summary summary(UUID userId, LocalDate from, LocalDate to)
+    {
+        String baseCurrency = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."))
+                .getBaseCurrency();
+
+        BigDecimal total = incomeRepository.sumByUserIdAndDateBetween(userId, from, to);
+        long count = incomeRepository.countByUserIdAndDateBetween(userId, from, to);
+
+        List<IncomeResponses.SourceSlice> slices = new ArrayList<>();
+        for (Object[] row : incomeRepository.sumBySource(userId, from, to))
+        {
+            UUID sourceId = (UUID) row[0];
+            BigDecimal amount = (BigDecimal) row[1];
+            long entries = ((Number) row[2]).longValue();
+            IncomeSource source = incomeSourceService.requireOwned(userId, sourceId);
+
+            slices.add(IncomeResponses.SourceSlice.builder()
+                    .source(toSourceRef(source))
+                    .total(Money.of(amount, baseCurrency))
+                    .count(entries)
+                    .share(total.signum() == 0 ? 0
+                            : amount.multiply(BigDecimal.valueOf(100))
+                                    .divide(total, 1, RoundingMode.HALF_UP)
+                                    .doubleValue())
+                    .build());
+        }
+
+        slices.sort((a, b) -> b.getTotal().amount().compareTo(a.getTotal().amount()));
+
+        return IncomeResponses.Summary.builder()
+                .from(from)
+                .to(to)
+                .total(Money.of(total, baseCurrency))
+                .count(count)
+                .bySource(slices)
+                .build();
+    }
+
+    private IncomeResponses.SourceRef toSourceRef(IncomeSource source)
+    {
+        return IncomeResponses.SourceRef.builder()
+                .id(source.getId())
+                .name(source.getName())
+                .icon(source.getIcon())
+                .color(source.getColor())
+                .build();
+    }
     private Income getIncomeOrThrow(UUID userId, UUID id)
     {
         return incomeRepository.findByIdAndUserId(id, userId)

@@ -13,6 +13,7 @@ import { Brand, MaxContentWidth, Radius, Shadows, Spacing } from '@/constants/th
 import { CategoryBadge } from '@/features/finances/components/category-badge';
 import { CsvImportPopup } from '@/features/finances/components/csv-import-popup';
 import { ExpenseForm } from '@/features/finances/components/expense-form';
+import { IncomeSegment } from '@/features/finances/components/income-segment';
 import {
   daysBetween,
   describeDuration,
@@ -111,6 +112,9 @@ export function TransactionsSegment({
   const [error, setError] = useState<string | null>(null);
 
   // The window and the filters that narrow it.
+  /** Which half of the ledger is on screen. */
+  const [ledger, setLedger] = useState<'expenses' | 'income'>('expenses');
+
   const [windowKey, setWindowKey] = useState<WindowKey>('period');
   const [customFrom, setCustomFrom] = useState(daysAgo(29));
   const [customTo, setCustomTo] = useState(todayIso());
@@ -410,6 +414,18 @@ export function TransactionsSegment({
     return `between ${formatLongDate(customFrom)} and ${formatLongDate(customTo)}`;
   }, [windowKey, customFrom, customTo]);
 
+  // The other half of the ledger: the same window, the other direction.
+  if (ledger === 'income') {
+    return (
+      <IncomeSegment
+        session={session}
+        onSignOut={onSignOut}
+        onToast={onToast}
+        onSwitch={() => setLedger('expenses')}
+      />
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -419,6 +435,29 @@ export function TransactionsSegment({
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={loading && rows.length > 0} onRefresh={reload} />}>
         <View style={styles.page}>
+          {/* Expenses or income: the same ledger, two directions. */}
+          <View style={[styles.ledgerSwitch, { borderColor: theme.border }]}>
+            {(['expenses', 'income'] as const).map((side) => {
+              const active = side === ledger;
+              return (
+                <Pressable
+                  key={side}
+                  onPress={() => setLedger(side)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={side === 'expenses' ? 'Expenses' : 'Income'}
+                  style={[
+                    styles.ledgerTab,
+                    active && { backgroundColor: theme.backgroundSelected },
+                  ]}>
+                  <ThemedText type={active ? 'smallBold' : 'small'} themeColor={active ? 'text' : 'textMuted'}>
+                    {side === 'expenses' ? 'Expenses' : 'Income'}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+
           {/* The window: the first thing on the screen, so it is set like a headline. */}
           <Pressable
             onPress={() => setWindowOpen(true)}
@@ -818,6 +857,19 @@ export function TransactionsSegment({
 }
 
 const styles = StyleSheet.create({
+  ledgerSwitch: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    gap: 3,
+    padding: 3,
+    borderWidth: 1,
+    borderRadius: 999,
+  },
+  ledgerTab: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: 999,
+  },
   screen: {
     flex: 1,
   },

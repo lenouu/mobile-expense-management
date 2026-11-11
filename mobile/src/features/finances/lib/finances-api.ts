@@ -26,6 +26,46 @@ export type Expense = {
   updatedAt: string;
 };
 
+/** `GET /expenses/overview` - one window against the window of the same length before it. */
+export type OverviewSlice = {
+  category: { id: string; name: string; icon: string | null; color: string | null };
+  total: Money;
+  count: number;
+  previousTotal: Money;
+  change: Money;
+  changePercent: number | null;
+  share: number;
+};
+
+export type OverviewDay = { date: string; total: Money };
+
+export type ExpenseOverview = {
+  from: string;
+  to: string;
+  total: Money;
+  count: number;
+  previousFrom: string;
+  previousTo: string;
+  previousTotal: Money;
+  previousCount: number;
+  change: Money;
+  changePercent: number | null;
+  byCategory: OverviewSlice[];
+  daily: OverviewDay[];
+};
+
+/** GET /expenses/overview. Without dates the server answers for the current financial period. */
+export function fetchExpenseOverview(
+  session: Session,
+  window: { from?: string; to?: string } = {},
+) {
+  const params = new URLSearchParams();
+  if (window.from) params.set('from', window.from);
+  if (window.to) params.set('to', window.to);
+  const query = params.toString();
+
+  return authRequest<ExpenseOverview>(`/expenses/overview${query ? `?${query}` : ''}`, session);
+}
 export type Income = {
   id: string;
   /** `{ amount, currency }`; the backend never sends money as a bare number. */

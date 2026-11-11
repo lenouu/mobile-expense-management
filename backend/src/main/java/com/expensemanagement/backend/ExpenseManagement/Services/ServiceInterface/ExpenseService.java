@@ -69,4 +69,13 @@ public interface ExpenseService
      */
     ExpenseResponses.Total totals(UUID userId, UUID periodId, LocalDate from, LocalDate to,
                                   UUID categoryId, String q);
+
+    /**
+     * The window's total, its split by category and its shape day by day, against the window of
+     * the same length that came before it.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if {@code from} is
+     *         after {@code to}
+     */
+    ExpenseResponses.Overview overview(UUID userId, LocalDate from, LocalDate to);
 }

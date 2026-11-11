@@ -36,4 +36,7 @@ public interface IncomeService
      *         not exist or does not belong to the user
      */
     IncomeResponses.TotalIncome totalForPeriod(UUID userId, UUID periodId);
+
+    /** The window's total and its split by source - the income list's summary block. */
+    IncomeResponses.Summary summary(UUID userId, LocalDate from, LocalDate to);
 }

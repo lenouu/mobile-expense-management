@@ -99,6 +99,17 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID>
             where e.user.id = :userId and e.budget.id = :budgetId
             group by e.category.id""")
     List<Object[]> sumByCategoryForBudget(@Param("userId") UUID userId, @Param("budgetId") UUID budgetId);
+    /** The same window, one row per day - the shape of the period, not just its total. */
+    @Query("""
+            select e.date, coalesce(sum(e.amount), 0)
+            from Expense e
+            where e.user.id = :userId and e.date between :from and :to
+            group by e.date
+            order by e.date""")
+    List<Object[]> sumByDate(@Param("userId") UUID userId,
+                             @Param("from") LocalDate from,
+                             @Param("to") LocalDate to);
+
     /**
      * The same window as {@link #totalsMatching}, split by category.
      *

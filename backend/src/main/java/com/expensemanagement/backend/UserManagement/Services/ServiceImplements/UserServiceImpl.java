@@ -7,6 +7,7 @@ import com.expensemanagement.backend.Exceptions.DuplicateResourceException;
 import com.expensemanagement.backend.Exceptions.InvalidCredentialsException;
 import com.expensemanagement.backend.Exceptions.OperationNotAllowedException;
 import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
+import com.expensemanagement.backend.IncomeManagement.Services.ServiceInterface.IncomeSourceService;
 import com.expensemanagement.backend.ExpenseManagement.Services.ServiceInterface.ExpenseService;
 import com.expensemanagement.backend.UserManagement.Dtos.DtoRequests.UserRequests;
 import com.expensemanagement.backend.UserManagement.Dtos.DtoResponses.UserResponses;
@@ -44,14 +45,17 @@ public class UserServiceImpl implements UserService
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserCategoryService userCategoryService;
+    private final IncomeSourceService incomeSourceService;
     private final ExpenseService expenseService;
 
     public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                           UserCategoryService userCategoryService, ExpenseService expenseService)
+                           UserCategoryService userCategoryService,
+                           IncomeSourceService incomeSourceService, ExpenseService expenseService)
     {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userCategoryService = userCategoryService;
+        this.incomeSourceService = incomeSourceService;
         this.expenseService = expenseService;
     }
 
@@ -100,6 +104,10 @@ public class UserServiceImpl implements UserService
         // S2-TECH-1: the new account starts with its own copy of the active default
         // categories. Same transaction as the insert above, so it is all or nothing.
         userCategoryService.provisionDefaults(saved);
+
+        // Income sources too: the source is required on an income entry, so an empty list would
+        // leave a new account unable to record any money coming in.
+        incomeSourceService.provisionDefaults(saved);
 
         log.info("Registered account id={} username={}", saved.getId(), saved.getUserName());
         return UserMappers.toDetails(saved);

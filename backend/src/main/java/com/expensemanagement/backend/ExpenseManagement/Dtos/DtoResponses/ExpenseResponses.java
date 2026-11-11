@@ -8,6 +8,7 @@ import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -78,4 +79,60 @@ public class ExpenseResponses
         private final String icon;
         private final String color;
     }
-}
+    /**
+     * Body of {@code GET /expenses/overview}: one window, and what it is worth.
+     *
+     * <p>Everything is derived from the same rows the ledger would list for the window, so the
+     * headline, the category split and the daily shape can never disagree with the list.
+     */
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class Overview
+    {
+        private final LocalDate from;
+        private final LocalDate to;
+
+        private final Money total;
+        private final long count;
+
+        /** The window of the same length ending the day before {@code from}. */
+        private final LocalDate previousFrom;
+        private final LocalDate previousTo;
+        private final Money previousTotal;
+        private final long previousCount;
+
+        /** {@code total − previousTotal}. Negative when this window spent less than the last. */
+        private final Money change;
+        /** Percentage change against the previous window, or null when that window had nothing. */
+        private final Double changePercent;
+
+        private final List<CategorySlice> byCategory;
+        private final List<DaySlice> daily;
+    }
+
+    /** One category's share of a window, and how it compares with the window before. */
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class CategorySlice
+    {
+        private final CategoryRef category;
+        private final Money total;
+        private final long count;
+        private final Money previousTotal;
+        private final Money change;
+        private final Double changePercent;
+        /** Percentage of the window's total, 0-100. */
+        private final double share;
+    }
+
+    /** One day of the window. Days with nothing are present as zero, so the strip has no gaps. */
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class DaySlice
+    {
+        private final LocalDate date;
+        private final Money total;
+    }}

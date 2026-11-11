@@ -9,6 +9,7 @@ import { SegmentedNav, type SegmentItem } from '@/components/ui/segmented-nav';
 import { TopToast, type ToastKind, type ToastMessage } from '@/components/ui/top-toast';
 import { Spacing } from '@/constants/theme';
 import { CategoriesManager } from '@/features/finances/components/categories-manager';
+import { OverviewSegment } from '@/features/finances/components/overview-segment';
 import { TransactionsSegment } from '@/features/finances/components/transactions-segment';
 import { useTheme } from '@/hooks/use-theme';
 import { useCurrentSession, useSession } from '@/providers';
@@ -55,7 +56,7 @@ export default function ExpensesRoute() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      <AppHeader title="Expenses" />
+      <AppHeader title="Expenses & Income" />
       <SegmentedNav items={SEGMENTS} value={segment} onChange={setSegment} />
 
       {/* Keyed on the segment so the content fades in on every switch, and sized to fill the
@@ -75,12 +76,7 @@ export default function ExpensesRoute() {
             onSignOut={handleSessionEnd}
           />
         ) : (
-          <View style={styles.pending}>
-            <ThemedText type="small" themeColor="textMuted" style={styles.pendingText}>
-              The overview - this window’s total, its categories and how it compares - is the next
-              piece to build.
-            </ThemedText>
-          </View>
+          <OverviewSegment session={session} onSignOut={handleSessionEnd} />
         )}
       </FadeIn>
 

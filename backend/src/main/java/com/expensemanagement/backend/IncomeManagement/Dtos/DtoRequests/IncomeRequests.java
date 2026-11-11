@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 public class IncomeRequests {
 
@@ -29,9 +30,13 @@ public class IncomeRequests {
         @PastOrPresent(message = "Date cannot be in the future")
         private LocalDate date;
 
-        @NotBlank(message = "Source is required")
-        @Size(max = 100, message = "Source must be at most 100 characters")
-        private String source;
+        /** The income source the user owns; required, because every payment comes from one. */
+        @NotNull(message = "Source is required")
+        private UUID sourceId;
+
+        /** An optional label for this payment, e.g. "November salary". */
+        @Size(max = 100, message = "Name must be at most 100 characters")
+        private String name;
 
         @Size(max = 255, message = "Description must be at most 255 characters")
         private String description;

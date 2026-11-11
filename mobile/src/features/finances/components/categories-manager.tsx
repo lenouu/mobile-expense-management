@@ -10,6 +10,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { Popup } from '@/components/ui/popup';
 import { TopToast, type ToastKind, type ToastMessage } from '@/components/ui/top-toast';
 import { CategoryBadge } from '@/features/finances/components/category-badge';
+import { IncomeSourcesManager } from '@/features/finances/components/income-sources-manager';
 import { DeleteButton, Field, financeStyles, TextField } from '@/features/finances/components/finance-ui';
 import { Brand, Radius, Shadows, Spacing } from '@/constants/theme';
 import { describeError } from '@/utils/errors';
@@ -69,6 +70,9 @@ export function CategoriesManager({
   const [searchInput, setSearchInput] = useState('');
   const [q, setQ] = useState('');
   /** What the pop-up is for: 'new', the category being edited, or null when it is closed. */
+  /** Which list is on screen: the expense categories, or the income sources. */
+  const [kind, setKind] = useState<'expenses' | 'income'>('expenses');
+
   const [formTarget, setFormTarget] = useState<'new' | MyCategory | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -214,7 +218,36 @@ export function CategoriesManager({
           <RefreshControl refreshing={loading && categories.length > 0} onRefresh={reload} />
         }>
         <View style={financeStyles.page}>
-          {header}
+          {/* Two vocabularies, one screen: what you spend on, and where you earn from. */}
+          <View style={[styles.kindSwitch, { borderColor: theme.border }]}>
+            {(['expenses', 'income'] as const).map((side) => {
+              const active = side === kind;
+              return (
+                <Pressable
+                  key={side}
+                  onPress={() => setKind(side)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={side === 'expenses' ? 'Expense categories' : 'Income sources'}
+                  style={[
+                    styles.kindTab,
+                    active && { backgroundColor: theme.backgroundSelected },
+                  ]}>
+                  <ThemedText
+                    type={active ? 'smallBold' : 'small'}
+                    themeColor={active ? 'text' : 'textMuted'}>
+                    {side === 'expenses' ? 'Expense categories' : 'Income sources'}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {kind === 'income' ? (
+            <IncomeSourcesManager session={session} onToast={onToast ?? (() => undefined)} onSignOut={onSignOut} />
+          ) : (
+            <>
+              {header}
 
           {message && <ThemedText style={financeStyles.errorText}>{message}</ThemedText>}
 
@@ -308,6 +341,8 @@ export function CategoriesManager({
               onChange={(target) => loadPage(target, q)}
               disabled={loading}
             />
+          )}
+          </>
           )}
         </View>
       </ScrollView>
@@ -444,6 +479,20 @@ function CategoryForm({
 }
 
 const styles = StyleSheet.create({
+  kindSwitch: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    gap: 3,
+    padding: 3,
+    borderWidth: 1,
+    borderRadius: 999,
+    marginBottom: Spacing.three,
+  },
+  kindTab: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: 999,
+  },
   screen: {
     flex: 1,
   },

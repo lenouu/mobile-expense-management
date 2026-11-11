@@ -46,7 +46,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const AMOUNT = /^\d+(\.\d{1,2})?$/;
 
 /** Splits one CSV line, honouring quotes. */
-function splitLine(line: string, delimiter: string): string[] {
+export function splitLine(line: string, delimiter: string): string[] {
   const cells: string[] = [];
   let current = '';
   let quoted = false;
@@ -84,7 +84,7 @@ function splitLine(line: string, delimiter: string): string[] {
 }
 
 /** `,` or `;`, whichever the header uses more of. */
-function detectDelimiter(headerLine: string): string {
+export function detectDelimiter(headerLine: string): string {
   const commas = (headerLine.match(/,/g) ?? []).length;
   const semicolons = (headerLine.match(/;/g) ?? []).length;
   return semicolons > commas ? ';' : ',';
@@ -94,7 +94,7 @@ function normaliseHeaderCell(cell: string): string {
   return cell.replace(/^\uFEFF/, '').trim().toLowerCase();
 }
 
-function findField(header: string[], aliases: string[]): number {
+export function findField(header: string[], aliases: string[]): number {
   return header.findIndex((cell) => aliases.includes(normaliseHeaderCell(cell)));
 }
 
