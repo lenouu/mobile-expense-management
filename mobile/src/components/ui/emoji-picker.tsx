@@ -206,6 +206,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   field: {
+    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
