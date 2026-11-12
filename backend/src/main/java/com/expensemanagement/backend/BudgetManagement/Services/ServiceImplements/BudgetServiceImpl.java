@@ -99,7 +99,7 @@ public class BudgetServiceImpl implements BudgetService
 
         BigDecimal total = request.getOverallAmount();
         List<BudgetRequests.AllocationItem> allocations = request.getAllocations();
-        requireBalancedSplit(total, allocations);
+        requireSplitWithinTotal(total, allocations);
 
         Budget budget = new Budget();
         budget.setUser(userRepository.getReferenceById(userId));
@@ -130,7 +130,7 @@ public class BudgetServiceImpl implements BudgetService
         LocalDate end = request.getEndDate() != null ? request.getEndDate() : budget.getEndDate();
 
         requireSensibleWindow(userId, start, end, LocalDate.now(), budget.getId());
-        requireBalancedSplit(request.getOverallAmount(), request.getAllocations());
+        requireSplitWithinTotal(request.getOverallAmount(), request.getAllocations());
 
         budget.setName(trimToNull(request.getName()));
         budget.setStartDate(start);
@@ -190,17 +190,15 @@ public class BudgetServiceImpl implements BudgetService
                     "A finished budget is history and cannot be deleted.");
         }
 
-        // The expenses exist only as part of this plan: taking the plan away takes them too.
-        List<Expense> assigned = expenseRepository.findAllByBudgetIdAndUserId(budgetId, userId);
-        if (!assigned.isEmpty())
-        {
-            expenseRepository.deleteAll(assigned);
-        }
+        // The expenses are the user's financial record (US20: they are tracked whether or not a
+        // budget exists). Deleting a plan must not delete history, so the rows are unlinked rather
+        // than removed: they stay in the ledger as ordinary expenses.
+        int unlinked = expenseRepository.clearBudget(budgetId, userId);
 
         budgetRepository.delete(budget);
 
-        log.warn("User id={} deleted budget id={} and {} expense(s) recorded under it",
-                userId, budgetId, assigned.size());
+        log.info("User id={} deleted budget id={}; {} expense(s) kept and unlinked from it",
+                userId, budgetId, unlinked);
     }
 
     // ------------------------------------------------------------------
@@ -247,13 +245,15 @@ public class BudgetServiceImpl implements BudgetService
     }
 
     /**
-     * The split has to complete the total.
+     * The split may not spend more than the total.
      *
-     * <p>No allocations at all is perfectly valid: the plan is a single number. A split that ends
-     * short of the total, or past it, is refused - the number the user typed and the numbers they
-     * distributed have to be the same promise.
+     * <p>US31 puts the ceiling on the allocations: each one, and their sum, must stay inside the
+     * budget. Leaving part of it unallocated is allowed and meaningful - a user may plan 100 000 and
+     * only split 60 000 of it, keeping the rest for what they have not thought of yet.
+     *
+     * <p>The one thing that cannot happen is a split that promises more than the plan.
      */
-    private void requireBalancedSplit(BigDecimal total, List<BudgetRequests.AllocationItem> allocations)
+    private void requireSplitWithinTotal(BigDecimal total, List<BudgetRequests.AllocationItem> allocations)
     {
         if (allocations == null || allocations.isEmpty())
         {
@@ -264,14 +264,11 @@ public class BudgetServiceImpl implements BudgetService
                 .map(BudgetRequests.AllocationItem::getAllocatedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (allocated.compareTo(total) != 0)
+        if (allocated.compareTo(total) > 0)
         {
-            BigDecimal difference = total.subtract(allocated);
             throw new InvalidRequestException("The categories add up to " + allocated
-                    + ", which does not match the budget of " + total
-                    + (difference.signum() > 0
-                        ? " (" + difference + " still unallocated)."
-                        : " (" + difference.negate() + " over the budget)."));
+                    + ", which is more than the budget of " + total
+                    + " (" + allocated.subtract(total) + " over).");
         }
 
         long distinct = allocations.stream()

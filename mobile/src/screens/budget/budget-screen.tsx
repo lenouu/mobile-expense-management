@@ -114,21 +114,27 @@ export function BudgetScreen({
     if (!current) return;
 
     const count = current.expenseCount;
+    // Deleting the plan does not delete the money: the expenses stay in the ledger, unlinked.
     const expensesLine =
       count === 0
         ? 'It has no expenses under it yet.'
-        : `This also deletes the ${count} ${count === 1 ? 'expense' : 'expenses'} recorded under it — permanently.`;
+        : `The ${count} ${count === 1 ? 'expense' : 'expenses'} recorded under it stay in your ledger — they just stop belonging to a budget.`;
 
-    Alert.alert('Delete this budget?', `${titleOf(current)}\n\n${expensesLine} It cannot be undone.`, [
+    Alert.alert('Delete this budget?', `${titleOf(current)}\n\n${expensesLine} The budget itself cannot be undone.`, [
       { text: 'Keep it', style: 'cancel' },
       {
-        text: 'Delete permanently',
+        text: 'Delete budget',
         style: 'destructive',
         onPress: async () => {
           setDeleting(true);
           try {
             await deleteBudget(session, current.id);
-            onToast('deleted', 'The budget and its expenses have been deleted.');
+            onToast(
+              'deleted',
+              count === 0
+                ? 'The budget has been deleted.'
+                : `The budget has been deleted. Its ${count} ${count === 1 ? 'expense was' : 'expenses were'} kept in your ledger.`,
+            );
             setCurrent(null);
             load();
           } catch (e) {

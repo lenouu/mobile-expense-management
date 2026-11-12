@@ -22,7 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import java.math.RoundingMode;
@@ -132,8 +135,32 @@ public class IncomeServiceImpl implements IncomeService
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."))
                 .getBaseCurrency();
 
+        // The window of the same length immediately before: a 30-day view compares with the 30
+        // days that came before it, which stays honest for a custom range.
+        long length = ChronoUnit.DAYS.between(from, to) + 1;
+        LocalDate previousTo = from.minusDays(1);
+        LocalDate previousFrom = previousTo.minusDays(length - 1);
+
         BigDecimal total = incomeRepository.sumByUserIdAndDateBetween(userId, from, to);
         long count = incomeRepository.countByUserIdAndDateBetween(userId, from, to);
+        BigDecimal previousTotal = incomeRepository.sumByUserIdAndDateBetween(userId, previousFrom, previousTo);
+        long previousCount = incomeRepository.countByUserIdAndDateBetween(userId, previousFrom, previousTo);
+        BigDecimal change = total.subtract(previousTotal);
+
+        Map<LocalDate, BigDecimal> byDate = new HashMap<>();
+        for (Object[] row : incomeRepository.sumByDate(userId, from, to))
+        {
+            byDate.put((LocalDate) row[0], (BigDecimal) row[1]);
+        }
+
+        List<IncomeResponses.DaySlice> daily = new ArrayList<>();
+        for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1))
+        {
+            daily.add(IncomeResponses.DaySlice.builder()
+                    .date(date)
+                    .total(Money.of(byDate.getOrDefault(date, BigDecimal.ZERO), baseCurrency))
+                    .build());
+        }
 
         List<IncomeResponses.SourceSlice> slices = new ArrayList<>();
         for (Object[] row : incomeRepository.sumBySource(userId, from, to))
@@ -161,7 +188,17 @@ public class IncomeServiceImpl implements IncomeService
                 .to(to)
                 .total(Money.of(total, baseCurrency))
                 .count(count)
+                .previousFrom(previousFrom)
+                .previousTo(previousTo)
+                .previousTotal(Money.of(previousTotal, baseCurrency))
+                .previousCount(previousCount)
+                .change(Money.of(change, baseCurrency))
+                .changePercent(previousTotal.signum() == 0 ? null
+                        : change.multiply(BigDecimal.valueOf(100))
+                                .divide(previousTotal, 1, RoundingMode.HALF_UP)
+                                .doubleValue())
                 .bySource(slices)
+                .daily(daily)
                 .build();
     }
 

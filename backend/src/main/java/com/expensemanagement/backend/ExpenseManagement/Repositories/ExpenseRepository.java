@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -99,6 +100,16 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID>
             where e.user.id = :userId and e.budget.id = :budgetId
             group by e.category.id""")
     List<Object[]> sumByCategoryForBudget(@Param("userId") UUID userId, @Param("budgetId") UUID budgetId);
+    /**
+     * Detaches every expense assigned to a budget, keeping the rows.
+     *
+     * <p>Used when a budget is deleted: the plan goes, the financial record stays (US20, US33).
+     *
+     * @return how many rows were unlinked
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Expense e set e.budget = null where e.budget.id = :budgetId and e.user.id = :userId")
+    int clearBudget(@Param("budgetId") UUID budgetId, @Param("userId") UUID userId);
     /** The same window, one row per day - the shape of the period, not just its total. */
     @Query("""
             select e.date, coalesce(sum(e.amount), 0)

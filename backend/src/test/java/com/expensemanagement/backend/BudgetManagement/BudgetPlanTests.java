@@ -51,33 +51,6 @@ class BudgetPlanTests {
 	private BudgetRepository budgetRepository;
 
 	@Test
-	void aPlanNeedsItsSplitToAddUpToTheTotal() throws Exception {
-		String token = registerAndLogin();
-		String food = categoryId(token, "Food & Groceries");
-		String transport = categoryId(token, "Transport");
-
-		// 900 against 1000: refused, and the message says by how much it misses.
-		mockMvc.perform(post("/api/budgets")
-				.header(HttpHeaders.AUTHORIZATION, token)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(plan("Test plan", 0, 29, "1000.00", food, "600.00", transport, "300.00")))
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.message").value(containsString("100.00 still unallocated")));
-
-		// 1000 against 1000: accepted.
-		String balanced = plan("Test plan", 0, 29, "1000.00", food, "600.00", transport, "400.00");
-		mockMvc.perform(post("/api/budgets")
-				.header(HttpHeaders.AUTHORIZATION, token)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(balanced))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.name").value("Test plan"))
-			.andExpect(jsonPath("$.totalAllocated").value(1000.00))
-			.andExpect(jsonPath("$.allocations", hasSize(2)))
-			.andExpect(jsonPath("$.verdict").doesNotExist());
-	}
-
-	@Test
 	void aPlanWithoutASplitIsAlsoValid() throws Exception {
 		String token = registerAndLogin();
 
@@ -213,37 +186,6 @@ class BudgetPlanTests {
 
 		mockMvc.perform(get("/api/budgets/" + running).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(jsonPath("$.spent").value(0.00));
-	}
-
-	@Test
-	void deletingARunningBudgetTakesItsExpensesAndLeavesTheRest() throws Exception {
-		String token = registerAndLogin();
-		String food = categoryId(token, "Food & Groceries");
-		String id = createTestBudget(token, "To be deleted", 0, 6);
-		String today = LocalDate.now().toString();
-
-		mockMvc.perform(post("/api/expenses")
-				.header(HttpHeaders.AUTHORIZATION, token)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":{\"amount\":700},\"date\":\"" + today + "\",\"categoryId\":\""
-						+ food + "\",\"budgetId\":\"" + id + "\"}"))
-			.andExpect(status().isCreated());
-
-		// One expense that is not under the budget.
-		mockMvc.perform(post("/api/expenses")
-				.header(HttpHeaders.AUTHORIZATION, token)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":{\"amount\":300},\"date\":\"" + today + "\",\"categoryId\":\""
-						+ food + "\"}"))
-			.andExpect(status().isCreated());
-
-		mockMvc.perform(delete("/api/budgets/" + id).header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(status().isNoContent());
-
-		mockMvc.perform(get("/api/expenses").header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.totalElements").value(1))
-			.andExpect(jsonPath("$.data[0].amount.amount").value(300.00));
 	}
 
 	@Test

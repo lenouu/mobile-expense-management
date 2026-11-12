@@ -143,11 +143,10 @@ export function BudgetFormPopup({
     if (days > 366) return 'A budget can last at most a year.';
     if (start < todayIso()) return 'A budget cannot start in the past.';
 
-    if (rows.length > 0 && allocated !== planned) {
-      const difference = planned - allocated;
-      return difference > 0
-        ? `The categories add up to ${formatMoney({ amount: allocated, currency: session.baseCurrency })}, ${formatMoney({ amount: difference, currency: session.baseCurrency })} short of the total.`
-        : `The categories add up to ${formatMoney({ amount: allocated, currency: session.baseCurrency })}, ${formatMoney({ amount: -difference, currency: session.baseCurrency })} over the total.`;
+    // Under is fine: the rest of the total is simply not planned yet. Over is not - a split may
+    // never promise more than the plan (US31).
+    if (rows.length > 0 && allocated > planned) {
+      return `The categories add up to ${formatMoney({ amount: allocated, currency: session.baseCurrency })}, which is ${formatMoney({ amount: allocated - planned, currency: session.baseCurrency })} more than the budget.`;
     }
 
     return null;
@@ -358,7 +357,7 @@ export function BudgetFormPopup({
             </ThemedText>
             <ThemedText
               type="smallBold"
-              style={rows.length > 0 && allocated !== planned ? { color: Status.danger } : undefined}>
+              style={rows.length > 0 && allocated > planned ? { color: Status.danger } : undefined}>
               {formatMoney({ amount: allocated, currency: session.baseCurrency })}
               {planned > 0 ? ` of ${formatMoney({ amount: planned, currency: session.baseCurrency })}` : ''}
             </ThemedText>

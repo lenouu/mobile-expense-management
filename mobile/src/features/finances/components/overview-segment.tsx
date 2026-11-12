@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -9,6 +9,7 @@ import { Brand, MaxContentWidth, Radius, Spacing, Status } from '@/constants/the
 import { ApiRequestError } from '@/features/auth/lib/api-client';
 import { CategoryBadge } from '@/features/finances/components/category-badge';
 import { formatLongDate, formatMoney } from '@/features/finances/components/finance-ui';
+import { IncomeOverview } from '@/features/finances/components/income-overview';
 import { WindowControl, type WindowValue } from '@/features/finances/components/window-control';
 import {
   type ExpenseOverview,
@@ -40,6 +41,9 @@ export function OverviewSegment({
   onSignOut: (message?: string) => void;
 }) {
   const theme = useTheme();
+
+  /** Which side of the ledger the overview is describing. */
+  const [ledger, setLedger] = useState<'expenses' | 'income'>('expenses');
 
   const [period, setPeriod] = useState<FinancialPeriod | null>(null);
   const [window, setWindow] = useState<WindowValue>({ key: 'period' });
@@ -116,6 +120,17 @@ export function OverviewSegment({
   );
   const averagePerDay = overview && overview.daily.length > 0 ? total / overview.daily.length : 0;
 
+  // The other half of the overview: the same questions, asked about money coming in.
+  if (ledger === 'income') {
+    return (
+      <IncomeOverview
+        session={session}
+        onSignOut={onSignOut}
+        onSwitch={() => setLedger('expenses')}
+      />
+    );
+  }
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
@@ -128,6 +143,29 @@ export function OverviewSegment({
         />
       }>
       <View style={styles.page}>
+        {/* Expenses or income: one overview, two directions. */}
+        <View style={[styles.switchRow, { borderColor: theme.border }]}>
+          <Pressable
+            onPress={() => undefined}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: true }}
+            accessibilityLabel="Expenses overview"
+            style={[styles.ledgerTab, { backgroundColor: theme.backgroundSelected }]}>
+            <ThemedText type="smallBold">Expenses</ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setLedger('income')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: false }}
+            accessibilityLabel="Income overview"
+            style={styles.ledgerTab}>
+            <ThemedText type="small" themeColor="textMuted">
+              Income
+            </ThemedText>
+          </Pressable>
+        </View>
+
         {/* The same control the Transactions segment uses: one window, two views of it. */}
         <WindowControl
           period={period}
@@ -318,6 +356,19 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    gap: 3,
+    padding: 3,
+    borderWidth: 1,
+    borderRadius: 999,
+  },
+  ledgerTab: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: 999,
   },
   hero: {
     borderRadius: Radius.card,

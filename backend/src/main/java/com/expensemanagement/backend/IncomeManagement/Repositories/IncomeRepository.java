@@ -30,6 +30,14 @@ public interface IncomeRepository extends JpaRepository<Income, UUID>
     /** US13: number of income records in a date range, without loading the entities. */
     long countByUserIdAndDateBetween(UUID userId, LocalDate from, LocalDate to);
 
+    /** The same window, one row per day - the shape of what came in. */
+    @Query("""
+            select i.date, coalesce(sum(i.amount), 0)
+            from Income i
+            where i.user.id = :userId and i.date between :from and :to
+            group by i.date
+            order by i.date""")
+    List<Object[]> sumByDate(UUID userId, LocalDate from, LocalDate to);
     /** How many payments point at a source - the number the delete rule quotes. */
     long countBySourceIdAndUserId(UUID sourceId, UUID userId);
 

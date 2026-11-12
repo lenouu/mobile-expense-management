@@ -103,9 +103,10 @@ export async function updateBudget(
 }
 
 /**
- * DELETE /budgets/{id} - takes the budget and the expenses recorded under it.
+ * DELETE /budgets/{id} - deletes the plan, and only the plan.
  *
- * A finished budget refuses; the server says so and the client shows the message.
+ * The expenses recorded under it are kept: they are the user's financial record, and they simply
+ * stop belonging to a budget. A finished budget refuses; the server says so and the client shows it.
  */
 export async function deleteBudget(session: Session, budgetId: string): Promise<void> {
   return authRequest<void>(`/budgets/${budgetId}`, session, { method: 'DELETE' });

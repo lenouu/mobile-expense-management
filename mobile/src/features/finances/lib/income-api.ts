@@ -41,7 +41,17 @@ export type IncomeSummary = {
   to: string;
   total: { amount: number; currency: string };
   count: number;
+  /** The window of the same length ending the day before `from`. */
+  previousFrom: string;
+  previousTo: string;
+  previousTotal: { amount: number; currency: string };
+  previousCount: number;
+  change: { amount: number; currency: string };
+  /** Against the previous window, or null when that window had nothing. */
+  changePercent: number | null;
   bySource: IncomeSourceSlice[];
+  /** Every day of the window, zeros included. */
+  daily: { date: string; total: { amount: number; currency: string } }[];
 };
 
 export type SaveIncome = {

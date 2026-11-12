@@ -102,9 +102,9 @@ public class BudgetController
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete a budget",
-            description = "Deletes the budget and the expenses recorded under it. A finished budget "
-                    + "cannot be deleted - it is history.")
-    @ApiResponse(responseCode = "204", description = "Budget and its expenses deleted")
+            description = "Deletes the plan. The expenses recorded under it are kept and simply stop belonging "
+                    + "to a budget - they remain in the ledger. A finished budget cannot be deleted.")
+    @ApiResponse(responseCode = "204", description = "Budget deleted; its expenses kept and unlinked")
     @ApiResponse(responseCode = "400", description = "The budget has closed", content = @Content)
     @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)

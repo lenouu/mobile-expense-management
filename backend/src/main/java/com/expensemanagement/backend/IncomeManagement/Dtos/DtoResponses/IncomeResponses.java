@@ -83,5 +83,28 @@ public class IncomeResponses
         private final LocalDate to;
         private final Money total;
         private final long count;
+
+        /** The window of the same length ending the day before {@code from}. */
+        private final LocalDate previousFrom;
+        private final LocalDate previousTo;
+        private final Money previousTotal;
+        private final long previousCount;
+
+        /** {@code total − previousTotal}; negative when less came in than before. */
+        private final Money change;
+        /** Against the previous window, or null when that window had nothing. */
+        private final Double changePercent;
+
         private final java.util.List<SourceSlice> bySource;
+        private final java.util.List<DaySlice> daily;
+    }
+
+    /** One day of the window; days with nothing are present as zero. */
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class DaySlice
+    {
+        private final LocalDate date;
+        private final Money total;
     }}
