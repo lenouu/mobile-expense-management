@@ -99,11 +99,14 @@ class BudgetCloseTests
 		budget.setOverallAmount(BigDecimal.valueOf(planned));
 		budget.setStatus(BudgetStatus.ACTIVE);
 
+		// Built before the when() below: stubbing a mock inside another stubbing is refused by Mockito.
+		ExpenseRepository.Totals spentTotals = totals(spent, 3);
+
 		when(budgetRepository.findByIdAndUserId(budget.getId(), USER_ID)).thenReturn(Optional.of(budget));
 		when(budgetRepository.saveAndFlush(any(Budget.class))).thenAnswer(call -> call.getArgument(0));
 		when(allocationRepository.findAllByBudgetId(budget.getId())).thenReturn(List.of());
 		when(expenseRepository.totalsByBudget(USER_ID, budget.getId()))
-				.thenReturn(totals(spent, 3));
+				.thenReturn(spentTotals);
 		when(expenseRepository.sumByCategoryForBudget(USER_ID, budget.getId())).thenReturn(List.of());
 
 		return budget;
@@ -174,10 +177,12 @@ class BudgetCloseTests
 		budget.setStatus(BudgetStatus.ACTIVE);
 		budget.setEditsUsed(0);
 
+		ExpenseRepository.Totals noSpending = totals(0, 0);
+
 		when(budgetRepository.findByIdAndUserId(budget.getId(), USER_ID)).thenReturn(Optional.of(budget));
 		when(allocationRepository.findAllByBudgetId(budget.getId())).thenReturn(List.of());
 		when(expenseRepository.totalsByBudget(USER_ID, budget.getId()))
-				.thenReturn(totals(0, 0));
+				.thenReturn(noSpending);
 		when(expenseRepository.sumByCategoryForBudget(USER_ID, budget.getId())).thenReturn(List.of());
 
 		var details = budgetService.getBudget(USER_ID, budget.getId());

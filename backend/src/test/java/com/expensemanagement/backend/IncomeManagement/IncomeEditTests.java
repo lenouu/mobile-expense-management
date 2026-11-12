@@ -100,7 +100,7 @@ class IncomeEditTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.amount.amount").value(250))
 			.andExpect(jsonPath("$.date").value("2026-09-10"))
-			.andExpect(jsonPath("$.source").value("Freelance"));
+			.andExpect(jsonPath("$.source.name").value("Freelance"));
 	}
 
 	@Test

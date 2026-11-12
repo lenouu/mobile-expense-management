@@ -19,6 +19,7 @@ public class IncomeRequests {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @SourceProvided
     public static class SaveIncome {
 
         /** {@code {"amount": 250000.00, "currency": "XAF"}} - never a bare number. */
@@ -30,9 +31,19 @@ public class IncomeRequests {
         @PastOrPresent(message = "Date cannot be in the future")
         private LocalDate date;
 
-        /** The income source the user owns; required, because every payment comes from one. */
-        @NotNull(message = "Source is required")
+        /**
+         * The income source the user owns. Every payment comes from one: give either this or
+         * {@link #source} (checked by {@link SourceProvided}). When both are given, this one wins.
+         */
         private UUID sourceId;
+
+        /**
+         * The source by name, e.g. "Salary" - the shape clients used before income sources existed,
+         * still accepted so they keep working. It is matched to the user's source of that name
+         * (ignoring case), and a new source is created when there is none.
+         */
+        @Size(max = 60, message = "Source must be at most 60 characters")
+        private String source;
 
         /** An optional label for this payment, e.g. "November salary". */
         @Size(max = 100, message = "Name must be at most 100 characters")

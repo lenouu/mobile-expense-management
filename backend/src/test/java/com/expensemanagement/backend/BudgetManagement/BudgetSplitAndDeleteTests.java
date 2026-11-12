@@ -62,11 +62,12 @@ class BudgetSplitAndDeleteTests
 			.andExpect(jsonPath("$.totalAllocated").value(600.00))
 			.andExpect(jsonPath("$.allocations", hasSize(2)));
 
-		// 1200 of 1000: refused, and the message says by how much it goes over.
+		// 1200 of 1000: refused, and the message says by how much it goes over. Dated after the first
+		// plan, so the "one budget at a time" rule does not refuse it before the split is checked.
 		mockMvc.perform(post("/api/budgets")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(plan("Over split", 0, 29, "1000.00", food, "700.00", transport, "500.00")))
+				.content(plan("Over split", 30, 59, "1000.00", food, "700.00", transport, "500.00")))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.message").value(containsString("more than the budget")));
 	}

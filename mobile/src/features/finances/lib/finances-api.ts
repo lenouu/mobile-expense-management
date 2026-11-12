@@ -71,7 +71,8 @@ export type Income = {
   /** `{ amount, currency }`; the backend never sends money as a bare number. */
   amount: Money;
   date: string;
-  source: string;
+  /** The income source the payment came from; an object since income sources exist. */
+  source: { id: string; name: string; icon: string | null; color: string | null };
   description: string | null;
   createdAt: string;
   updatedAt: string;

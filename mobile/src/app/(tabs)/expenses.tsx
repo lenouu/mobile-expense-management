@@ -2,14 +2,13 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
 import { AppHeader } from '@/components/ui/app-header';
 import { FadeIn } from '@/components/ui/fade-in';
 import { SegmentedNav, type SegmentItem } from '@/components/ui/segmented-nav';
 import { TopToast, type ToastKind, type ToastMessage } from '@/components/ui/top-toast';
-import { Spacing } from '@/constants/theme';
 import { CategoriesManager } from '@/features/finances/components/categories-manager';
 import { OverviewSegment } from '@/features/finances/components/overview-segment';
+import { SmsCaptureManager } from '@/features/finances/components/sms-capture-manager';
 import { TransactionsSegment } from '@/features/finances/components/transactions-segment';
 import { useTheme } from '@/hooks/use-theme';
 import { useCurrentSession, useSession } from '@/providers';
@@ -18,17 +17,17 @@ const SEGMENTS: SegmentItem[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'transactions', label: 'Transactions' },
   { key: 'categories', label: 'Categories' },
+  // S6-TECH-2: add an expense from a pasted mobile money SMS.
+  { key: 'sms', label: 'SMS' },
 ];
 
 /**
- * The Expenses tab, split into three sections.
+ * The Expenses tab, split into sections.
  *
  * Each section answers one question - what did I spend and on what (Overview), what exactly did I
- * record (Transactions), and how is my spending organised (Categories) - instead of stacking all
- * of it into one long scroll, which buried the controls above the content.
- *
- * Only Categories is built so far, so it is the segment the tab opens on; the other two say
- * plainly that they are next rather than showing an empty screen.
+ * record (Transactions), how is my spending organised (Categories), and the shortcut of adding one
+ * from a mobile money SMS (SMS, S6-TECH-2) - instead of stacking all of it into one long scroll,
+ * which buried the controls above the content.
  */
 export default function ExpensesRoute() {
   const session = useCurrentSession();
@@ -75,6 +74,8 @@ export default function ExpensesRoute() {
             onToast={showToast}
             onSignOut={handleSessionEnd}
           />
+        ) : segment === 'sms' ? (
+          <SmsCaptureManager session={session} onToast={showToast} onSignOut={handleSessionEnd} />
         ) : (
           <OverviewSegment session={session} onSignOut={handleSessionEnd} />
         )}
@@ -92,15 +93,5 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-  },
-  pending: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-  },
-  pendingText: {
-    textAlign: 'center',
-    maxWidth: 320,
   },
 });

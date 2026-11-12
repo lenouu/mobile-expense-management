@@ -75,7 +75,7 @@ public class IncomeServiceImpl implements IncomeService
         Income income = new Income();
         // A reference, not a query: the id comes from a verified token, so the user exists.
         income.setUser(userRepository.getReferenceById(userId));
-        IncomeSource source = incomeSourceService.requireOwned(userId, request.getSourceId());
+        IncomeSource source = resolveSource(userId, request);
         Income saved = incomeRepository.save(IncomeMappers.apply(income, request, source));
 
         log.info("User id={} added income id={}", userId, saved.getId());
@@ -87,7 +87,7 @@ public class IncomeServiceImpl implements IncomeService
     public IncomeResponses.Details update(UUID userId, UUID id, IncomeRequests.SaveIncome request)
     {
         Income income = getIncomeOrThrow(userId, id);
-        IncomeSource source = incomeSourceService.requireOwned(userId, request.getSourceId());
+        IncomeSource source = resolveSource(userId, request);
         IncomeMappers.apply(income, request, source);
 
         // Flushed now so @PreUpdate has stamped updatedAt before the response is built.
@@ -200,6 +200,20 @@ public class IncomeServiceImpl implements IncomeService
                 .bySource(slices)
                 .daily(daily)
                 .build();
+    }
+
+    /**
+     * {@code sourceId} when given; otherwise the plain {@code source} name older clients send,
+     * matched to (or created as) one of the caller's sources. One of the two is guaranteed by
+     * {@code @SourceProvided}.
+     */
+    private IncomeSource resolveSource(UUID userId, IncomeRequests.SaveIncome request)
+    {
+        if (request.getSourceId() != null)
+        {
+            return incomeSourceService.requireOwned(userId, request.getSourceId());
+        }
+        return incomeSourceService.findOrCreateByName(userId, request.getSource());
     }
 
     private IncomeResponses.SourceRef toSourceRef(IncomeSource source)
