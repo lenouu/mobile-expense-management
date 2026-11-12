@@ -6,9 +6,10 @@ import { ThemedText } from '@/components/themed-text';
 import { AppHeader } from '@/components/ui/app-header';
 import { FadeIn } from '@/components/ui/fade-in';
 import { SegmentedNav, type SegmentItem } from '@/components/ui/segmented-nav';
-import { TopToast, type ToastMessage } from '@/components/ui/top-toast';
+import { TopToast, type ToastKind, type ToastMessage } from '@/components/ui/top-toast';
 import { Spacing } from '@/constants/theme';
 import { CategoriesManager } from '@/features/finances/components/categories-manager';
+import { SmsCaptureManager } from '@/features/finances/components/sms-capture-manager';
 import { useTheme } from '@/hooks/use-theme';
 import { useCurrentSession, useSession } from '@/providers';
 
@@ -16,17 +17,20 @@ const SEGMENTS: SegmentItem[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'transactions', label: 'Transactions' },
   { key: 'categories', label: 'Categories' },
+  // S6-TECH-2: add an expense from a pasted mobile money SMS.
+  { key: 'sms', label: 'SMS' },
 ];
 
 /**
- * The Expenses tab, split into three sections.
+ * The Expenses tab, split into sections.
  *
  * Each section answers one question - what did I spend and on what (Overview), what exactly did I
- * record (Transactions), and how is my spending organised (Categories) - instead of stacking all
- * of it into one long scroll, which buried the controls above the content.
+ * record (Transactions), how is my spending organised (Categories), and the shortcut of adding one
+ * from a mobile money SMS (SMS, S6-TECH-2) - instead of stacking all of it into one long scroll,
+ * which buried the controls above the content.
  *
- * Only Categories is built so far, so it is the segment the tab opens on; the other two say
- * plainly that they are next rather than showing an empty screen.
+ * Categories and SMS are built so far, and the tab opens on Categories; Overview and Transactions
+ * say plainly that they are next rather than showing an empty screen.
  */
 export default function ExpensesRoute() {
   const session = useCurrentSession();
@@ -43,6 +47,13 @@ export default function ExpensesRoute() {
 
   if (!session) return null;
 
+  const showToast = (kind: ToastKind, message: string) => setToast({ id: Date.now(), message, kind });
+  const endSession = (message?: string) => {
+    Alert.alert('Session ended', message ?? 'Please sign in again.');
+    signOut();
+    router.replace('/auth/sign-in');
+  };
+
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <AppHeader title="Expenses" />
@@ -55,13 +66,11 @@ export default function ExpensesRoute() {
           <CategoriesManager
             session={session}
             contentStyle={undefined}
-            onToast={(kind, message) => setToast({ id: Date.now(), message, kind })}
-            onSignOut={(message) => {
-              Alert.alert('Session ended', message ?? 'Please sign in again.');
-              signOut();
-              router.replace('/auth/sign-in');
-            }}
+            onToast={showToast}
+            onSignOut={endSession}
           />
+        ) : segment === 'sms' ? (
+          <SmsCaptureManager session={session} onToast={showToast} onSignOut={endSession} />
         ) : (
           <View style={styles.pending}>
             <ThemedText type="small" themeColor="textMuted" style={styles.pendingText}>
