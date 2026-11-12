@@ -143,8 +143,9 @@ class BudgetPlanTests {
 		String token = registerAndLogin();
 		String food = categoryId(token, "Food & Groceries");
 
-		// A budget that starts in four days: today's expense is outside it.
-		String future = createTestBudget(token, "Starting soon", 4, 10);
+		// A budget that starts in eight days - after the one created below ends, since only one
+		// budget may run at a time: today's expense is outside it.
+		String future = createTestBudget(token, "Starting soon", 8, 14);
 
 		String today = LocalDate.now().toString();
 		mockMvc.perform(post("/api/expenses")

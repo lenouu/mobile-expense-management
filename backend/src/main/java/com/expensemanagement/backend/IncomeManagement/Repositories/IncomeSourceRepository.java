@@ -17,6 +17,8 @@ public interface IncomeSourceRepository extends JpaRepository<IncomeSource, UUID
 
     boolean existsByUserIdAndNameIgnoreCase(UUID userId, String name);
 
+    Optional<IncomeSource> findFirstByUserIdAndNameIgnoreCase(UUID userId, String name);
+
     boolean existsByUserIdAndNameIgnoreCaseAndIdNot(UUID userId, String name, UUID id);
 
     long countByUserId(UUID userId);

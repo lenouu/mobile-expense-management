@@ -165,6 +165,20 @@ public class IncomeSourceServiceImpl implements IncomeSourceService
         return requireSource(userId, sourceId);
     }
 
+    @Override
+    public IncomeSource findOrCreateByName(UUID userId, String name)
+    {
+        String trimmed = name.trim();
+        return sourceRepository.findFirstByUserIdAndNameIgnoreCase(userId, trimmed)
+                .orElseGet(() -> {
+                    IncomeSource source = new IncomeSource();
+                    source.setUser(getUserOrThrow(userId));
+                    source.setName(trimmed);
+                    source.setColor(DEFAULT_COLOR);
+                    return sourceRepository.save(source);
+                });
+    }
+
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------

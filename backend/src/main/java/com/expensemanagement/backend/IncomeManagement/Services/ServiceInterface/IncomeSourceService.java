@@ -40,4 +40,10 @@ public interface IncomeSourceService
      *         belongs to someone else
      */
     IncomeSource requireOwned(UUID userId, UUID sourceId);
+
+    /**
+     * The caller's source with this name (ignoring case), created with the default look when they
+     * have none. Lets an income be saved with a plain {@code "source": "Salary"}.
+     */
+    IncomeSource findOrCreateByName(UUID userId, String name);
 }

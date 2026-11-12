@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -79,6 +80,28 @@ public class GlobalExceptionHandler
     {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(ApiError.of("business_rule_violation", ex.getMessage()));
+    }
+
+    /**
+     * A pasted SMS that is not a supported mobile money transaction (S6-TECH-2). Its own code so
+     * the app can show the reason as it is instead of treating it as a form error.
+     */
+    @ExceptionHandler(UnsupportedMessageException.class)
+    public ResponseEntity<ApiError> handleUnsupportedMessage(UnsupportedMessageException ex)
+    {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiError.of("unsupported_message", ex.getMessage()));
+    }
+
+    /**
+     * Two requests changed the same record at once (a double tap on "Confirm", say) and this one
+     * lost. Nothing was written, so it is a conflict to retry, not a server error.
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleConcurrentUpdate(ObjectOptimisticLockingFailureException ex)
+    {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiError.of("conflict", "This record was changed at the same time. Reload it and try again."));
     }
 
     /**
