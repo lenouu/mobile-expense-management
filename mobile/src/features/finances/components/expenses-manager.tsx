@@ -7,21 +7,17 @@ import { ThemedView } from '@/components/themed-view';
 import { Button, Chip } from '@/components/ui/primitives';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { ApiRequestError } from '@/features/auth/lib/api-client';
+import { ExpenseForm } from '@/features/finances/components/expense-form';
 import {
-  CurrencyPicker,
   DeleteButton,
   Field,
   financeStyles as styles,
   formatDate,
   formatMoney,
-  moneyFieldError,
   TextField,
   todayIso,
-  toMoney,
-  validateAmountAndDate,
 } from '@/features/finances/components/finance-ui';
 import {
-  createExpense,
   deleteExpense,
   type Expense,
   type ExpenseFilters,
@@ -32,12 +28,9 @@ import {
   fetchMyCategories,
   type FinancialPeriod,
   type MyCategory,
-  type SaveExpense,
-  updateExpense,
 } from '@/features/finances/lib/finances-api';
 import { useTheme } from '@/hooks/use-theme';
 import type { Session } from '@/types/api';
-import { DEFAULT_CURRENCY } from '@/types/api';
 import { describeError } from '@/utils/errors';
 
 const PAGE_SIZE = 20;
@@ -390,13 +383,15 @@ export function ExpensesManager({
         {notice && <ThemedText style={styles.noticeText}>{notice}</ThemedText>}
 
         {editing === 'new' ? (
-          <ExpenseForm
-            session={session}
-            categories={categories}
-            onSaved={() => onSaved(true)}
-            onCancel={() => setEditing(null)}
-            onAuthError={handleError}
-          />
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ExpenseForm
+              session={session}
+              categories={categories}
+              onSaved={(_saved, created) => onSaved(created)}
+              onCancel={() => setEditing(null)}
+              onAuthError={handleError}
+            />
+          </ThemedView>
         ) : (
           <Button
             label="Add expense"
@@ -429,15 +424,16 @@ export function ExpensesManager({
 
             {group.items.map((expense) =>
               editing === expense.id ? (
-                <ExpenseForm
-                  key={expense.id}
-                  session={session}
-                  categories={categories}
-                  expense={expense}
-                  onSaved={() => onSaved(false)}
-                  onCancel={() => setEditing(null)}
-                  onAuthError={handleError}
-                />
+                <ThemedView key={expense.id} type="backgroundElement" style={styles.card}>
+                  <ExpenseForm
+                    session={session}
+                    categories={categories}
+                    expense={expense}
+                    onSaved={(_saved, created) => onSaved(created)}
+                    onCancel={() => setEditing(null)}
+                    onAuthError={handleError}
+                  />
+                </ThemedView>
               ) : (
                 <ThemedView key={expense.id} type="backgroundElement" style={styles.card}>
                   <View style={styles.headerRow}>
@@ -483,110 +479,6 @@ export function ExpensesManager({
         )}
       </View>
     </ScrollView>
-  );
-}
-
-/** Add form when `expense` is absent, edit form otherwise. */
-function ExpenseForm({
-  session,
-  categories,
-  expense,
-  onSaved,
-  onCancel,
-  onAuthError,
-}: {
-  session: Session;
-  categories: MyCategory[];
-  expense?: Expense;
-  onSaved: () => void;
-  onCancel: () => void;
-  onAuthError: (e: unknown) => void;
-}) {
-  const [amount, setAmount] = useState(expense ? String(expense.amount.amount) : '');
-  const [currency, setCurrency] = useState(expense?.amount.currency ?? DEFAULT_CURRENCY);
-  const [date, setDate] = useState(expense?.date ?? todayIso());
-  const [categoryId, setCategoryId] = useState<string | null>(expense?.category.id ?? null);
-  const [description, setDescription] = useState(expense?.description ?? '');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    // Same rules as the backend, checked first so the user gets instant feedback.
-    const errors = validateAmountAndDate(amount, date);
-    if (categoryId === null) errors.categoryId = 'Choose a category';
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0 || categoryId === null) return;
-
-    const body: SaveExpense = {
-      amount: toMoney(amount, currency)!,
-      date: date.trim(),
-      categoryId,
-      description: description.trim() || undefined,
-    };
-
-    setSaving(true);
-    setError(null);
-    try {
-      if (expense) {
-        await updateExpense(session, expense.id, body);
-      } else {
-        await createExpense(session, body);
-      }
-      onSaved();
-    } catch (e) {
-      if (e instanceof ApiRequestError && e.status === 401) {
-        onAuthError(e);
-      } else {
-        setFieldErrors(e instanceof ApiRequestError ? e.fields : {});
-        setError(describeError(e));
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <ThemedView type="backgroundElement" style={styles.card}>
-      <ThemedText type="smallBold">{expense ? 'Edit expense' : 'New expense'}</ThemedText>
-
-      <Field label="Amount" error={moneyFieldError(fieldErrors)}>
-        <TextField placeholder="e.g. 12.50" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
-      </Field>
-
-      <Field label="Currency">
-        <CurrencyPicker value={currency} onChange={setCurrency} />
-      </Field>
-
-      <Field label="Date (YYYY-MM-DD)" error={fieldErrors.date}>
-        <TextField placeholder={todayIso()} autoCorrect={false} maxLength={10} value={date} onChangeText={setDate} />
-      </Field>
-
-      <Field label="Category" error={fieldErrors.categoryId}>
-        <View style={styles.row}>
-          {categories.map((c) => (
-            <Chip
-              key={c.id}
-              label={c.name}
-              selected={categoryId === c.id}
-              onPress={() => setCategoryId(c.id)}
-              onCard
-            />
-          ))}
-        </View>
-      </Field>
-
-      <Field label="Description (optional)" error={fieldErrors.description}>
-        <TextField placeholder="What was it for?" maxLength={255} value={description} onChangeText={setDescription} />
-      </Field>
-
-      {error && <ThemedText style={styles.errorText}>{error}</ThemedText>}
-
-      <View style={styles.row}>
-        <Button label={saving ? 'Saving…' : 'Save'} onPress={save} disabled={saving} />
-        <Button label="Cancel" onPress={onCancel} disabled={saving} secondary onCard />
-      </View>
-    </ThemedView>
   );
 }
 

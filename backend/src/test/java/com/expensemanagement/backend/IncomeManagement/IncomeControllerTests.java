@@ -49,7 +49,7 @@ class IncomeControllerTests {
 			.andExpect(jsonPath("$.id").isString())
 			.andExpect(jsonPath("$.amount.amount").value(1500))
 			.andExpect(jsonPath("$.date").value("2026-09-30"))
-			.andExpect(jsonPath("$.source").value("Salary"))
+			.andExpect(jsonPath("$.source.name").value("Salary"))
 			.andExpect(jsonPath("$.description").value("September"))
 			.andReturn()
 			.getResponse()
@@ -58,7 +58,7 @@ class IncomeControllerTests {
 
 		mockMvc.perform(get("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.source").value("Salary"));
+			.andExpect(jsonPath("$.source.name").value("Salary"));
 
 		mockMvc
 			.perform(put("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token)
@@ -66,7 +66,7 @@ class IncomeControllerTests {
 				.content(incomeJson("1600.75", "2026-09-29", "Salary + bonus", null)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.amount.amount").value(1600.75))
-			.andExpect(jsonPath("$.source").value("Salary + bonus"))
+			.andExpect(jsonPath("$.source.name").value("Salary + bonus"))
 			.andExpect(jsonPath("$.description").doesNotExist());
 
 		mockMvc.perform(delete("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token))

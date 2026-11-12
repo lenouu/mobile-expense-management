@@ -34,7 +34,7 @@ public interface ExpenseService
      *         not exist or belongs to someone else
      */
     Page<ExpenseResponses.Details> findMine(UUID userId, UUID periodId, LocalDate from, LocalDate to,
-                                            UUID categoryId, String q, Pageable pageable);
+                                            UUID categoryId, String q, UUID budgetId, Pageable pageable);
 
     ExpenseResponses.Details findMine(UUID userId, UUID id);
 
@@ -45,6 +45,14 @@ public interface ExpenseService
     ExpenseResponses.Details update(UUID userId, UUID id, ExpenseRequests.SaveExpense request);
 
     void delete(UUID userId, UUID id);
+
+    /**
+     * Whether the account has recorded anything at all.
+     *
+     * <p>Used before changing the account's base currency: amounts already stored are in the old
+     * unit, and there is no rate to convert them with.
+     */
+    boolean hasAny(UUID userId);
 
     /**
      * Total of the caller's expenses over a window (US39).
@@ -61,4 +69,13 @@ public interface ExpenseService
      */
     ExpenseResponses.Total totals(UUID userId, UUID periodId, LocalDate from, LocalDate to,
                                   UUID categoryId, String q);
+
+    /**
+     * The window's total, its split by category and its shape day by day, against the window of
+     * the same length that came before it.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if {@code from} is
+     *         after {@code to}
+     */
+    ExpenseResponses.Overview overview(UUID userId, LocalDate from, LocalDate to);
 }

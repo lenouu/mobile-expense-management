@@ -20,23 +20,73 @@ export type Expense = {
   date: string;
   description: string | null;
   category: { id: string; name: string; icon: string | null; color: string | null };
+  /** The budget it is counted against, or null for a normal expense. */
+  budget: { id: string; name: string | null; startDate: string; endDate: string } | null;
   createdAt: string;
   updatedAt: string;
 };
 
+/** `GET /expenses/overview` - one window against the window of the same length before it. */
+export type OverviewSlice = {
+  category: { id: string; name: string; icon: string | null; color: string | null };
+  total: Money;
+  count: number;
+  previousTotal: Money;
+  change: Money;
+  changePercent: number | null;
+  share: number;
+};
+
+export type OverviewDay = { date: string; total: Money };
+
+export type ExpenseOverview = {
+  from: string;
+  to: string;
+  total: Money;
+  count: number;
+  previousFrom: string;
+  previousTo: string;
+  previousTotal: Money;
+  previousCount: number;
+  change: Money;
+  changePercent: number | null;
+  byCategory: OverviewSlice[];
+  daily: OverviewDay[];
+};
+
+/** GET /expenses/overview. Without dates the server answers for the current financial period. */
+export function fetchExpenseOverview(
+  session: Session,
+  window: { from?: string; to?: string } = {},
+) {
+  const params = new URLSearchParams();
+  if (window.from) params.set('from', window.from);
+  if (window.to) params.set('to', window.to);
+  const query = params.toString();
+
+  return authRequest<ExpenseOverview>(`/expenses/overview${query ? `?${query}` : ''}`, session);
+}
 export type Income = {
   id: string;
   /** `{ amount, currency }`; the backend never sends money as a bare number. */
   amount: Money;
   date: string;
-  source: string;
+  /** The income source the payment came from; an object since income sources exist. */
+  source: { id: string; name: string; icon: string | null; color: string | null };
   description: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
 /** Body of POST and PUT. PUT is a full replace: an omitted description is cleared. */
-export type SaveExpense = { amount: Money; date: string; categoryId: string; description?: string };
+export type SaveExpense = {
+  amount: Money;
+  date: string;
+  categoryId: string;
+  description?: string;
+  /** Optional: the budget this expense counts against. */
+  budgetId?: string;
+};
 
 export type SaveIncome = { amount: Money; date: string; source: string; description?: string };
 

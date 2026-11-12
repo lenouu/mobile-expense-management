@@ -31,6 +31,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.expensemanagement.backend.PeriodManagement.Entities.FinancialPeriod;
+import com.expensemanagement.backend.PeriodManagement.Services.ServiceInterface.FinancialPeriodService;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -47,10 +49,12 @@ import java.util.UUID;
 public class ExpenseController
 {
     private final ExpenseService expenseService;
+    private final FinancialPeriodService periodService;
 
-    public ExpenseController(ExpenseService expenseService)
+    public ExpenseController(ExpenseService expenseService, FinancialPeriodService periodService)
     {
         this.expenseService = expenseService;
+        this.periodService = periodService;
     }
 
     @GetMapping
@@ -84,13 +88,40 @@ public class ExpenseController
             @RequestParam(required = false) UUID categoryId,
             @Parameter(description = "Case-insensitive text to look for in the description")
             @RequestParam(required = false) String q,
+            @Parameter(description = "Only expenses assigned to this budget; must be one of yours")
+            @RequestParam(required = false) UUID budgetId,
             @ParameterObject @PageableDefault(size = 20, sort = {"date", "id"}, direction = Sort.Direction.DESC)
             Pageable pageable)
     {
         return PageResponse.of(
-                expenseService.findMine(currentUserId(jwt), periodId, from, to, categoryId, q, pageable));
+                expenseService.findMine(currentUserId(jwt), periodId, from, to, categoryId, q, budgetId, pageable));
     }
 
+    /**
+     * The Overview: the window's total, its categories and its daily shape, against the window of
+     * the same length immediately before it.
+     *
+     * <p>Declared before {@code /{id}} so the literal path wins.
+     */
+    @GetMapping("/overview")
+    @Operation(summary = "What a window adds up to",
+            description = "Total, split by category and day by day, each compared with the window of "
+                    + "the same length before it. With no dates, the current financial period.")
+    public ExpenseResponses.Overview overview(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "First day the overview covers, inclusive")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Last day the overview covers, inclusive")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to)
+    {
+        if (from == null && to == null)
+        {
+            FinancialPeriod period = periodService.current(currentUserId(jwt));
+            return expenseService.overview(currentUserId(jwt), period.getStartDate(), period.getEndDate());
+        }
+
+        return expenseService.overview(currentUserId(jwt), from, to);
+    }
     /** Declared before {@code /{id}} for readability; the literal path wins either way. */
     @GetMapping("/total")
     @Operation(summary = "Total of my expenses over a window (US39)",

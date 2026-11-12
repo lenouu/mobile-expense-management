@@ -1,9 +1,10 @@
 package com.expensemanagement.backend.BudgetManagement.Controllers;
 
 import com.expensemanagement.backend.BudgetManagement.Dtos.DtoRequests.BudgetRequests;
-import com.expensemanagement.backend.BudgetManagement.Dtos.DtoRequests.CategoryAllocationRequests;
 import com.expensemanagement.backend.BudgetManagement.Dtos.DtoResponses.BudgetResponses;
 import com.expensemanagement.backend.BudgetManagement.Services.ServiceInterface.BudgetService;
+import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoResponses.ExpenseResponses;
+import com.expensemanagement.backend.Shared.PageResponse;
 import com.expensemanagement.backend.Swagger.SwaggerConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,6 +12,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -20,12 +24,15 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Budgets and category allocations (S4-TECH-2, US28).
- * Scoped by owner from the JWT token.
+ * Budgets (US28-US33).
+ *
+ * <p>A budget is a plan for a window the user chooses, not for a financial period: it can be two
+ * months of 100 000 or one week of 30 000, and only one may run at a time. Expenses join it
+ * explicitly, which is why a budget's spending is a sum of assigned rows rather than a date range.
  */
 @RestController
 @RequestMapping("/api/budgets")
-@Tag(name = "Budgets", description = "The caller's overall budgets and category allocations")
+@Tag(name = "Budgets", description = "The caller's budgets, their allocations and their expenses")
 @SecurityRequirement(name = SwaggerConfig.BEARER_SCHEME)
 public class BudgetController
 {
@@ -38,12 +45,13 @@ public class BudgetController
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create an overall budget for a period",
-            description = "Creates a new overall budget tied to a financial period.")
+    @Operation(summary = "Create a budget",
+            description = "The window, the optional name, the amount and the optional split, in one call. "
+                    + "A split must add up to the amount, and the window may not overlap another budget.")
     @ApiResponse(responseCode = "201", description = "Budget created")
-    @ApiResponse(responseCode = "400", description = "Invalid request or validation failed", content = @Content)
+    @ApiResponse(responseCode = "400",
+            description = "Invalid window, overlapping dates, or an unbalanced split", content = @Content)
     @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
-    @ApiResponse(responseCode = "409", description = "Budget already exists for this period", content = @Content)
     public BudgetResponses.BudgetDetails create(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody BudgetRequests.CreateBudget request)
@@ -51,8 +59,20 @@ public class BudgetController
         return budgetService.createBudget(currentUserId(jwt), request);
     }
 
+    @GetMapping
+    @Operation(summary = "List the caller's budgets",
+            description = "Newest window first. Reading a budget whose window has ended closes it and "
+                    + "writes its recap.")
+    @ApiResponse(responseCode = "200", description = "Budgets, newest first")
+    @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
+    public List<BudgetResponses.BudgetSummary> list(@AuthenticationPrincipal Jwt jwt)
+    {
+        return budgetService.listMine(currentUserId(jwt));
+    }
+
     @GetMapping("/{id}")
-    @Operation(summary = "Get budget by ID", description = "Returns a budget and its category allocations.")
+    @Operation(summary = "Get one budget",
+            description = "Amounts, spending, allocations, edit allowance and, once closed, the verdict.")
     @ApiResponse(responseCode = "200", description = "Budget details")
     @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
@@ -63,23 +83,12 @@ public class BudgetController
         return budgetService.getBudget(currentUserId(jwt), id);
     }
 
-    @GetMapping("/period/{periodId}")
-    @Operation(summary = "Get budget for a financial period", description = "Returns the budget for a specific period.")
-    @ApiResponse(responseCode = "200", description = "Budget details")
-    @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
-    public BudgetResponses.BudgetDetails getByPeriod(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable UUID periodId)
-    {
-        return budgetService.getBudgetByPeriod(currentUserId(jwt), periodId);
-    }
-
     @PutMapping("/{id}")
-    @Operation(summary = "Update overall budget amount",
-            description = "Updates the overall amount. Must not be lower than the sum of current category allocations.")
+    @Operation(summary = "Replace a budget's plan",
+            description = "Accepted only while the budget is editable: before its start, then within the "
+                    + "first 6% of its window, and at most three times. Counts as one edit.")
     @ApiResponse(responseCode = "200", description = "Budget updated")
-    @ApiResponse(responseCode = "400", description = "Invalid request or amount lower than current allocations", content = @Content)
+    @ApiResponse(responseCode = "400", description = "Fixed, closed, or an invalid plan", content = @Content)
     @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
     public BudgetResponses.BudgetDetails update(
@@ -90,62 +99,32 @@ public class BudgetController
         return budgetService.updateBudget(currentUserId(jwt), id, request);
     }
 
-    @PostMapping("/{budgetId}/allocations")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Allocate an amount to a category",
-            description = "Adds or updates an allocation for a category. Total allocations cannot exceed overall budget.")
-    @ApiResponse(responseCode = "201", description = "Category allocated")
-    @ApiResponse(responseCode = "400", description = "Exceeds overall budget or category invalid", content = @Content)
-    @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
-    public BudgetResponses.AllocationDetails allocateCategory(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable UUID budgetId,
-            @Valid @RequestBody CategoryAllocationRequests.SaveAllocation request)
-    {
-        return budgetService.addOrUpdateAllocation(currentUserId(jwt), budgetId, request);
-    }
-
-    @PutMapping("/{budgetId}/allocations/{allocationId}")
-    @Operation(summary = "Update a category allocation",
-            description = "Updates an existing category allocation amount without double counting.")
-    @ApiResponse(responseCode = "200", description = "Allocation updated")
-    @ApiResponse(responseCode = "400", description = "Exceeds overall budget or invalid amount", content = @Content)
-    @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Budget or allocation not found", content = @Content)
-    public BudgetResponses.AllocationDetails updateAllocation(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable UUID budgetId,
-            @PathVariable UUID allocationId,
-            @Valid @RequestBody CategoryAllocationRequests.UpdateAllocation request)
-    {
-        return budgetService.updateAllocation(currentUserId(jwt), budgetId, allocationId, request);
-    }
-
-    @DeleteMapping("/{budgetId}/allocations/{allocationId}")
+    @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete a category allocation", description = "Removes a category allocation from a budget.")
-    @ApiResponse(responseCode = "204", description = "Allocation deleted")
-    @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Budget or allocation not found", content = @Content)
-    public void deleteAllocation(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable UUID budgetId,
-            @PathVariable UUID allocationId)
-    {
-        budgetService.deleteAllocation(currentUserId(jwt), budgetId, allocationId);
-    }
-
-    @GetMapping("/{budgetId}/allocations")
-    @Operation(summary = "List allocations for a budget", description = "Returns all category allocations for a budget.")
-    @ApiResponse(responseCode = "200", description = "List of allocations")
+    @Operation(summary = "Delete a budget",
+            description = "Deletes the plan. The expenses recorded under it are kept and simply stop belonging "
+                    + "to a budget - they remain in the ledger. A finished budget cannot be deleted.")
+    @ApiResponse(responseCode = "204", description = "Budget deleted; its expenses kept and unlinked")
+    @ApiResponse(responseCode = "400", description = "The budget has closed", content = @Content)
     @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
     @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
-    public List<BudgetResponses.AllocationDetails> getAllocations(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable UUID budgetId)
+    public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id)
     {
-        return budgetService.getAllocations(currentUserId(jwt), budgetId);
+        budgetService.deleteBudget(currentUserId(jwt), id);
+    }
+
+    @GetMapping("/{id}/expenses")
+    @Operation(summary = "The expenses assigned to a budget",
+            description = "The rows behind the spending figure, paged the same way as the ledger.")
+    @ApiResponse(responseCode = "200", description = "Expenses counted under this budget")
+    @ApiResponse(responseCode = "401", description = "No valid token", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Budget not found", content = @Content)
+    public PageResponse<ExpenseResponses.Details> expenses(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.DESC) Pageable pageable)
+    {
+        return PageResponse.of(budgetService.expensesOf(currentUserId(jwt), id, pageable));
     }
 
     private UUID currentUserId(Jwt jwt)

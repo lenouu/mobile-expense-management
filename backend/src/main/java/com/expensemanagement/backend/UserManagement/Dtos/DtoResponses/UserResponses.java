@@ -34,6 +34,8 @@ public class UserResponses {
         private final String email;
         private final String firstName;
         private final String lastName;
+        /** The unit this account records amounts in, e.g. XAF. */
+        private final String baseCurrency;
         private final LocalDate dateOfBirth;
         private final String profilePictureReference;
         /**

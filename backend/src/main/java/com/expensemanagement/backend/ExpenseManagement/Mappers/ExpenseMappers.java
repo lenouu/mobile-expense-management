@@ -1,5 +1,6 @@
 package com.expensemanagement.backend.ExpenseManagement.Mappers;
 
+import com.expensemanagement.backend.BudgetManagement.Entities.Budget;
 import com.expensemanagement.backend.CategoryManagement.Entities.UserCategory;
 import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoRequests.ExpenseRequests;
 import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoResponses.ExpenseResponses;
@@ -28,8 +29,24 @@ public final class ExpenseMappers
                         .icon(category.getIcon())
                         .color(category.getColor())
                         .build())
+                .budget(toBudgetRef(expense.getBudget()))
                 .createdAt(expense.getCreatedAt())
                 .updatedAt(expense.getUpdatedAt())
+                .build();
+    }
+
+    /** The budget the expense is counted against, or null when it belongs to none. */
+    private static ExpenseResponses.BudgetRef toBudgetRef(Budget budget)
+    {
+        if (budget == null)
+        {
+            return null;
+        }
+        return ExpenseResponses.BudgetRef.builder()
+                .id(budget.getId())
+                .name(budget.getName())
+                .startDate(budget.getStartDate())
+                .endDate(budget.getEndDate())
                 .build();
     }
 

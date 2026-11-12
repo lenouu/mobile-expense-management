@@ -1,11 +1,14 @@
 package com.expensemanagement.backend.UserManagement.Services.ServiceImplements;
 
+import java.util.Locale;
 import java.util.UUID;
 import com.expensemanagement.backend.CategoryManagement.Services.ServiceInterface.UserCategoryService;
 import com.expensemanagement.backend.Exceptions.DuplicateResourceException;
 import com.expensemanagement.backend.Exceptions.InvalidCredentialsException;
 import com.expensemanagement.backend.Exceptions.OperationNotAllowedException;
 import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
+import com.expensemanagement.backend.IncomeManagement.Services.ServiceInterface.IncomeSourceService;
+import com.expensemanagement.backend.ExpenseManagement.Services.ServiceInterface.ExpenseService;
 import com.expensemanagement.backend.UserManagement.Dtos.DtoRequests.UserRequests;
 import com.expensemanagement.backend.UserManagement.Dtos.DtoResponses.UserResponses;
 import com.expensemanagement.backend.UserManagement.Entities.User;
@@ -42,13 +45,18 @@ public class UserServiceImpl implements UserService
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserCategoryService userCategoryService;
+    private final IncomeSourceService incomeSourceService;
+    private final ExpenseService expenseService;
 
     public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                           UserCategoryService userCategoryService)
+                           UserCategoryService userCategoryService,
+                           IncomeSourceService incomeSourceService, ExpenseService expenseService)
     {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userCategoryService = userCategoryService;
+        this.incomeSourceService = incomeSourceService;
+        this.expenseService = expenseService;
     }
 
     // ------------------------------------------------------------------
@@ -96,6 +104,10 @@ public class UserServiceImpl implements UserService
         // S2-TECH-1: the new account starts with its own copy of the active default
         // categories. Same transaction as the insert above, so it is all or nothing.
         userCategoryService.provisionDefaults(saved);
+
+        // Income sources too: the source is required on an income entry, so an empty list would
+        // leave a new account unable to record any money coming in.
+        incomeSourceService.provisionDefaults(saved);
 
         log.info("Registered account id={} username={}", saved.getId(), saved.getUserName());
         return UserMappers.toDetails(saved);
@@ -189,6 +201,23 @@ public class UserServiceImpl implements UserService
                 && userRepository.existsByUserNameAndStatusNot(request.getUserName(), UserAccountState.DELETED))
         {
             throw new DuplicateResourceException("Username '" + request.getUserName() + "' is already taken");
+        }
+
+        // The base currency is handled here rather than in the mapper because it carries a rule:
+        // amounts already recorded are in the old unit, and nothing converts them.
+        if (StringUtils.hasText(request.getBaseCurrency()))
+        {
+            String next = request.getBaseCurrency().trim().toUpperCase(Locale.ROOT);
+            if (!next.equals(user.getBaseCurrency()))
+            {
+                if (expenseService.hasAny(id))
+                {
+                    throw new OperationNotAllowedException("Amounts are already recorded in "
+                            + user.getBaseCurrency() + ", and there is no rate to convert them. "
+                            + "Set the base currency before recording expenses.");
+                }
+                user.setBaseCurrency(next);
+            }
         }
 
         // applyUpdate only touches non-null fields, so this is a PATCH, not a replace.

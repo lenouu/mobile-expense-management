@@ -196,7 +196,7 @@ export function IncomesManager({
                   {formatDate(income.date)}
                 </ThemedText>
               </View>
-              <ThemedText type="small">{income.source}</ThemedText>
+              <ThemedText type="small">{income.source.name}</ThemedText>
               {income.description && (
                 <ThemedText type="small" themeColor="textSecondary">
                   {income.description}
@@ -245,7 +245,7 @@ function IncomeForm({
   const [amount, setAmount] = useState(income ? String(income.amount.amount) : '');
   const [currency, setCurrency] = useState(income?.amount.currency ?? DEFAULT_CURRENCY);
   const [date, setDate] = useState(income?.date ?? todayIso());
-  const [source, setSource] = useState(income?.source ?? '');
+  const [source, setSource] = useState(income?.source.name ?? '');
   const [description, setDescription] = useState(income?.description ?? '');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);

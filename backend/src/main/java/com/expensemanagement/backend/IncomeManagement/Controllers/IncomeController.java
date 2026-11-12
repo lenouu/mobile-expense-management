@@ -72,6 +72,22 @@ public class IncomeController
         return PageResponse.of(incomeService.findMine(currentUserId(jwt), from, to, pageable));
     }
 
+    /**
+     * The income list's summary: the window's total and its split by source.
+     *
+     * <p>Declared before {@code /{id}} so the literal path wins over the UUID pattern.
+     */
+    @GetMapping("/summary")
+    @Operation(summary = "What came in, and from where",
+            description = "Total and count for the window, plus one slice per source. Income is never "
+                    + "netted against spending, so this total is gross.")
+    public IncomeResponses.Summary summary(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to)
+    {
+        return incomeService.summary(currentUserId(jwt), from, to);
+    }
     @GetMapping("/total")
     @Operation(summary = "Total income for a financial period (US13)",
             description = """

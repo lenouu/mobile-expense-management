@@ -40,6 +40,7 @@ export function Popup({
   onClosed,
   children,
   dismissOnBackdrop = true,
+  expand = false,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -48,6 +49,13 @@ export function Popup({
   children: ReactNode;
   /** Set false for a pop-up the user must answer (a confirm, or a form in progress). */
   dismissOnBackdrop?: boolean;
+  /**
+   * Uses all the height the screen has to offer instead of keeping a comfortable margin.
+   *
+   * <p>For a form whose fields must all be reachable without scrolling. The card still stays inside
+   * the screen's safe area, so nothing is ever cut off at the edges.
+   */
+  expand?: boolean;
 }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -134,9 +142,11 @@ export function Popup({
   const scale = pop.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] });
   const translateY = pop.interpolate({ inputRange: [0, 1], outputRange: [32, 0] });
   // Leaves room for the status and navigation areas plus a margin, so the card is always whole.
+  // An expanded card gives up only the screen's own padding, not the extra comfort margin.
+  const margin = expand ? Spacing.four * 2 : Spacing.six * 2;
   const maxCardHeight = Math.max(
     240,
-    windowHeight - insets.top - insets.bottom - Spacing.six * 2,
+    windowHeight - insets.top - insets.bottom - margin,
   );
 
   return (
@@ -178,6 +188,7 @@ export function Popup({
               {/* Taps inside the card must not reach the backdrop's close handler. */}
               <Pressable onPress={() => {}} style={styles.cardInner}>
                 <ScrollView
+                  style={styles.cardScroll}
                   contentContainerStyle={styles.cardContent}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}>
@@ -216,9 +227,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: Spacing.four,
     gap: Spacing.three,
+    // A column that may shrink: the scroll view inside gives way, not the card.
+    flexShrink: 1,
   },
   /** Lets the scroll view shrink inside the card instead of pushing it past its maxHeight. */
   cardInner: {
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  /**
+   * The scroll view itself has to be allowed to shrink too: without this it keeps its content
+   * height, overflows the card's maxHeight and is simply clipped - which is what made a tall
+   * pop-up (the CSV importer) impossible to scroll to its buttons.
+   */
+  cardScroll: {
     flexShrink: 1,
   },
   cardContent: {
