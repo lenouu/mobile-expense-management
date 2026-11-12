@@ -13,16 +13,8 @@ import { ApiRequestError } from '@/features/auth/lib/api-client';
 import { describeError } from '@/utils/errors';
 import type { Account, Session } from '@/types/api';
 
-/** Every field name the backend can report in `fieldErrors`, plus the password misspelling. */
-const FORM_FIELDS: SignUpField[] = [
-  'firstName',
-  'lastName',
-  'userName',
-  'email',
-  'dateOfBirth',
-  'password',
-  'acceptedTerms',
-];
+/** Every field name the backend can report in `fields`, plus the password misspelling. */
+const FORM_FIELDS: SignUpField[] = ['userName', 'email', 'password', 'acceptedTerms'];
 
 function isFormField(name: string): name is SignUpField {
   return (FORM_FIELDS as string[]).includes(name);
@@ -88,7 +80,7 @@ export function useSignUpForm(onSignedIn: (result: { account: Account; session: 
 /**
  * Turns a failed request into messages the form can show.
  *
- * The backend answers a 400 with `fieldErrors` keyed by its own field names - the same camelCase
+ * The backend answers a 400 with `fields` keyed by its own field paths - the same camelCase
  * names this form uses, so they drop straight into the state the client-side rules write to.
  *
  * A 409 carries no field, only a sentence naming the offending value: "Username 'x' is already
@@ -101,7 +93,7 @@ function mapSubmitError(error: unknown): SignUpErrors {
   }
 
   const errors: SignUpErrors = {};
-  for (const [field, message] of Object.entries(error.fieldErrors)) {
+  for (const [field, message] of Object.entries(error.fields)) {
     if (isFormField(field)) {
       errors[field] = message;
     } else {

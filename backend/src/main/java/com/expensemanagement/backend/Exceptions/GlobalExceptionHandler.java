@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -27,6 +28,11 @@ import java.util.Map;
  *
  * <p>Without this, anything a service throws surfaces as a 500 with a stack trace, which makes
  * a wrong password look like a server bug.
+ *
+ * <p>Status codes follow the API contract: 400 for a malformed request, 401 for missing or
+ * invalid authentication, 403 for an authenticated caller who may not do this, 404 for a
+ * resource that does not exist <em>or does not belong to the caller</em>, 409 for a conflict
+ * with existing data, and 422 for a request that is well formed but breaks a business rule.
  */
 @RestControllerAdvice
 @Slf4j
@@ -43,28 +49,59 @@ public class GlobalExceptionHandler
     public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException ex)
     {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiError.of(404, "not_found", ex.getMessage()));
+                .body(ApiError.of("not_found", ex.getMessage()));
     }
 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ApiError> handleDuplicate(DuplicateResourceException ex)
     {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiError.of(409, "conflict", ex.getMessage()));
+                .body(ApiError.of("conflict", ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiError> handleInvalidCredentials(InvalidCredentialsException ex)
     {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ApiError.of(401, "invalid_credentials", ex.getMessage()));
+                .body(ApiError.of("invalid_credentials", ex.getMessage()));
     }
 
+    /**
+     * A request that is syntactically fine but breaks one of the product's rules: signing in to
+     * a suspended account, two mismatched new passwords, deleting a category that expenses still
+     * use, demoting the last administrator.
+     *
+     * <p>422 rather than 409: nothing about the <em>data</em> conflicts, the request is understood
+     * and simply not allowed. The budget rules that arrive later (an allocation exceeding the
+     * overall budget, an edit after the window closed) are the same category and use this path.
+     */
     @ExceptionHandler(OperationNotAllowedException.class)
     public ResponseEntity<ApiError> handleNotAllowed(OperationNotAllowedException ex)
     {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiError.of("business_rule_violation", ex.getMessage()));
+    }
+
+    /**
+     * A pasted SMS that is not a supported mobile money transaction (S6-TECH-2). Its own code so
+     * the app can show the reason as it is instead of treating it as a form error.
+     */
+    @ExceptionHandler(UnsupportedMessageException.class)
+    public ResponseEntity<ApiError> handleUnsupportedMessage(UnsupportedMessageException ex)
+    {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiError.of("unsupported_message", ex.getMessage()));
+    }
+
+    /**
+     * Two requests changed the same record at once (a double tap on "Confirm", say) and this one
+     * lost. Nothing was written, so it is a conflict to retry, not a server error.
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleConcurrentUpdate(ObjectOptimisticLockingFailureException ex)
+    {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiError.of(409, "operation_not_allowed", ex.getMessage()));
+                .body(ApiError.of("conflict", "This record was changed at the same time. Reload it and try again."));
     }
 
     /**
@@ -77,7 +114,7 @@ public class GlobalExceptionHandler
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex)
     {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiError.of(403, "forbidden", "Insufficient privileges"));
+                .body(ApiError.of("forbidden", "Insufficient privileges"));
     }
 
     /** Raised when {@code @Valid} rejects a request body, e.g. a blank username. */
@@ -89,7 +126,7 @@ public class GlobalExceptionHandler
                 fieldErrors.put(fieldError.getField(), fieldError.getDefaultMessage()));
 
         return ResponseEntity.badRequest()
-                .body(ApiError.of(400, "validation_failed", "Request validation failed", fieldErrors));
+                .body(ApiError.of("validation_failed", "Request validation failed", fieldErrors));
     }
 
     /**
@@ -103,7 +140,7 @@ public class GlobalExceptionHandler
     public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex)
     {
         return ResponseEntity.badRequest()
-                .body(ApiError.of(400, "malformed_request", "Request body is malformed or missing"));
+                .body(ApiError.of("malformed_request", "Request body is malformed or missing"));
     }
 
     /**
@@ -119,7 +156,7 @@ public class GlobalExceptionHandler
     public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex)
     {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiError.of(404, "not_found", "No endpoint " + ex.getHttpMethod() + " " + ex.getResourcePath()));
+                .body(ApiError.of("not_found", "No endpoint " + ex.getHttpMethod() + " " + ex.getResourcePath()));
     }
 
     /**
@@ -139,7 +176,7 @@ public class GlobalExceptionHandler
                 : ex.getRequiredType().getSimpleName();
 
         return ResponseEntity.badRequest()
-                .body(ApiError.of(400, "invalid_parameter",
+                .body(ApiError.of("invalid_parameter",
                         "Parameter '" + ex.getName() + "' has invalid value '" + value
                                 + "'; expected " + expected));
     }
@@ -149,7 +186,7 @@ public class GlobalExceptionHandler
     public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException ex)
     {
         return ResponseEntity.badRequest()
-                .body(ApiError.of(400, "missing_parameter",
+                .body(ApiError.of("missing_parameter",
                         "Required parameter '" + ex.getParameterName() + "' is missing"));
     }
 
@@ -164,8 +201,7 @@ public class GlobalExceptionHandler
     public ResponseEntity<ApiError> handleInvalidSort(PropertyReferenceException ex)
     {
         return ResponseEntity.badRequest()
-                .body(ApiError.of(400, "invalid_sort",
-                        "Unknown sort field '" + ex.getPropertyName() + "'"));
+                .body(ApiError.of("invalid_sort", "Unknown sort field '" + ex.getPropertyName() + "'"));
     }
 
     /**
@@ -187,7 +223,7 @@ public class GlobalExceptionHandler
         log.warn("Rejecting request with a malformed query parameter", ex);
 
         return ResponseEntity.badRequest()
-                .body(ApiError.of(400, "invalid_query",
+                .body(ApiError.of("invalid_query",
                         "A query parameter is malformed. For 'sort' use 'property,direction', "
                                 + "e.g. sort=userName,asc - not a JSON array."));
     }
@@ -196,7 +232,7 @@ public class GlobalExceptionHandler
     public ResponseEntity<ApiError> handleInvalidRequest(InvalidRequestException ex)
     {
         return ResponseEntity.badRequest()
-                .body(ApiError.of(400, "invalid_request", ex.getMessage()));
+                .body(ApiError.of("invalid_request", ex.getMessage()));
     }
 
     /**
@@ -214,17 +250,17 @@ public class GlobalExceptionHandler
         if (ex instanceof ErrorResponse errorResponse && errorResponse.getStatusCode().value() < 500)
         {
             HttpStatusCode status = errorResponse.getStatusCode();
-            String error = status instanceof HttpStatus known
+            String code = status instanceof HttpStatus known
                     ? known.name().toLowerCase()
                     : "request_failed";
             return ResponseEntity.status(status)
-                    .body(ApiError.of(status.value(), error, errorResponse.getBody().getDetail()));
+                    .body(ApiError.of(code, errorResponse.getBody().getDetail()));
         }
 
         log.error("Unexpected error on {} {}", request.getMethod(), request.getRequestURI(), ex);
         errorLogService.record(ex, request, HttpStatus.INTERNAL_SERVER_ERROR.value());
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiError.of(500, "internal_error", "An unexpected error occurred"));
+                .body(ApiError.of("internal_error", "An unexpected error occurred"));
     }
 }

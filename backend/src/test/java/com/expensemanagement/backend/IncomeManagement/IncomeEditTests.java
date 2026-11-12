@@ -43,7 +43,7 @@ class IncomeEditTests {
 	void editReplacesTheRecordEverywhereAndRecordsWhenItHappened() throws Exception {
 		String token = registerAndLogin();
 		String created = create(token, "100", "2026-09-01", "Salary");
-		Integer id = JsonPath.read(created, "$.id");
+		String id = JsonPath.read(created, "$.id");
 		String createdAt = JsonPath.read(created, "$.createdAt");
 
 		// Make sure the edit lands on a later clock tick than the creation.
@@ -55,7 +55,7 @@ class IncomeEditTests {
 				.content(incomeJson("1000", "2026-09-02", "Salary", "Was missing a zero")))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(id))
-			.andExpect(jsonPath("$.amount").value(1000))
+			.andExpect(jsonPath("$.amount.amount").value(1000))
 			.andExpect(jsonPath("$.date").value("2026-09-02"))
 			.andExpect(jsonPath("$.description").value("Was missing a zero"))
 			// The creation time is kept; only updatedAt moves.
@@ -68,55 +68,55 @@ class IncomeEditTests {
 
 		// The list holds the corrected record only - the old amount is gone, not duplicated.
 		mockMvc.perform(get("/api/incomes").header(HttpHeaders.AUTHORIZATION, token))
-			.andExpect(jsonPath("$.content", hasSize(1)))
-			.andExpect(jsonPath("$.content[0].id").value(id))
-			.andExpect(jsonPath("$.content[0].amount").value(1000));
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].id").value(id))
+			.andExpect(jsonPath("$.data[0].amount.amount").value(1000));
 	}
 
 	@Test
 	void invalidEditIsRejectedAndLeavesTheIncomeUnchanged() throws Exception {
 		String token = registerAndLogin();
-		Integer id = JsonPath.read(create(token, "250", "2026-09-10", "Freelance"), "$.id");
+		String id = JsonPath.read(create(token, "250", "2026-09-10", "Freelance"), "$.id");
 		String tomorrow = LocalDate.now().plusDays(1).toString();
 
 		mockMvc
 			.perform(put("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":0,\"date\":\"" + tomorrow + "\",\"source\":\" \"}"))
+				.content("{\"amount\":{\"amount\":0},\"date\":\"" + tomorrow + "\",\"source\":\" \"}"))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error").value("validation_failed"))
-			.andExpect(jsonPath("$.fieldErrors.amount").exists())
-			.andExpect(jsonPath("$.fieldErrors.date").exists())
-			.andExpect(jsonPath("$.fieldErrors.source").exists());
+			.andExpect(jsonPath("$.code").value("validation_failed"))
+			.andExpect(jsonPath("$.fields['amount.amount']").exists())
+			.andExpect(jsonPath("$.fields.date").exists())
+			.andExpect(jsonPath("$.fields.source").exists());
 
 		mockMvc
 			.perform(put("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(incomeJson("10.555", "2026-09-10", "Freelance", null)))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.fieldErrors.amount").exists());
+			.andExpect(jsonPath("$.fields['amount.amount']").exists());
 
 		mockMvc.perform(get("/api/incomes/" + id).header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.amount").value(250))
+			.andExpect(jsonPath("$.amount.amount").value(250))
 			.andExpect(jsonPath("$.date").value("2026-09-10"))
-			.andExpect(jsonPath("$.source").value("Freelance"));
+			.andExpect(jsonPath("$.source.name").value("Freelance"));
 	}
 
 	@Test
 	void editingAnIncomeThatDoesNotExistIsNotFound() throws Exception {
 		mockMvc
-			.perform(put("/api/incomes/999999999").header(HttpHeaders.AUTHORIZATION, registerAndLogin())
+			.perform(put("/api/incomes/00000000-0000-0000-0000-000000000000").header(HttpHeaders.AUTHORIZATION, registerAndLogin())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(incomeJson("10", "2026-09-10", "Salary", null)))
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error").value("not_found"));
+			.andExpect(jsonPath("$.code").value("not_found"));
 	}
 
 	@Test
 	void editingRequiresAToken() throws Exception {
 		mockMvc
-			.perform(put("/api/incomes/1").contentType(MediaType.APPLICATION_JSON)
+			.perform(put("/api/incomes/00000000-0000-0000-0000-000000000000").contentType(MediaType.APPLICATION_JSON)
 				.content(incomeJson("10", "2026-09-10", "Salary", null)))
 			.andExpect(status().isUnauthorized());
 	}
@@ -133,7 +133,7 @@ class IncomeEditTests {
 	}
 
 	private static String incomeJson(String amount, String date, String source, String description) {
-		return "{\"amount\":" + amount + ",\"date\":\"" + date + "\",\"source\":\"" + source + "\""
+		return "{\"amount\":{\"amount\":" + amount + "},\"date\":\"" + date + "\",\"source\":\"" + source + "\""
 				+ (description != null ? ",\"description\":\"" + description + "\"" : "") + "}";
 	}
 

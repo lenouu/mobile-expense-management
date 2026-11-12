@@ -5,9 +5,11 @@ import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoResponses.Expense
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.math.BigDecimal;
+import com.expensemanagement.backend.Shared.Money;
+
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Expenses of one user. Every method takes the caller's id (from the token), and another user's
@@ -16,43 +18,73 @@ import java.util.List;
 public interface ExpenseService
 {
     /**
-     * Expenses between {@code from} and {@code to} (both optional, inclusive).
+     * The caller's expenses, newest first, with optional additive filters.
+     *
+     * <p>{@code periodId} restricts to one of the caller's financial periods (US21): the period's
+     * start and end dates become the date bounds, and any explicit {@code from} / {@code to}
+     * narrow that range further rather than replacing it. When the intersection is empty the
+     * result is an empty page, not an error.
+     *
+     * <p>{@code categoryId} narrows to one of the caller's categories, and {@code q} is a
+     * case-insensitive substring of the description.
+     *
+     * <p>Neither {@code categoryId} nor {@code periodId} is checked for ownership: because the
+     * query is already scoped to the caller, someone else's id simply matches nothing. A period
+     * id is different - it is resolved up front, so another user's period answers 404.
      *
      * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if from is after to
+     * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if the period does
+     *         not exist or belongs to someone else
      */
-    Page<ExpenseResponses.Details> findMine(Long userId, LocalDate from, LocalDate to, Pageable pageable);
+    Page<ExpenseResponses.Details> findMine(UUID userId, UUID periodId, LocalDate from, LocalDate to,
+                                            UUID categoryId, String q, UUID budgetId, Pageable pageable);
 
-    ExpenseResponses.Details findMine(Long userId, Long id);
+    ExpenseResponses.Details findMine(UUID userId, UUID id);
 
     /** @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if the category is not the caller's */
-    ExpenseResponses.Details create(Long userId, ExpenseRequests.SaveExpense request);
+    ExpenseResponses.Details create(UUID userId, ExpenseRequests.SaveExpense request);
 
     /** @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if the category is not the caller's */
-    ExpenseResponses.Details update(Long userId, Long id, ExpenseRequests.SaveExpense request);
+    ExpenseResponses.Details update(UUID userId, UUID id, ExpenseRequests.SaveExpense request);
 
-    void delete(Long userId, Long id);
+    void delete(UUID userId, UUID id);
 
-    /**
-     * S8-TECH-1: Calculates the total amount spent by the user between from and to (inclusive).
-     * If no expenses exist in the range, returns BigDecimal.ZERO.
-     *
-     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if from is after to
-     */
-    BigDecimal calculateTotalSpending(Long userId, LocalDate from, LocalDate to);
+    Money calculateTotalSpending(UUID userId, LocalDate from, LocalDate to);
+
+    List<ExpenseResponses.CategorySpending> findSpendingByCategory(UUID userId, LocalDate from, LocalDate to);
+
+    ExpenseResponses.SpendingSummary getSpendingSummary(UUID userId, LocalDate from, LocalDate to);
 
     /**
-     * S8-TECH-1: Returns total spending grouped by category for the user between from and to (inclusive),
-     * ordered by total spent descending.
+     * Whether the account has recorded anything at all.
      *
-     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if from is after to
+     * <p>Used before changing the account's base currency: amounts already stored are in the old
+     * unit, and there is no rate to convert them with.
      */
-    List<ExpenseResponses.CategorySpending> findSpendingByCategory(Long userId, LocalDate from, LocalDate to);
+    boolean hasAny(UUID userId);
 
     /**
-     * S8-TECH-1: Aggregated spending summary (total spending and per-category spending) for the user
-     * between from and to (inclusive).
+     * Total of the caller's expenses over a window (US39).
      *
-     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if from is after to
+     * <p>The window is resolved exactly like the listing: {@code periodId} supplies the bounds and
+     * {@code from}/{@code to} narrow them, and with neither it is the current period. The same
+     * {@code categoryId} and {@code q} filters apply, so the total always matches the rows the
+     * list would return for the same query.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if the period
+     *         does not exist or belongs to someone else
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if {@code from} is
+     *         after {@code to}
      */
-    ExpenseResponses.SpendingSummary getSpendingSummary(Long userId, LocalDate from, LocalDate to);
+    ExpenseResponses.Total totals(UUID userId, UUID periodId, LocalDate from, LocalDate to,
+                                  UUID categoryId, String q);
+
+    /**
+     * The window's total, its split by category and its shape day by day, against the window of
+     * the same length that came before it.
+     *
+     * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if {@code from} is
+     *         after {@code to}
+     */
+    ExpenseResponses.Overview overview(UUID userId, LocalDate from, LocalDate to);
 }

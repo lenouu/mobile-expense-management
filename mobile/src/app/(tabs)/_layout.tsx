@@ -17,7 +17,7 @@ import { useSession } from '@/providers';
  */
 export default function TabsLayout() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme ?? 'light'];
   const { session } = useSession();
   const isAdmin = session?.type === 'ADMIN';
 
@@ -27,10 +27,11 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: Brand.green,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: {
-          backgroundColor: colors.backgroundElement,
-          borderTopColor: colors.border,
-        },
+        // Signed out, the app is showing its single login screen, so the bar would only offer two
+        // destinations the user cannot use yet. It appears as soon as there is a session.
+        tabBarStyle: session
+          ? { backgroundColor: colors.backgroundElement, borderTopColor: colors.border }
+          : { display: 'none' },
       }}>
       {/* Consumer screens: hidden from an administrator. */}
       <Tabs.Screen
@@ -42,13 +43,33 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="finances"
+        name="expenses"
         options={{
-          title: 'Money',
-          href: isAdmin ? null : '/finances',
+          title: 'Expenses',
+          href: isAdmin ? null : '/expenses',
+          tabBarIcon: ({ color, size }) => <Icon name="cart" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="budget"
+        options={{
+          title: 'Budget',
+          href: isAdmin ? null : '/budget',
           tabBarIcon: ({ color, size }) => <Icon name="wallet" size={size} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          href: isAdmin ? null : '/profile',
+          tabBarIcon: ({ color, size }) => <Icon name="person" size={size} color={color} />,
+        }}
+      />
+
+      {/* The old single "Money" screen. Off the bar now that its contents are being split into
+          the tabs above; kept reachable by URL until the Expenses screen replaces it. */}
+      <Tabs.Screen name="finances" options={{ href: null }} />
 
       {/* Admin console: hidden from everyone who is not an administrator. */}
       <Tabs.Screen
@@ -83,6 +104,9 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => <Icon name="categories" size={size} color={color} />,
         }}
       />
+
+      {/* Reachable from the Expenses header; never on the bar. */}
+      <Tabs.Screen name="categories" options={{ href: null }} />
 
       {/* Reachable from Home's Administrative Controls; never on the bar. */}
       <Tabs.Screen name="admin-logs" options={{ href: null }} />

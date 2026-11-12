@@ -8,6 +8,7 @@ import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class UserResponses {
 
@@ -15,7 +16,7 @@ public class UserResponses {
     @Builder
     @AllArgsConstructor
     public static class Summary {
-        private final Long id;
+        private final UUID id;
         private final String userName;
         private final String firstName;
         private final String lastName;
@@ -28,13 +29,23 @@ public class UserResponses {
     @Builder
     @AllArgsConstructor
     public static class Details {
-        private final Long id;
+        private final UUID id;
         private final String userName;
         private final String email;
         private final String firstName;
         private final String lastName;
+        /** The unit this account records amounts in, e.g. XAF. */
+        private final String baseCurrency;
         private final LocalDate dateOfBirth;
         private final String profilePictureReference;
+        /**
+         * Where the avatar bytes can be fetched, relative to the API base (`/api`), e.g.
+         * {@code /avatars/8f3c….jpg}. Null when the account has no picture.
+         *
+         * <p>The file name is random and changes on every upload, which is what makes the URL a
+         * reliable cache key: a new picture is a new URL, so no client ever shows a stale one.
+         */
+        private final String profilePictureUrl;
         private final UserAccountState status;
         private final UserType type;
         private final LocalDateTime createdAt;

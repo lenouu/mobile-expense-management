@@ -13,9 +13,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * {@code spring.data.web.pageable.max-page-size}. Adding it silently removes the {@code ?size=}
  * cap, so a client can request the whole table again.
  *
- * <p>Instead the two paged endpoints wrap their result in {@code PagedModel} explicitly,
- * which produces the same stable {@code {"content":[...],"page":{...}}} envelope while leaving
- * Boot's resolver (and therefore the configured cap) in place.
+ * <p>Instead every paged endpoint wraps its result in {@link com.expensemanagement.backend.Shared.PageResponse},
+ * which produces the contract's flat {@code {data, page, size, totalElements, totalPages}}
+ * envelope while leaving Boot's resolver (and therefore the configured cap) in place.
  */
 @SpringBootApplication
 public class ExpenseManagementBackendApplication {

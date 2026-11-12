@@ -3,15 +3,17 @@ import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-nativ
 
 import { Button, Chip } from '@/components/ui/primitives';
 import {
+  CurrencyPicker,
   DeleteButton,
   editedLabel,
   Field,
   financeStyles as styles,
-  formatAmount,
   formatDate,
-  parseAmount,
+  formatMoney,
+  moneyFieldError,
   TextField,
   todayIso,
+  toMoney,
   validateAmountAndDate,
 } from '@/features/finances/components/finance-ui';
 import { ThemedText } from '@/components/themed-text';
@@ -20,6 +22,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { ApiRequestError } from '@/features/auth/lib/api-client';
 import { describeError } from '@/utils/errors';
 import type { Session } from '@/types/api';
+import { DEFAULT_CURRENCY } from '@/types/api';
 import { createIncome, deleteIncome, fetchIncomes, type Income, type SaveIncome, updateIncome } from '@/features/finances/lib/finances-api';
 
 const PAGE_SIZE = 20;
@@ -28,7 +31,7 @@ const PAGE_SIZE = 20;
 const SOURCE_PRESETS = ['Salary', 'Business', 'Freelance', 'Gift', 'Other'];
 
 /** null: form closed. 'new': adding. A number: editing that income. */
-type Editing = null | 'new' | number;
+type Editing = null | 'new' | string;
 
 /**
  * S2-TECH-2: the signed-in user's incomes - list, add, edit and delete.
@@ -54,7 +57,7 @@ export function IncomesManager({
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleError = useCallback(
     (e: unknown) => {
@@ -72,10 +75,10 @@ export function IncomesManager({
     setMessage(null);
     try {
       const list = await fetchIncomes(session, { page: 0, size: PAGE_SIZE });
-      setIncomes(list.content);
+      setIncomes(list.data);
       setPage(0);
-      setTotalPages(list.page.totalPages);
-      setTotal(list.page.totalElements);
+      setTotalPages(list.totalPages);
+      setTotal(list.totalElements);
     } catch (e) {
       handleError(e);
     } finally {
@@ -91,9 +94,9 @@ export function IncomesManager({
     setLoadingMore(true);
     try {
       const next = await fetchIncomes(session, { page: page + 1, size: PAGE_SIZE });
-      setIncomes((current) => [...current, ...next.content]);
-      setPage(next.page.number);
-      setTotalPages(next.page.totalPages);
+      setIncomes((current) => [...current, ...next.data]);
+      setPage(next.page);
+      setTotalPages(next.totalPages);
     } catch (e) {
       handleError(e);
     } finally {
@@ -187,13 +190,13 @@ export function IncomesManager({
             <ThemedView key={income.id} type="backgroundElement" style={styles.card}>
               <View style={styles.headerRow}>
                 <ThemedText type="smallBold" style={styles.amount}>
-                  {formatAmount(income.amount)}
+                  {formatMoney(income.amount)}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {formatDate(income.date)}
                 </ThemedText>
               </View>
-              <ThemedText type="small">{income.source}</ThemedText>
+              <ThemedText type="small">{income.source.name}</ThemedText>
               {income.description && (
                 <ThemedText type="small" themeColor="textSecondary">
                   {income.description}
@@ -239,9 +242,10 @@ function IncomeForm({
   onCancel: () => void;
   onAuthError: (e: unknown) => void;
 }) {
-  const [amount, setAmount] = useState(income ? String(income.amount) : '');
+  const [amount, setAmount] = useState(income ? String(income.amount.amount) : '');
+  const [currency, setCurrency] = useState(income?.amount.currency ?? DEFAULT_CURRENCY);
   const [date, setDate] = useState(income?.date ?? todayIso());
-  const [source, setSource] = useState(income?.source ?? '');
+  const [source, setSource] = useState(income?.source.name ?? '');
   const [description, setDescription] = useState(income?.description ?? '');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -255,7 +259,7 @@ function IncomeForm({
     if (Object.keys(errors).length > 0) return;
 
     const body: SaveIncome = {
-      amount: parseAmount(amount)!,
+      amount: toMoney(amount, currency)!,
       date: date.trim(),
       source: source.trim(),
       description: description.trim() || undefined,
@@ -274,7 +278,7 @@ function IncomeForm({
       if (e instanceof ApiRequestError && e.status === 401) {
         onAuthError(e);
       } else {
-        setFieldErrors(e instanceof ApiRequestError ? e.fieldErrors : {});
+        setFieldErrors(e instanceof ApiRequestError ? e.fields : {});
         setError(describeError(e));
       }
     } finally {
@@ -286,8 +290,12 @@ function IncomeForm({
     <ThemedView type="backgroundElement" style={styles.card}>
       <ThemedText type="smallBold">{income ? 'Edit income' : 'New income'}</ThemedText>
 
-      <Field label="Amount" error={fieldErrors.amount}>
+      <Field label="Amount" error={moneyFieldError(fieldErrors)}>
         <TextField placeholder="e.g. 1500" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+      </Field>
+
+      <Field label="Currency">
+        <CurrencyPicker value={currency} onChange={setCurrency} />
       </Field>
 
       <Field label="Date (YYYY-MM-DD)" error={fieldErrors.date}>

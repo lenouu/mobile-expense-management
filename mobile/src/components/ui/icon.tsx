@@ -36,7 +36,16 @@ export type IconName =
   | 'cart'
   | 'car'
   | 'heart'
-  | 'heartPulse';
+  | 'heartPulse'
+  | 'camera'
+  | 'person'
+  | 'chevronDown'
+  | 'chevronUp'
+  | 'chevronLeft'
+  | 'chevronRight'
+  | 'edit'
+  | 'delete'
+  | 'close';
 
 /**
  * `ios` is an SF Symbol name; `md` is a Material Symbols ligature.
@@ -73,6 +82,15 @@ export const ICONS = {
   car: { ios: 'car.fill', md: 'directions_car' },
   heart: { ios: 'heart.fill', md: 'favorite' },
   heartPulse: { ios: 'heart.text.square.fill', md: 'monitor_heart' },
+  camera: { ios: 'camera.fill', md: 'photo_camera' },
+  person: { ios: 'person.fill', md: 'person' },
+  chevronDown: { ios: 'chevron.down', md: 'keyboard_arrow_down' },
+  chevronUp: { ios: 'chevron.up', md: 'keyboard_arrow_up' },
+  chevronLeft: { ios: 'chevron.left', md: 'keyboard_arrow_left' },
+  chevronRight: { ios: 'chevron.right', md: 'keyboard_arrow_right' },
+  edit: { ios: 'square.and.pencil', md: 'edit' },
+  delete: { ios: 'trash.fill', md: 'delete' },
+  close: { ios: 'xmark', md: 'close' },
 } as const satisfies Record<IconName, { ios: string; md: string }>;
 
 /** One symbol, sized and tinted. */

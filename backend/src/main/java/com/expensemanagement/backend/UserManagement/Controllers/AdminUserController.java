@@ -1,5 +1,7 @@
 package com.expensemanagement.backend.UserManagement.Controllers;
 
+import java.util.UUID;
+import com.expensemanagement.backend.Shared.PageResponse;
 import com.expensemanagement.backend.UserManagement.Dtos.DtoRequests.UserRequests;
 import com.expensemanagement.backend.UserManagement.Dtos.DtoResponses.UserResponses;
 import com.expensemanagement.backend.UserManagement.Enums.UserAccountState;
@@ -14,7 +16,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.data.web.PagedModel;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -77,7 +78,7 @@ public class AdminUserController
     @ApiResponse(responseCode = "200", description = "Page of user summaries")
     @ApiResponse(responseCode = "403", description = "Caller is not an ADMIN",
             content = @io.swagger.v3.oas.annotations.media.Content)
-    public PagedModel<UserResponses.Summary> list(
+    public PageResponse<UserResponses.Summary> list(
             @Parameter(description = "Filter by lifecycle state; omit for all")
             @RequestParam(required = false) UserAccountState status,
             @ParameterObject @PageableDefault(size = 20, sort = "userName") Pageable pageable)
@@ -88,9 +89,8 @@ public class AdminUserController
                 ? userService.findAll(pageable)
                 : userService.findAllByStatus(status, pageable);
 
-        // Wrapped explicitly so the JSON envelope is Spring Data's stable PagedModel rather
-        // than a raw PageImpl, without the global annotation that would disable the ?size= cap.
-        return new PagedModel<>(page);
+        // Wrapped in the project's flat envelope so every paged endpoint answers the same shape.
+        return PageResponse.of(page);
     }
 
     @GetMapping("/search")
@@ -101,12 +101,12 @@ public class AdminUserController
 
                     Example: `?name=man&page=0&size=20`""")
     @ApiResponse(responseCode = "200", description = "Page of matching user summaries")
-    public PagedModel<UserResponses.Summary> search(
+    public PageResponse<UserResponses.Summary> search(
             @Parameter(description = "Substring to match against first or last name")
             @RequestParam String name,
             @ParameterObject @PageableDefault(size = 20, sort = "userName") Pageable pageable)
     {
-        return new PagedModel<>(userService.searchByName(name, pageable));
+        return PageResponse.of(userService.searchByName(name, pageable));
     }
 
     /**
@@ -131,7 +131,7 @@ public class AdminUserController
     @ApiResponse(responseCode = "200", description = "User found")
     @ApiResponse(responseCode = "404", description = "No such id",
             content = @io.swagger.v3.oas.annotations.media.Content)
-    public UserResponses.Details getById(@PathVariable Long id)
+    public UserResponses.Details getById(@PathVariable UUID id)
     {
         return userService.findById(id);
     }
@@ -153,7 +153,7 @@ public class AdminUserController
     @ApiResponse(responseCode = "200", description = "Status changed")
     @ApiResponse(responseCode = "404", description = "No such id",
             content = @io.swagger.v3.oas.annotations.media.Content)
-    public UserResponses.Details changeStatus(@PathVariable Long id,
+    public UserResponses.Details changeStatus(@PathVariable UUID id,
                                               @Valid @RequestBody UserRequests.UpdateAccountStatus request)
     {
         return userService.updateStatus(id, request);
@@ -176,9 +176,9 @@ public class AdminUserController
     @ApiResponse(responseCode = "200", description = "Role changed")
     @ApiResponse(responseCode = "404", description = "No such id",
             content = @io.swagger.v3.oas.annotations.media.Content)
-    @ApiResponse(responseCode = "409", description = "Would remove the last ADMIN",
+    @ApiResponse(responseCode = "422", description = "Would remove the last ADMIN",
             content = @io.swagger.v3.oas.annotations.media.Content)
-    public UserResponses.Details changeType(@PathVariable Long id,
+    public UserResponses.Details changeType(@PathVariable UUID id,
                                             @Valid @RequestBody UserRequests.UpdateAccountType request)
     {
         return userService.changeType(id, request.getType());

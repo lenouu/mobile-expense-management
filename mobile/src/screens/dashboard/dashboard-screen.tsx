@@ -23,8 +23,10 @@ export function DashboardScreen() {
   const params = useLocalSearchParams<{ welcome?: string }>();
 
   return (
-    <Screen contentStyle={styles.content}>
+    // Signed out there is no tab bar, so the frame should not reserve room for one either.
+    <Screen withTabInset={!!session} contentStyle={styles.content}>
       <BrandLockup
+        floating={!session}
         title={session ? `Welcome, ${session.userName}` : 'FinFlow'}
         subtitle={
           session
@@ -38,6 +40,7 @@ export function DashboardScreen() {
           userName={session.userName}
           showWelcome={!!params.welcome}
           onSignOut={signOut}
+          onOpenProfile={() => router.push('/profile')}
         />
       ) : (
         <SignedOutCard />
@@ -51,10 +54,13 @@ function SignedInCard({
   userName,
   showWelcome,
   onSignOut,
+  onOpenProfile,
 }: {
   userName: string;
   showWelcome: boolean;
   onSignOut: () => void;
+  /** Opens the account screen, where the name, password and picture are edited. */
+  onOpenProfile: () => void;
 }) {
   return (
     <Card style={styles.card}>
@@ -68,6 +74,7 @@ function SignedInCard({
 
       <View style={styles.actions}>
         <Button label="Go to Money" primary onPress={() => router.replace('/finances')} />
+        <Button label="My profile" onPress={onOpenProfile} />
         <Button label="Sign out" onPress={onSignOut} />
       </View>
 

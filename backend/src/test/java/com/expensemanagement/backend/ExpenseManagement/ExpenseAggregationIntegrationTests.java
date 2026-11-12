@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -36,51 +38,95 @@ class ExpenseAggregationIntegrationTests {
 	@Test
 	void spendingSummaryAggregatesTotalsAndCategoriesCorrectly() throws Exception {
 		String token = registerAndLogin();
-		Integer food = categoryId(token, "Food & Groceries");
-		Integer transport = categoryId(token, "Transport");
+		UUID food = categoryId(token, "Food & Groceries");
+		UUID transport = categoryId(token, "Transport");
+		LocalDate today = LocalDate.now();
+		LocalDate from = today.minusDays(30);
+		LocalDate to = today.minusDays(1);
 
-		// Record expenses
-		createExpense(token, "50.00", "2026-09-10", food);
-		createExpense(token, "30.00", "2026-09-15", food);
-		createExpense(token, "20.00", "2026-09-20", transport);
+		// Include both date-range boundaries and one interior expense.
+		createExpense(token, "50.00", from, food);
+		createExpense(token, "30.00", from.plusDays(14), food);
+		createExpense(token, "20.00", to, transport);
 
-		// Expense outside date range
-		createExpense(token, "100.00", "2026-10-05", food);
+		// Expenses before and after the range must not contribute.
+		createExpense(token, "100.00", from.minusDays(1), food);
+		createExpense(token, "200.00", today, transport);
 
-		// Query for September 2026: total should be 50 + 30 + 20 = 100.00
-		mockMvc.perform(get("/api/expenses/spending?from=2026-09-01&to=2026-09-30")
+		mockMvc.perform(get("/api/expenses/spending")
+				.param("from", from.toString())
+				.param("to", to.toString())
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.from").value("2026-09-01"))
-			.andExpect(jsonPath("$.to").value("2026-09-30"))
-			.andExpect(jsonPath("$.totalSpent").value(100.00))
+			.andExpect(jsonPath("$.from").value(from.toString()))
+			.andExpect(jsonPath("$.to").value(to.toString()))
+			.andExpect(jsonPath("$.totalSpent.amount").value(100.00))
+			.andExpect(jsonPath("$.totalSpent.currency").value("XAF"))
 			.andExpect(jsonPath("$.categories", hasSize(2)))
+			.andExpect(jsonPath("$.categories[0].categoryId").value(food.toString()))
 			.andExpect(jsonPath("$.categories[0].categoryName").value("Food & Groceries"))
-			.andExpect(jsonPath("$.categories[0].totalSpent").value(80.00))
+			.andExpect(jsonPath("$.categories[0].totalSpent.amount").value(80.00))
+			.andExpect(jsonPath("$.categories[0].totalSpent.currency").value("XAF"))
+			.andExpect(jsonPath("$.categories[1].categoryId").value(transport.toString()))
 			.andExpect(jsonPath("$.categories[1].categoryName").value("Transport"))
-			.andExpect(jsonPath("$.categories[1].totalSpent").value(20.00));
+			.andExpect(jsonPath("$.categories[1].totalSpent.amount").value(20.00))
+			.andExpect(jsonPath("$.categories[1].totalSpent.currency").value("XAF"));
 	}
 
 	@Test
 	void emptySpendingReturnsZeroTotalAndEmptyList() throws Exception {
 		String token = registerAndLogin();
+		LocalDate to = LocalDate.now();
+		LocalDate from = to.minusDays(30);
 
-		mockMvc.perform(get("/api/expenses/spending?from=2026-01-01&to=2026-01-31")
+		mockMvc.perform(get("/api/expenses/spending")
+				.param("from", from.toString())
+				.param("to", to.toString())
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.totalSpent").value(0))
+			.andExpect(jsonPath("$.from").value(from.toString()))
+			.andExpect(jsonPath("$.to").value(to.toString()))
+			.andExpect(jsonPath("$.totalSpent.amount").value(0))
+			.andExpect(jsonPath("$.totalSpent.currency").value("XAF"))
 			.andExpect(jsonPath("$.categories", hasSize(0)));
 	}
 
 	@Test
 	void invalidDateRangeReturnsBadRequest() throws Exception {
 		String token = registerAndLogin();
+		LocalDate from = LocalDate.now();
 
-		mockMvc.perform(get("/api/expenses/spending?from=2026-09-30&to=2026-09-01")
+		mockMvc.perform(get("/api/expenses/spending")
+				.param("from", from.toString())
+				.param("to", from.minusDays(1).toString())
 				.header(HttpHeaders.AUTHORIZATION, token))
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.status").value(400))
-			.andExpect(jsonPath("$.error").value("invalid_request"));
+			.andExpect(jsonPath("$.code").value("invalid_request"));
+	}
+
+	@Test
+	void spendingSummaryExcludesOtherUsersExpensesAndCategories() throws Exception {
+		String token = registerAndLogin();
+		String otherToken = registerAndLogin();
+		UUID food = categoryId(token, "Food & Groceries");
+		UUID otherFood = categoryId(otherToken, "Food & Groceries");
+		LocalDate date = LocalDate.now().minusDays(1);
+
+		createExpense(token, "10.00", date, food);
+		createExpense(otherToken, "900.00", date, otherFood);
+
+		mockMvc.perform(get("/api/expenses/spending")
+				.param("from", date.toString())
+				.param("to", date.toString())
+				.header(HttpHeaders.AUTHORIZATION, token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalSpent.amount").value(10.00))
+			.andExpect(jsonPath("$.totalSpent.currency").value("XAF"))
+			.andExpect(jsonPath("$.categories", hasSize(1)))
+			.andExpect(jsonPath("$.categories[0].categoryId").value(food.toString()))
+			.andExpect(jsonPath("$.categories[0].categoryName").value("Food & Groceries"))
+			.andExpect(jsonPath("$.categories[0].totalSpent.amount").value(10.00))
+			.andExpect(jsonPath("$.categories[0].totalSpent.currency").value("XAF"));
 	}
 
 	@Test
@@ -88,21 +134,25 @@ class ExpenseAggregationIntegrationTests {
 		mockMvc.perform(get("/api/expenses/spending")).andExpect(status().isUnauthorized());
 	}
 
-	private void createExpense(String token, String amount, String date, Integer categoryId) throws Exception {
+	private void createExpense(String token, String amount, LocalDate date, UUID categoryId) throws Exception {
 		mockMvc.perform(post("/api/expenses")
 				.header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"amount\":" + amount + ",\"date\":\"" + date + "\",\"categoryId\":" + categoryId + "}"))
+				.content("{\"amount\":{\"amount\":" + amount + ",\"currency\":\"XAF\"},\"date\":\"" + date
+						+ "\",\"categoryId\":\"" + categoryId + "\"}"))
 			.andExpect(status().isCreated());
 	}
 
-	private Integer categoryId(String token, String name) throws Exception {
-		String body = mockMvc.perform(get("/api/categories").header(HttpHeaders.AUTHORIZATION, token))
+	private UUID categoryId(String token, String name) throws Exception {
+		String body = mockMvc.perform(get("/api/categories")
+				.param("q", name)
+				.header(HttpHeaders.AUTHORIZATION, token))
+			.andExpect(status().isOk())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		java.util.List<Integer> ids = JsonPath.read(body, "$[?(@.name == '" + name + "')].id");
-		return ids.get(0);
+		List<String> ids = JsonPath.read(body, "$.content[?(@.name == '" + name + "')].id");
+		return UUID.fromString(ids.get(0));
 	}
 
 	private String registerAndLogin() throws Exception {

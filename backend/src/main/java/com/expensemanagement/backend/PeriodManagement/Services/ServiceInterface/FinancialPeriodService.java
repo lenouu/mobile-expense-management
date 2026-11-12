@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Financial periods of one user (S4-TECH-1) - the shared foundation for budgets (US28-US33),
@@ -21,7 +22,7 @@ import java.util.Optional;
 public interface FinancialPeriodService
 {
     /** The period containing today. */
-    FinancialPeriod current(Long userId);
+    FinancialPeriod current(UUID userId);
 
     /**
      * The period containing {@code date}, e.g. to file an expense or income under its period.
@@ -30,7 +31,15 @@ public interface FinancialPeriodService
      * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if the date is
      *         more than a year in the future
      */
-    Optional<FinancialPeriod> containing(Long userId, LocalDate date);
+    Optional<FinancialPeriod> containing(UUID userId, LocalDate date);
+
+    /**
+     * One of the user's own periods by id, e.g. to compute totals for a past period (US39).
+     *
+     * @throws com.expensemanagement.backend.Exceptions.ResourceNotFoundException if it does not
+     *         exist or belongs to someone else
+     */
+    FinancialPeriod findMine(UUID userId, UUID periodId);
 
     /** The period just before {@code period}; empty for the user's first period. */
     Optional<FinancialPeriod> previous(FinancialPeriod period);
@@ -47,7 +56,7 @@ public interface FinancialPeriodService
     /** Whether {@code date} falls in the first {@code percent}% of the period. */
     boolean isInOpeningWindow(FinancialPeriod period, double percent, LocalDate date);
 
-    FinancialPeriodSettings settings(Long userId);
+    FinancialPeriodSettings settings(UUID userId);
 
     /**
      * Changes the user's period length (the rule behind US27). The period in progress keeps its
@@ -56,8 +65,8 @@ public interface FinancialPeriodService
      * @throws com.expensemanagement.backend.Exceptions.InvalidRequestException if the length is
      *         shorter than one week or longer than one year
      */
-    FinancialPeriodSettings changeLength(Long userId, int count, PeriodUnit unit);
+    FinancialPeriodSettings changeLength(UUID userId, int count, PeriodUnit unit);
 
     /** The user's periods up to the current one, newest first. */
-    Page<PeriodResponses.Period> history(Long userId, Pageable pageable);
+    Page<PeriodResponses.Period> history(UUID userId, Pageable pageable);
 }

@@ -1,5 +1,5 @@
 import { forwardRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View, type TextInputInstance, type TextInputProps } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing, Status } from '@/constants/theme';
@@ -22,7 +22,8 @@ export type TextFieldProps = TextInputProps & {
  * The label and error live inside this component rather than in the screen, so every field in
  * the app is announced and spaced identically.
  */
-export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
+// TextInputInstance, not TextInput: React Native 0.88's strict types give refs their own instance types.
+export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function TextField(
   { label, error, revealable, hint, style, onFocus, onBlur, secureTextEntry, ...rest },
   ref,
 ) {

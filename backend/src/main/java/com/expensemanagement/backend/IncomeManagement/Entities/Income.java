@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 /**
  * Money a user received (S2-TECH-2), e.g. a salary or a sale.
@@ -20,8 +21,8 @@ import java.time.temporal.ChronoUnit;
 public class Income
 {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -31,12 +32,21 @@ public class Income
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
+    /** ISO 4217 code of {@link #amount}; defaults to XAF when the client omits it. */
+    @Column(nullable = false, length = 3)
+    private String currency;
+
     @Column(nullable = false)
     private LocalDate date;
 
-    /** Where the money came from, e.g. "Salary". */
-    @Column(nullable = false, length = 100)
-    private String source;
+    /** Where the money came from - a record the user owns, not a string typed per entry. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "source_id", nullable = false)
+    private IncomeSource source;
+
+    /** An optional label for this one payment, e.g. "November salary". */
+    @Column(length = 100)
+    private String name;
 
     @Column(length = 255)
     private String description;

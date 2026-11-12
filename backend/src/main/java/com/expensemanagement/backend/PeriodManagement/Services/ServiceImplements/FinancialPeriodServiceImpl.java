@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Financial periods (S4-TECH-1).
@@ -59,7 +60,7 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
     }
 
     @Override
-    public FinancialPeriod current(Long userId)
+    public FinancialPeriod current(UUID userId)
     {
         return containing(userId, LocalDate.now())
                 // Only possible if the account was created "in the future" by a clock problem.
@@ -67,7 +68,7 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
     }
 
     @Override
-    public Optional<FinancialPeriod> containing(Long userId, LocalDate date)
+    public Optional<FinancialPeriod> containing(UUID userId, LocalDate date)
     {
         if (date.isAfter(LocalDate.now().plusYears(MAX_YEARS_AHEAD)))
         {
@@ -85,6 +86,13 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
     }
 
     @Override
+    public FinancialPeriod findMine(UUID userId, UUID periodId)
+    {
+        return periodRepository.findByIdAndUserId(periodId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No financial period with id " + periodId));
+    }
+
+    @Override
     public Optional<FinancialPeriod> previous(FinancialPeriod period)
     {
         if (period.getSequence() <= 1)
@@ -97,7 +105,7 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
     @Override
     public FinancialPeriod next(FinancialPeriod period)
     {
-        Long userId = period.getUser().getId();
+        UUID userId = period.getUser().getId();
         createPeriodsThrough(userId, period.getEndDate().plusDays(1));
         return periodRepository.findByUserIdAndSequence(userId, period.getSequence() + 1)
                 .orElseThrow(() -> new IllegalStateException("Next period of id=" + period.getId() + " was not created"));
@@ -116,13 +124,13 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
     }
 
     @Override
-    public FinancialPeriodSettings settings(Long userId)
+    public FinancialPeriodSettings settings(UUID userId)
     {
         return settingsRepository.findByUserId(userId).orElseGet(() -> createDefaultSettings(userId));
     }
 
     @Override
-    public FinancialPeriodSettings changeLength(Long userId, int count, PeriodUnit unit)
+    public FinancialPeriodSettings changeLength(UUID userId, int count, PeriodUnit unit)
     {
         if (unit == null)
         {
@@ -159,7 +167,7 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
     }
 
     @Override
-    public Page<PeriodResponses.Period> history(Long userId, Pageable pageable)
+    public Page<PeriodResponses.Period> history(UUID userId, Pageable pageable)
     {
         LocalDate today = LocalDate.now();
         FinancialPeriod current = current(userId);
@@ -169,14 +177,14 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
 
     // ------------------------------------------------------------------
 
-    private FinancialPeriod ensureFirstPeriod(Long userId)
+    private FinancialPeriod ensureFirstPeriod(UUID userId)
     {
         return periodRepository.findByUserIdAndSequence(userId, 1)
                 .orElseGet(() -> createPeriod(settings(userId), 1));
     }
 
     /** Creates the user's periods one by one until one covers {@code date}. */
-    private void createPeriodsThrough(Long userId, LocalDate date)
+    private void createPeriodsThrough(UUID userId, LocalDate date)
     {
         FinancialPeriod latest = periodRepository.findFirstByUserIdOrderBySequenceDesc(userId)
                 .orElseGet(() -> ensureFirstPeriod(userId));
@@ -213,7 +221,7 @@ public class FinancialPeriodServiceImpl implements FinancialPeriodService
         return periodRepository.save(period);
     }
 
-    private FinancialPeriodSettings createDefaultSettings(Long userId)
+    private FinancialPeriodSettings createDefaultSettings(UUID userId)
     {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No user with id " + userId));

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -31,10 +32,12 @@ public class UserRequests {
         @Size(min = 8, message = "Password must be at least 8 characters")
         private String password;
 
-        @NotBlank(message = "First name is required")
+        // Optional on purpose: the account is created with only credentials, and the profile
+        // screen is where the user fills in their name afterwards.
+        @Size(max = 50)
         private String firstName;
 
-        @NotBlank(message = "Last name is required")
+        @Size(max = 50)
         private String lastName;
 
         @Past(message = "Date of birth must be in the past")
@@ -60,7 +63,12 @@ public class UserRequests {
         @Past(message = "Date of birth must be in the past")
         private LocalDate dateOfBirth;
 
-        private String profilePictureReference;
+        /**
+         * The unit this account records amounts in, e.g. XAF. Only settable while nothing has been
+         * recorded yet: without a conversion rate, changing it later would relabel stored amounts.
+         */
+        @Pattern(regexp = "^[A-Za-z]{3}$", message = "Base currency must be a 3-letter ISO code like XAF")
+        private String baseCurrency;
     }
 
     @Getter
@@ -119,6 +127,26 @@ public class UserRequests {
         private UserType type;
 
         private String reason;
+    }
+
+    /**
+     * Body of `POST /users/me/photo`.
+     *
+     * <p>The picture travels base64-encoded in JSON rather than as a multipart part. A React Native
+     * multipart upload failed before the request reached the server on a real device, while plain
+     * JSON POSTs from the same app work - so the upload uses the transport that is known to work.
+     * The server decodes it, re-checks the real size and re-encodes the image.
+     */
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UploadPicture {
+
+        /** The image file, base64-encoded (no data-URI prefix). */
+        @NotBlank(message = "Image data is required")
+        private String image;
     }
 
     @Getter

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * A platform-wide expense category that new users start with (US09).
@@ -19,8 +20,8 @@ import java.time.LocalDateTime;
 public class DefaultCategory
 {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     /** Unique ignoring case; the service checks this before insert to answer 409, not 500. */
     @Column(nullable = false, unique = true, length = 50)

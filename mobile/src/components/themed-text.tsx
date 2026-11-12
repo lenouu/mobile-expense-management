@@ -12,6 +12,8 @@ import { useTheme } from '@/hooks/use-theme';
 export type ThemedTextType =
   | 'default'
   | 'heading'
+  | 'display'
+  | 'hero'
   | 'title'
   | 'subtitle'
   | 'body'
@@ -38,6 +40,8 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
         { color: theme[themeColor ?? 'text'] },
         type === 'default' && styles.body,
         type === 'heading' && styles.heading,
+        type === 'display' && styles.display,
+        type === 'hero' && styles.hero,
         type === 'title' && styles.title,
         type === 'subtitle' && styles.subtitle,
         type === 'body' && styles.body,
@@ -58,6 +62,8 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
 
 const styles = StyleSheet.create({
   heading: Typography.heading,
+  display: Typography.display,
+  hero: Typography.hero,
   title: Typography.title,
   subtitle: Typography.subtitle,
   body: Typography.body,

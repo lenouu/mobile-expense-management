@@ -15,10 +15,10 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-
+import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long>
+public interface UserRepository extends JpaRepository<User, UUID>
 {
     // ---------------------------------------------------------------------
     // Authentication / login lookups
@@ -72,7 +72,7 @@ public interface UserRepository extends JpaRepository<User, Long>
     long countByType(UserType type);
 
     /** Guard for acting on a live user, e.g. suspend/activate. */
-    Optional<User> findByIdAndStatus(Long id, UserAccountState status);
+    Optional<User> findByIdAndStatus(UUID id, UserAccountState status);
 
     boolean existsByEmailAndStatusNot(String email, UserAccountState status);
 
@@ -82,8 +82,16 @@ public interface UserRepository extends JpaRepository<User, Long>
     // Name search (admin / user directory screens)
     // ---------------------------------------------------------------------
 
-    Page<User> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
-            String firstName, String lastName, Pageable pageable);
+    /**
+     * The admin directory's search box: one term, matched against the name fields and the
+     * username.
+     *
+     * <p>The username is included because first and last name are optional now, and a derived
+     * query on them alone cannot match a NULL column - an account without a name would have been
+     * unfindable by search.
+     */
+    Page<User> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrUserNameContainingIgnoreCase(
+            String firstName, String lastName, String userName, Pageable pageable);
 
     // ---------------------------------------------------------------------
     // Reporting / auditing
@@ -92,6 +100,5 @@ public interface UserRepository extends JpaRepository<User, Long>
     List<User> findAllByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
     long countByCreatedAtAfter(LocalDateTime from);
-
 
 }

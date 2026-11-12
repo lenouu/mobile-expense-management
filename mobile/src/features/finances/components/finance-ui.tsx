@@ -1,10 +1,11 @@
 import { ReactNode, useState } from 'react';
 import { StyleSheet, TextInput, TextInputProps, View } from 'react-native';
 
-import { Button, DANGER_COLOR } from '@/components/ui/primitives';
+import { Button, Chip, DANGER_COLOR } from '@/components/ui/primitives';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, Status } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { DEFAULT_CURRENCY, type Money } from '@/types/api';
 import { describeError as describeSharedError } from '@/utils/errors';
 
 // Pieces shared by the Expenses and Incomes screens (S2-TECH-2).
@@ -43,14 +44,116 @@ export function validateAmountAndDate(amount: string, date: string): Record<stri
   return errors;
 }
 
-export function formatAmount(amount: number): string {
+/** Currencies the app offers. The backend accepts any ISO 4217 code. */
+export const SUPPORTED_CURRENCIES = [DEFAULT_CURRENCY, 'EUR', 'USD'] as const;
+
+function formatAmount(amount: number): string {
   return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Renders a money object as e.g. "12,500.00 XAF".
+ *
+ * The code is shown next to the number rather than as a glyph, because XAF has no widely
+ * supported symbol. A bare number is still tolerated, so an older payload renders instead of
+ * crashing the list.
+ */
+export function formatMoney(money: Money | number | null | undefined): string {
+  if (money === null || money === undefined) return '—';
+  if (typeof money === 'number') return `${formatAmount(money)} ${DEFAULT_CURRENCY}`;
+  return `${formatAmount(money.amount)} ${money.currency || DEFAULT_CURRENCY}`;
+}
+
+/** Builds the request body's money object from what the user typed, or null when invalid. */
+export function toMoney(text: string, currency: string): Money | null {
+  const value = parseAmount(text);
+  return value === null ? null : { amount: value, currency: currency || DEFAULT_CURRENCY };
+}
+
+/**
+ * The message for the amount field.
+ *
+ * The backend validates money as a nested object, so it reports the failure at `amount.amount`;
+ * our own client-side checks use the plain key. Both are accepted so the message lands under the
+ * input either way.
+ */
+export function moneyFieldError(fields: Record<string, string>): string | undefined {
+  return fields['amount.amount'] ?? fields.amount;
 }
 
 export function formatDate(iso: string): string {
   // Built from parts so the date is not shifted by the time zone.
   const [year, month, day] = iso.split('-').map(Number);
   return new Date(year, month - 1, day).toLocaleDateString();
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/**
+ * "Fri 2 May 2026" - the date spelled out.
+ *
+ * The numeric form is fine inside a dense row, but a day header has room to say which day it was,
+ * and a month written as a word is unambiguous where 02/05 is not: the same digits mean February
+ * in one convention and May in another.
+ */
+export function formatLongDate(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  if (!year || !month || !day) return iso;
+
+  const date = new Date(year, month - 1, day);
+  return `${WEEKDAYS[date.getDay()]} ${day} ${MONTHS[month - 1]} ${year}`;
+}
+
+/** "May 2026", for a calendar's heading. */
+export function formatMonthYear(year: number, month: number): string {
+  return `${MONTHS[month]} ${year}`;
+}
+
+/** "a, b and c" - the way a list of durations is written in a sentence. */
+function joinParts(parts: string[]): string {
+  if (parts.length <= 1) return parts.join('');
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * How long a window is, in words: "22 days", "1 month and 2 days", "1 year and 3 months".
+ *
+ * Weeks are deliberately absent: "3 weeks" is read as a month by everyone who has to convert it
+ * back, so the units here are the two that span everything between - days, then months, then years.
+ * Months are counted as thirty days and years as twelve of those, which is a description of the
+ * window rather than a second copy of it; the exact dates are always shown beside the sentence.
+ */
+export function describeDuration(days: number): string {
+  if (days <= 0) return '0 days';
+  if (days < 30) return days === 1 ? '1 day' : `${days} days`;
+
+  const years = Math.floor(days / 365);
+  const afterYears = days - years * 365;
+  const months = Math.floor(afterYears / 30);
+  const leftoverDays = afterYears - months * 30;
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(years === 1 ? '1 year' : `${years} years`);
+  if (months > 0) parts.push(months === 1 ? '1 month' : `${months} months`);
+  if (leftoverDays > 0) parts.push(leftoverDays === 1 ? '1 day' : `${leftoverDays} days`);
+
+  return joinParts(parts);
+}
+
+/** Whole days from one `YYYY-MM-DD` to another, inclusive of both ends. */
+export function daysBetween(from: string, to: string): number {
+  const [fromYear, fromMonth, fromDay] = from.split('-').map(Number);
+  const [toYear, toMonth, toDay] = to.split('-').map(Number);
+  if (!fromYear || !toYear) return 0;
+
+  // UTC so a daylight-saving change cannot turn a 22-day window into 21 or 23.
+  const start = Date.UTC(fromYear, fromMonth - 1, fromDay);
+  const end = Date.UTC(toYear, toMonth - 1, toDay);
+  return Math.round((end - start) / 86_400_000) + 1;
 }
 
 /** Re-exported so existing finance imports keep working; the wording lives in one place. */
@@ -80,6 +183,23 @@ export function Field({ label, error, children }: { label: string; error?: strin
           {error}
         </ThemedText>
       )}
+    </View>
+  );
+}
+
+/** A small currency selector; XAF is what the backend assumes when a client omits it. */
+export function CurrencyPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (code: string) => void;
+}) {
+  return (
+    <View style={styles.row}>
+      {SUPPORTED_CURRENCIES.map((code) => (
+        <Chip key={code} label={code} selected={value === code} onPress={() => onChange(code)} onCard />
+      ))}
     </View>
   );
 }

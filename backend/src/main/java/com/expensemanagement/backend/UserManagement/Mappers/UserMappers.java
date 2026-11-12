@@ -44,13 +44,27 @@ public final class UserMappers
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .baseCurrency(user.getBaseCurrency())
                 .dateOfBirth(user.getDateOfBirth())
                 .profilePictureReference(user.getProfilePictureReference())
+                .profilePictureUrl(avatarUrl(user.getProfilePictureReference()))
                 .status(user.getStatus())
                 .type(user.getType())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * The avatar's path relative to the API base, or null when the account has none.
+     *
+     * <p>Deliberately relative: the same account is reached over a LAN address from a phone and
+     * over localhost from the web build, so an absolute URL baked on the server would be wrong on
+     * one of them. The client prefixes whatever base it resolved.
+     */
+    public static String avatarUrl(String fileName)
+    {
+        return fileName == null || fileName.isBlank() ? null : "/avatars/" + fileName;
     }
 
     public static List<UserResponses.Summary> toSummaryList(List<User> users)
@@ -142,10 +156,8 @@ public final class UserMappers
         {
             user.setDateOfBirth(request.getDateOfBirth());
         }
-        if (request.getProfilePictureReference() != null)
-        {
-            user.setProfilePictureReference(request.getProfilePictureReference());
-        }
+        // The avatar is deliberately not settable here: it is written only by the upload endpoint,
+        // so a client cannot point an account at an arbitrary file.
         return user;
     }
 

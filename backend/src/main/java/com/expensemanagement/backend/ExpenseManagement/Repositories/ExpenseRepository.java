@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -13,42 +14,155 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-public interface ExpenseRepository extends JpaRepository<Expense, Long>
+public interface ExpenseRepository extends JpaRepository<Expense, UUID>
 {
     /**
      * Scoped by owner: another user's id simply is not found, so nobody can read or change
      * someone else's expense. The category is fetched with it because every response shows it.
      */
     @EntityGraph(attributePaths = "category")
-    Optional<Expense> findByIdAndUserId(Long id, Long userId);
+    Optional<Expense> findByIdAndUserId(UUID id, UUID userId);
+
+    /** Used before changing the account's base currency: amounts already recorded pin it. */
+    boolean existsByUserId(UUID userId);
 
     /** Inclusive on both ends; the service substitutes wide bounds when the caller gives none. */
     @EntityGraph(attributePaths = "category")
-    Page<Expense> findAllByUserIdAndDateBetween(Long userId, LocalDate from, LocalDate to, Pageable pageable);
+    Page<Expense> findAllByUserIdAndDateBetween(UUID userId, LocalDate from, LocalDate to, Pageable pageable);
 
-    /**
-     * S8-TECH-1: Aggregated total spending for a user between two dates (inclusive).
-     * Returns 0 when no expenses exist in the period.
-     */
-    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
-           "WHERE e.user.id = :userId AND e.date BETWEEN :from AND :to")
-    BigDecimal sumAmountByUserIdAndDateBetween(
-            @Param("userId") Long userId,
-            @Param("from") LocalDate from,
-            @Param("to") LocalDate to);
-
-    /**
-     * S8-TECH-1: Aggregated per-category spending for a user between two dates (inclusive).
-     * Excludes other users' expenses and categories, ordered by total spent descending.
-     */
-    @Query("SELECT c.id AS categoryId, c.name AS categoryName, c.icon AS categoryIcon, c.color AS categoryColor, SUM(e.amount) AS totalSpent " +
-           "FROM Expense e JOIN e.category c " +
-           "WHERE e.user.id = :userId AND c.user.id = :userId AND e.date BETWEEN :from AND :to " +
-           "GROUP BY c.id, c.name, c.icon, c.color " +
-           "ORDER BY SUM(e.amount) DESC")
+    @Query("""
+            select c.id as categoryId, c.name as categoryName, c.icon as categoryIcon,
+                   c.color as categoryColor, sum(e.amount) as totalSpent
+            from Expense e join e.category c
+            where e.user.id = :userId and c.user.id = :userId and e.date between :from and :to
+            group by c.id, c.name, c.icon, c.color
+            order by sum(e.amount) desc""")
     List<CategorySpendingProjection> findCategorySpendingByUserIdAndDateBetween(
-            @Param("userId") Long userId,
+            @Param("userId") UUID userId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to);
+
+    /**
+     * The listing query: every filter is optional and they combine.
+     *
+     * <p>{@code categoryId} and {@code pattern} are passed as null to mean "no such filter". Both
+     * are used in a typed comparison as well as the null check, which is what lets Hibernate
+     * determine their type - a bare {@code :param is null} on its own would not.
+     *
+     * <p>{@code pattern} is already lower-cased and wrapped in {@code %} by the service, so the
+     * wildcards are not interpreted from user input.
+     */
+    @EntityGraph(attributePaths = {"category", "budget"})
+    @Query("""
+            select e from Expense e
+            where e.user.id = :userId
+              and e.date between :from and :to
+              and (:categoryId is null or e.category.id = :categoryId)
+              and (:pattern is null or lower(e.description) like :pattern)
+              and (:budgetId is null or e.budget.id = :budgetId)""")
+    Page<Expense> search(@Param("userId") UUID userId,
+                         @Param("from") LocalDate from,
+                         @Param("to") LocalDate to,
+                         @Param("categoryId") UUID categoryId,
+                         @Param("pattern") String pattern,
+                         @Param("budgetId") UUID budgetId,
+                         Pageable pageable);
+
+    /** Sum and count of a user's expenses dated between {@code from} and {@code to}, inclusive. */
+    interface Totals
+    {
+        BigDecimal getTotal();
+
+        long getCount();
+    }
+
+    /**
+     * Summed by the database rather than in Java, so it stays one cheap query however many
+     * expenses there are. COALESCE turns the SUM of no rows (NULL) into 0.
+     */
+    @Query("""
+            select coalesce(sum(e.amount), 0) as total, count(e) as count
+            from Expense e
+            where e.user.id = :userId and e.date between :from and :to""")
+    Totals totalsBetween(@Param("userId") UUID userId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /**
+     * The expenses assigned to one budget: the rows behind its spending figure.
+     *
+     * <p>Scoped by owner as well as by budget, so a budget id from another account finds nothing.
+     */
+    @EntityGraph(attributePaths = {"category", "budget"})
+    Page<Expense> findAllByBudgetIdAndUserId(UUID budgetId, UUID userId, Pageable pageable);
+
+    /** Everything assigned to a budget, used when the budget is deleted. */
+    List<Expense> findAllByBudgetIdAndUserId(UUID budgetId, UUID userId);
+
+    /** What a budget has spent, and how many expenses it covers. */
+    @Query("""
+            select coalesce(sum(e.amount), 0) as total, count(e) as count
+            from Expense e
+            where e.user.id = :userId and e.budget.id = :budgetId""")
+    Totals totalsByBudget(@Param("userId") UUID userId, @Param("budgetId") UUID budgetId);
+
+    /** A budget's spending split by category, for its allocations' own balances. */
+    @Query("""
+            select e.category.id, coalesce(sum(e.amount), 0)
+            from Expense e
+            where e.user.id = :userId and e.budget.id = :budgetId
+            group by e.category.id""")
+    List<Object[]> sumByCategoryForBudget(@Param("userId") UUID userId, @Param("budgetId") UUID budgetId);
+    /**
+     * Detaches every expense assigned to a budget, keeping the rows.
+     *
+     * <p>Used when a budget is deleted: the plan goes, the financial record stays (US20, US33).
+     *
+     * @return how many rows were unlinked
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Expense e set e.budget = null where e.budget.id = :budgetId and e.user.id = :userId")
+    int clearBudget(@Param("budgetId") UUID budgetId, @Param("userId") UUID userId);
+    /** The same window, one row per day - the shape of the period, not just its total. */
+    @Query("""
+            select e.date, coalesce(sum(e.amount), 0)
+            from Expense e
+            where e.user.id = :userId and e.date between :from and :to
+            group by e.date
+            order by e.date""")
+    List<Object[]> sumByDate(@Param("userId") UUID userId,
+                             @Param("from") LocalDate from,
+                             @Param("to") LocalDate to);
+
+    /**
+     * The same window as {@link #totalsMatching}, split by category.
+     *
+     * <p>Used by a budget to give each allocation its own balance. Categories with no spending are
+     * absent rather than zero, so the caller decides what a missing row means.
+     */
+    @Query("""
+            select e.category.id, coalesce(sum(e.amount), 0)
+            from Expense e
+            where e.user.id = :userId and e.date between :from and :to
+            group by e.category.id""")
+    List<Object[]> sumByCategory(@Param("userId") UUID userId,
+                                 @Param("from") LocalDate from,
+                                 @Param("to") LocalDate to);
+
+    /**
+     * The same filters as {@link #search}, summed instead of paged, so a total shown above a list
+     * always describes that list and not some other set of rows.
+     */
+    @Query("""
+            select coalesce(sum(e.amount), 0) as total, count(e) as count
+            from Expense e
+            where e.user.id = :userId
+              and e.date between :from and :to
+              and (:categoryId is null or e.category.id = :categoryId)
+              and (:pattern is null or lower(e.description) like :pattern)""")
+    Totals totalsMatching(@Param("userId") UUID userId,
+                          @Param("from") LocalDate from,
+                          @Param("to") LocalDate to,
+                          @Param("categoryId") UUID categoryId,
+                          @Param("pattern") String pattern);
 }
