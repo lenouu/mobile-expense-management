@@ -63,4 +63,17 @@ public final class ExpenseMappers
         expense.setDescription(StringUtils.hasText(request.getDescription()) ? request.getDescription().trim() : null);
         return expense;
     }
+
+    public static ExpenseResponses.CategorySpending toCategorySpending(
+            com.expensemanagement.backend.ExpenseManagement.Repositories.Projections.CategorySpendingProjection projection,
+            String currency)
+    {
+        return ExpenseResponses.CategorySpending.builder()
+                .categoryId(projection.getCategoryId())
+                .categoryName(projection.getCategoryName())
+                .categoryIcon(projection.getCategoryIcon())
+                .categoryColor(projection.getCategoryColor())
+                .totalSpent(Money.of(projection.getTotalSpent(), currency))
+                .build();
+    }
 }

@@ -193,6 +193,46 @@ public class ExpenseServiceImpl implements ExpenseService
         log.info("User id={} deleted expense id={}", userId, id);
     }
 
+    @Override
+    public Money calculateTotalSpending(UUID userId, LocalDate from, LocalDate to)
+    {
+        DateRanges.Range range = DateRanges.of(from, to);
+        String currency = CurrencyPolicy.resolve(null, getUserOrThrow(userId).getBaseCurrency());
+        ExpenseRepository.Totals totals = expenseRepository.totalsBetween(userId, range.from(), range.to());
+        return Money.of(totals.getTotal(), currency);
+    }
+
+    @Override
+    public List<ExpenseResponses.CategorySpending> findSpendingByCategory(UUID userId, LocalDate from, LocalDate to)
+    {
+        DateRanges.Range range = DateRanges.of(from, to);
+        String currency = CurrencyPolicy.resolve(null, getUserOrThrow(userId).getBaseCurrency());
+        return expenseRepository.findCategorySpendingByUserIdAndDateBetween(userId, range.from(), range.to())
+                .stream()
+                .map(projection -> ExpenseMappers.toCategorySpending(projection, currency))
+                .toList();
+    }
+
+    @Override
+    public ExpenseResponses.SpendingSummary getSpendingSummary(UUID userId, LocalDate from, LocalDate to)
+    {
+        DateRanges.Range range = DateRanges.of(from, to);
+        String currency = CurrencyPolicy.resolve(null, getUserOrThrow(userId).getBaseCurrency());
+        ExpenseRepository.Totals totals = expenseRepository.totalsBetween(userId, range.from(), range.to());
+        List<ExpenseResponses.CategorySpending> categories = expenseRepository
+                .findCategorySpendingByUserIdAndDateBetween(userId, range.from(), range.to())
+                .stream()
+                .map(projection -> ExpenseMappers.toCategorySpending(projection, currency))
+                .toList();
+
+        return ExpenseResponses.SpendingSummary.builder()
+                .from(from)
+                .to(to)
+                .totalSpent(Money.of(totals.getTotal(), currency))
+                .categories(categories)
+                .build();
+    }
+
     /**
      * Not read-only, unlike the other reads: the window may resolve to the current period, which
      * can have to be created first, and a read-only transaction would refuse that insert.

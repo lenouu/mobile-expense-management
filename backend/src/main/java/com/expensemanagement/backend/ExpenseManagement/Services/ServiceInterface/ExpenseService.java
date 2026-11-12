@@ -5,7 +5,10 @@ import com.expensemanagement.backend.ExpenseManagement.Dtos.DtoResponses.Expense
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import com.expensemanagement.backend.Shared.Money;
+
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -45,6 +48,12 @@ public interface ExpenseService
     ExpenseResponses.Details update(UUID userId, UUID id, ExpenseRequests.SaveExpense request);
 
     void delete(UUID userId, UUID id);
+
+    Money calculateTotalSpending(UUID userId, LocalDate from, LocalDate to);
+
+    List<ExpenseResponses.CategorySpending> findSpendingByCategory(UUID userId, LocalDate from, LocalDate to);
+
+    ExpenseResponses.SpendingSummary getSpendingSummary(UUID userId, LocalDate from, LocalDate to);
 
     /**
      * Whether the account has recorded anything at all.

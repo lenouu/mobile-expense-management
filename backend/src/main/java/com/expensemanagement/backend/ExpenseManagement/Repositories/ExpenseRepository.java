@@ -1,6 +1,7 @@
 package com.expensemanagement.backend.ExpenseManagement.Repositories;
 
 import com.expensemanagement.backend.ExpenseManagement.Entities.Expense;
+import com.expensemanagement.backend.ExpenseManagement.Repositories.Projections.CategorySpendingProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -30,6 +31,18 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID>
     /** Inclusive on both ends; the service substitutes wide bounds when the caller gives none. */
     @EntityGraph(attributePaths = "category")
     Page<Expense> findAllByUserIdAndDateBetween(UUID userId, LocalDate from, LocalDate to, Pageable pageable);
+
+    @Query("""
+            select c.id as categoryId, c.name as categoryName, c.icon as categoryIcon,
+                   c.color as categoryColor, sum(e.amount) as totalSpent
+            from Expense e join e.category c
+            where e.user.id = :userId and c.user.id = :userId and e.date between :from and :to
+            group by c.id, c.name, c.icon, c.color
+            order by sum(e.amount) desc""")
+    List<CategorySpendingProjection> findCategorySpendingByUserIdAndDateBetween(
+            @Param("userId") UUID userId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 
     /**
      * The listing query: every filter is optional and they combine.

@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Outgoing payloads for expenses (S2-TECH-2). Same shape as {@code UserResponses}.
+ * Outgoing payloads for expenses (S2-TECH-2, S8-TECH-1). Same shape as {@code UserResponses}.
  */
 public class ExpenseResponses
 {
@@ -135,4 +135,28 @@ public class ExpenseResponses
     {
         private final LocalDate date;
         private final Money total;
-    }}
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class CategorySpending
+    {
+        private final UUID categoryId;
+        private final String categoryName;
+        private final String categoryIcon;
+        private final String categoryColor;
+        private final Money totalSpent;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class SpendingSummary
+    {
+        private final LocalDate from;
+        private final LocalDate to;
+        private final Money totalSpent;
+        private final List<CategorySpending> categories;
+    }
+}
