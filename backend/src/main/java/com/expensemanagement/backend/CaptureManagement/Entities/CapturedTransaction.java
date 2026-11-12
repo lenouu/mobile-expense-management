@@ -19,7 +19,8 @@ import java.util.UUID;
  * until they confirm it, and then a normal expense is created and linked through {@link #expenseId}.
  *
  * <p>Only the fields read from the message are kept. The raw SMS text is never stored: it can hold
- * a balance, phone numbers and names the user did not ask us to keep.
+ * a balance, phone numbers and names the user did not ask us to keep. Receipt photos are not stored
+ * either.
  *
  * <p>Any field the parser could not read is null rather than guessed; the review form shows it
  * blank so the user fills it in.
@@ -48,14 +49,14 @@ public class CapturedTransaction
     private CaptureSource source;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private MobileMoneyProvider provider;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private MobileMoneyTransactionType type;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(precision = 12, scale = 2)
     private BigDecimal amount;
 
     @Column(nullable = false, length = 3)
@@ -76,6 +77,11 @@ public class CapturedTransaction
     private LocalDate transactionDate;
 
     private LocalTime transactionTime;
+
+    @Column(length = 100)
+    private String merchant;
+
+    private Double confidence;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
