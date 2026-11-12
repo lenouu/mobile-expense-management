@@ -108,3 +108,14 @@ app.seed.enabled=true
 # entire users table in one call, which is a cheap denial of service and a memory spike.
 spring.data.web.pageable.default-page-size=20
 spring.data.web.pageable.max-page-size=100
+
+# Receipt OCR; timeout is in milliseconds.
+receipt.ocr.provider=${RECEIPT_OCR_PROVIDER:ocrspace}
+receipt.ocr.ocrspace.api-key=${OCR_SPACE_API_KEY:}
+receipt.ocr.ocrspace.url=${OCR_SPACE_URL:https://api.ocr.space/parse/image}
+receipt.ocr.ocrspace.engine=${OCR_SPACE_ENGINE:2}
+receipt.ocr.ocrspace.language=${OCR_SPACE_LANGUAGE:eng}
+receipt.ocr.ocrspace.timeout=${OCR_SPACE_TIMEOUT:15000}
+spring.servlet.multipart.max-file-size=5MB
+spring.servlet.multipart.max-request-size=6MB
+spring.servlet.multipart.file-size-threshold=6MB

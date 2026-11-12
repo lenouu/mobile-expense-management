@@ -235,6 +235,13 @@ public class GlobalExceptionHandler
                 .body(ApiError.of("invalid_request", ex.getMessage()));
     }
 
+    @ExceptionHandler(ReceiptReadingUnavailableException.class)
+    public ResponseEntity<ApiError> handleReceiptReadingUnavailable(ReceiptReadingUnavailableException ex)
+    {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ApiError.of("receipt_reading_unavailable", ex.getMessage()));
+    }
+
     /**
      * Last resort for anything no handler above claims.
      *

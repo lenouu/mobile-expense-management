@@ -39,6 +39,8 @@ public class CaptureResponses
         private final String reference;
         private final LocalDate transactionDate;
         private final LocalTime transactionTime;
+        private final String merchant;
+        private final Double confidence;
         /** A description the review form can start from, e.g. "MTN MoMo payment - ENEO". */
         private final String suggestedDescription;
         private final CaptureStatus status;
@@ -47,4 +49,8 @@ public class CaptureResponses
         private final LocalDateTime createdAt;
         private final LocalDateTime reviewedAt;
     }
+
+    public record Receipt(UUID captureId, Extracted extracted, double confidence) {}
+
+    public record Extracted(Money amount, LocalDate date, String merchant) {}
 }
