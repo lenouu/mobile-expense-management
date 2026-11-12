@@ -76,6 +76,18 @@ public class Budget
      */
     private LocalDateTime closedAt;
 
+    /**
+     * The closing instant of the edit window a "closing soon" reminder was sent for (US59).
+     *
+     * <p>Keyed on the window rather than a plain flag: moving the dates opens a new window, which
+     * earns its own reminder, while the same window is never reminded twice.
+     *
+     * <p>Not updatable: only {@code BudgetRepository.claimEditReminder} writes it, so a stale entity
+     * saved by an edit or a status refresh cannot reset the claim and cause a second reminder.
+     */
+    @Column(updatable = false)
+    private LocalDateTime editReminderSentFor;
+
     @OneToMany(mappedBy = "budget", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CategoryAllocation> categoryAllocations = new ArrayList<>();
 
