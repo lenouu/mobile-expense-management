@@ -43,4 +43,18 @@ public interface BudgetRepository extends JpaRepository<Budget, UUID>
                                      @Param("excludedId") UUID excludedBudgetId,
                                      @Param("start") LocalDate start,
                                      @Param("end") LocalDate end);
+
+    /**
+     * Every budget of the caller's whose window touches {@code [start, end]}.
+     *
+     * <p>Used by analytics to pick the best-overlapping budget for a financial period (US41, US42).
+     */
+    @Query("""
+            select b from Budget b
+            where b.user.id = :userId
+              and b.startDate <= :end
+              and b.endDate >= :start""")
+    List<Budget> findAllOverlapping(@Param("userId") UUID userId,
+                                    @Param("start") LocalDate start,
+                                    @Param("end") LocalDate end);
 }
