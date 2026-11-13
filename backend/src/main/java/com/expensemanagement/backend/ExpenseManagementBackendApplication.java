@@ -2,6 +2,7 @@ package com.expensemanagement.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Note on paged responses: this class deliberately does <em>not</em> carry
@@ -18,6 +19,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * envelope while leaving Boot's resolver (and therefore the configured cap) in place.
  */
 @SpringBootApplication
+@EnableScheduling
 public class ExpenseManagementBackendApplication {
 
 	public static void main(String[] args) {

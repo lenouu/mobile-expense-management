@@ -2,6 +2,7 @@ package com.expensemanagement.backend.BudgetManagement.Calendar;
 
 import com.expensemanagement.backend.BudgetManagement.Entities.Budget;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -38,17 +39,30 @@ public final class BudgetWindow
         throw new AssertionError("BudgetWindow is a static utility class and cannot be instantiated");
     }
 
+    /** The instant the edit clock starts running: the start of the budget's first day. */
+    public static LocalDateTime opensAt(LocalDate startDate)
+    {
+        return startDate.atStartOfDay();
+    }
+
     /** The instant after which a running budget is fixed, whatever the edit count says. */
     public static LocalDateTime editableUntil(LocalDate startDate, long lengthInDays)
     {
         long minutes = Math.max(1, Math.round(lengthInDays * WINDOW_FRACTION * 24 * 60));
-        return startDate.atStartOfDay().plusMinutes(minutes);
+        return opensAt(startDate).plusMinutes(minutes);
     }
 
     /** Convenience for a budget. */
     public static LocalDateTime editableUntil(Budget budget)
     {
         return editableUntil(budget.getStartDate(), budget.lengthInDays());
+    }
+
+    /** Halfway through the edit window: when the "closing soon" reminder becomes due (US59). */
+    public static LocalDateTime reminderDueAt(Budget budget)
+    {
+        LocalDateTime opens = opensAt(budget.getStartDate());
+        return opens.plus(Duration.between(opens, editableUntil(budget)).dividedBy(2));
     }
 
     /** Whether the time half of the rule still allows an edit. */
