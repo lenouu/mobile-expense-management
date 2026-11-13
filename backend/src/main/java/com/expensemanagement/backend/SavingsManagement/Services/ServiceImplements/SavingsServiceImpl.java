@@ -9,6 +9,9 @@ import com.expensemanagement.backend.SavingsManagement.Services.ServiceInterface
 import com.expensemanagement.backend.Shared.Money;
 import com.expensemanagement.backend.UserManagement.Entities.User;
 import com.expensemanagement.backend.UserManagement.Repositories.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,8 +19,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -108,6 +113,25 @@ public class SavingsServiceImpl implements SavingsService
     {
         List<SavingsResponses.PeriodSummary> summaries = summariesUpTo(userId, period);
         return summaries.get(summaries.size() - 1);
+    }
+
+    // Not read-only: current() may create the user's periods on demand.
+    @Override
+    @Transactional
+    public Page<SavingsResponses.PeriodSummary> history(UUID userId, Pageable pageable)
+    {
+        Optional<FinancialPeriod> lastCompleted = periodService.previous(periodService.current(userId));
+        if (lastCompleted.isEmpty())
+        {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
+        List<SavingsResponses.PeriodSummary> newestFirst = new ArrayList<>(summariesUpTo(userId, lastCompleted.get()));
+        Collections.reverse(newestFirst);
+
+        int from = (int) Math.min(pageable.getOffset(), newestFirst.size());
+        int to = Math.min(from + pageable.getPageSize(), newestFirst.size());
+        return new PageImpl<>(List.copyOf(newestFirst.subList(from, to)), pageable, newestFirst.size());
     }
 
     // ------------------------------------------------------------------

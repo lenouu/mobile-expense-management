@@ -2,6 +2,8 @@ package com.expensemanagement.backend.SavingsManagement.Services.ServiceInterfac
 
 import com.expensemanagement.backend.PeriodManagement.Entities.FinancialPeriod;
 import com.expensemanagement.backend.SavingsManagement.Dtos.DtoResponses.SavingsResponses;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,5 +47,11 @@ public interface SavingsService
      * @return the savings and debt summary for {@code period}
      */
     SavingsResponses.PeriodSummary summaryFor(UUID userId, FinancialPeriod period);
+
+    /**
+     * Summaries of the user's completed periods (those before the current one), newest first
+     * (US45). Empty when the user has no completed period yet.
+     */
+    Page<SavingsResponses.PeriodSummary> history(UUID userId, Pageable pageable);
 }
 

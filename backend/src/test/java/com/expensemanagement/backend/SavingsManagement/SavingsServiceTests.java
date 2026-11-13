@@ -15,16 +15,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 //import static org.mockito.Mockito.mock;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -277,8 +284,98 @@ class SavingsServiceTests {
     }
 
     // ------------------------------------------------------------------
+    // History (US45)
+    // ------------------------------------------------------------------
+
+    @Test
+    void history_isNewestFirstAndExcludesCurrentAndFuturePeriods() {
+        stubUser();
+        when(periodService.current(USER_ID)).thenReturn(p3);
+        when(periodService.previous(p3)).thenReturn(Optional.of(p2));
+        when(periodService.previous(p2)).thenReturn(Optional.of(p1));
+        // p3 (current) is deliberately not stubbed: computing it would fail under strict stubs.
+        stubIncomeAndExpense(p1, new BigDecimal("100.00"), new BigDecimal("50.00"));
+        stubIncomeAndExpense(p2, new BigDecimal("100.00"), new BigDecimal("80.00"));
+
+        Page<SavingsResponses.PeriodSummary> page = savingsService.history(USER_ID, PageRequest.of(0, 20));
+
+        assertThat(page.getContent()).extracting(SavingsResponses.PeriodSummary::getPeriodId)
+                .containsExactly(P2_ID, P1_ID);
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        verify(periodService, never()).next(any());
+    }
+
+    @Test
+    void history_slicesTheRequestedPage() {
+        stubUser();
+        List<FinancialPeriod> periods = monthlyPeriods(6);
+        when(periodService.current(USER_ID)).thenReturn(periods.get(5));
+        for (int i = 0; i < 5; i++) {
+            stubIncomeAndExpense(periods.get(i), new BigDecimal("100.00"), new BigDecimal("10.00"));
+        }
+
+        Page<SavingsResponses.PeriodSummary> page = savingsService.history(USER_ID, PageRequest.of(1, 2));
+
+        assertThat(page.getContent()).extracting(SavingsResponses.PeriodSummary::getPeriodId)
+                .containsExactly(periods.get(2).getId(), periods.get(1).getId());
+        assertThat(page.getNumber()).isEqualTo(1);
+        assertThat(page.getSize()).isEqualTo(2);
+        assertThat(page.getTotalElements()).isEqualTo(5);
+        assertThat(page.getTotalPages()).isEqualTo(3);
+    }
+
+    @Test
+    void history_withNoCompletedPeriod_isEmpty() {
+        when(periodService.current(USER_ID)).thenReturn(p1);
+        when(periodService.previous(p1)).thenReturn(Optional.empty());
+
+        Page<SavingsResponses.PeriodSummary> page = savingsService.history(USER_ID, PageRequest.of(0, 20));
+
+        assertThat(page.getContent()).isEmpty();
+        assertThat(page.getTotalElements()).isZero();
+        verifyNoInteractions(incomeRepository, expenseRepository);
+    }
+
+    @Test
+    void history_rowsMatchSummaryForEachPeriod() {
+        stubUser();
+        when(periodService.current(USER_ID)).thenReturn(p3);
+        when(periodService.previous(p3)).thenReturn(Optional.of(p2));
+        when(periodService.previous(p2)).thenReturn(Optional.of(p1));
+        // P1 ends in debt so P2 carries it: the rows must keep the carry-forward.
+        stubIncomeAndExpense(p1, new BigDecimal("100.00"), new BigDecimal("250.00"));
+        stubIncomeAndExpense(p2, new BigDecimal("300.00"), new BigDecimal("50.00"));
+
+        Page<SavingsResponses.PeriodSummary> page = savingsService.history(USER_ID, PageRequest.of(0, 20));
+
+        assertThat(page.getContent().get(0)).usingRecursiveComparison()
+                .isEqualTo(savingsService.summaryFor(USER_ID, p2));
+        assertThat(page.getContent().get(1)).usingRecursiveComparison()
+                .isEqualTo(savingsService.summaryFor(USER_ID, p1));
+    }
+
+    // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
+
+    /** Monthly periods from January 2026, each linked to its predecessor via previous(). */
+    private List<FinancialPeriod> monthlyPeriods(int count) {
+        List<FinancialPeriod> periods = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            FinancialPeriod p = new FinancialPeriod();
+            p.setId(UUID.randomUUID());
+            p.setUser(user);
+            p.setSequence(i);
+            LocalDate start = LocalDate.of(2026, i, 1);
+            p.setStartDate(start);
+            p.setEndDate(start.plusMonths(1).minusDays(1));
+            if (i > 1) {
+                when(periodService.previous(p)).thenReturn(Optional.of(periods.get(i - 2)));
+            }
+            periods.add(p);
+        }
+        return periods;
+    }
 
     private void stubUser() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
