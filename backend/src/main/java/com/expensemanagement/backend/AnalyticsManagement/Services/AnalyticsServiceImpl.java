@@ -47,6 +47,8 @@ import lombok.extern.slf4j.Slf4j;
 public class AnalyticsServiceImpl
 {
     private static final int BUCKETS = 7;
+    /** The longest window the dashboard draws: a year, the longest financial period there is. */
+    static final int MAX_WINDOW_DAYS = 366;
     private static final DateTimeFormatter DAY_MONTH = DateTimeFormatter.ofPattern("d MMM");
 
     private final ExpenseRepository expenseRepository;
@@ -80,6 +82,12 @@ public class AnalyticsServiceImpl
         if (from.isAfter(to))
         {
             throw new InvalidRequestException("The start date is after the end date.");
+        }
+        // The response holds one point per day for this window and for the one before it, so an
+        // unbounded range would let a single request build hundreds of thousands of points.
+        if (ChronoUnit.DAYS.between(from, to) + 1 > MAX_WINDOW_DAYS)
+        {
+            throw new InvalidRequestException("The window can be at most " + MAX_WINDOW_DAYS + " days long.");
         }
 
         User user = userRepository.findById(userId)
@@ -350,11 +358,20 @@ public class AnalyticsServiceImpl
                 .build();
     }
 
+    /**
+     * The budget running today, or null so the dashboard leaves the section out (US50 AC2).
+     *
+     * <p>Running means its window contains today and it has not closed: ACTIVE while it can still
+     * be edited, FIXED once the edit window has passed - for most of a budget's life it is FIXED.
+     * An UPCOMING budget has not started, so it is not the budget in force. The dates are checked
+     * as well as the status, because a status is only refreshed when the budget itself is read.
+     */
     private AnalyticsResponses.BudgetSnapshot budget(UUID userId, String currency)
     {
-        var budgets = budgetRepository.findAllByUserIdNewestFirst(userId);
-        var live = budgets.stream()
-                .filter(b -> b.getStatus() == BudgetStatus.ACTIVE || b.getStatus() == BudgetStatus.UPCOMING)
+        LocalDate today = LocalDate.now();
+        var live = budgetRepository.findAllByUserIdNewestFirst(userId).stream()
+                .filter(b -> b.getStatus() == BudgetStatus.ACTIVE || b.getStatus() == BudgetStatus.FIXED)
+                .filter(b -> !today.isBefore(b.getStartDate()) && !today.isAfter(b.getEndDate()))
                 .findFirst()
                 .orElse(null);
 
@@ -372,7 +389,7 @@ public class AnalyticsServiceImpl
                 .planned(money(live.getOverallAmount(), currency))
                 .spent(money(spent.getTotal(), currency))
                 .remaining(money(remaining, currency))
-                .daysLeft(ChronoUnit.DAYS.between(LocalDate.now(), live.getEndDate()))
+                .daysLeft(Math.max(0, ChronoUnit.DAYS.between(today, live.getEndDate())))
                 .status(live.getStatus().name())
                 .build();
     }
