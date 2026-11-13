@@ -251,9 +251,7 @@ export function IncomeSourcesManager({
               Icon
             </ThemedText>
 
-            <View style={styles.swatches}>
-              <EmojiPicker value={icon} onChange={setIcon} accent={color} />
-            </View>
+            <EmojiPicker value={icon} onChange={setIcon} accent={color} />
           </View>
 
           <View style={styles.block}>

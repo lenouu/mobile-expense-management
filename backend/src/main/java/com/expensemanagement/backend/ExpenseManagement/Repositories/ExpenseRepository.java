@@ -110,6 +110,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID>
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Expense e set e.budget = null where e.budget.id = :budgetId and e.user.id = :userId")
     int clearBudget(@Param("budgetId") UUID budgetId, @Param("userId") UUID userId);
+    /** The single largest expense in a window - the one line people ask about. */
+    java.util.List<Expense> findTopByUserIdAndDateBetweenOrderByAmountDesc(UUID userId, LocalDate from, LocalDate to);
     /** The same window, one row per day - the shape of the period, not just its total. */
     @Query("""
             select e.date, coalesce(sum(e.amount), 0)

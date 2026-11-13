@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -79,7 +79,24 @@ export function FadeIn({
 
   return (
     <Animated.View style={[style, { opacity: progress, transform: [{ translateY }] }]}>
-      {children}
+      {guardChildren(children, 'FadeIn')}
     </Animated.View>
   );
+}
+
+/**
+ * A View cannot render a bare string - React Native refuses it - so a stray text child is dropped
+ * and named in development. Text belongs in `ThemedText`; anything that reaches here is a bug
+ * upstream, and the warning says exactly which string it was.
+ */
+export function guardChildren(children: ReactNode, where: string): ReactNode {
+  return Children.toArray(children).filter((child) => {
+    if (typeof child === 'string' || typeof child === 'number') {
+      if (__DEV__ && String(child).trim().length > 0) {
+        console.warn(`[${where}] text outside a <Text>:`, JSON.stringify(String(child)));
+      }
+      return false;
+    }
+    return true;
+  });
 }
