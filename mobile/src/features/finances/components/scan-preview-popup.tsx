@@ -38,9 +38,14 @@ type Draft = {
 
 /** The category the model named, found among the ones the user actually has. */
 function matchCategory(name: string | null, categories: MyCategory[]): string | null {
-  if (!name) return null;
+  if (categories.length === 0) return null;
+
+  // The backend already resolves the model's answer against this list, so a row normally
+  // arrives with a category. The fallback is what keeps it from ever arriving blank.
+  if (!name) return categories[0].id;
+
   const target = name.trim().toLowerCase();
-  if (!target) return null;
+  if (!target) return categories[0].id;
 
   const exact = categories.find((category) => category.name.trim().toLowerCase() === target);
   if (exact) return exact.id;
@@ -50,7 +55,7 @@ function matchCategory(name: string | null, categories: MyCategory[]): string | 
     const candidate = category.name.trim().toLowerCase();
     return candidate.includes(target) || target.includes(candidate);
   });
-  return partial?.id ?? null;
+  return partial?.id ?? categories[0].id;
 }
 
 /** The budget an expense belongs to "by default": one that is running today. */

@@ -11,6 +11,7 @@ import { CategoryBadge } from '@/features/finances/components/category-badge';
 import { formatLongDate, formatMoney } from '@/features/finances/components/finance-ui';
 import { IncomeFormPopup } from '@/features/finances/components/income-form-popup';
 import { WindowControl, type WindowValue } from '@/features/finances/components/window-control';
+import { useDataVersion } from '@/features/finances/lib/data-events';
 import {
   type IncomeEntry,
   type IncomeSource,
@@ -60,6 +61,8 @@ export function IncomeSegment({
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  /** Re-reads the list when an income is added elsewhere (e.g. the SMS review). */
+  const dataVersion = useDataVersion();
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<IncomeEntry | null>(null);
@@ -126,7 +129,7 @@ export function IncomeSegment({
   useEffect(() => {
     if (range) load(0, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range?.from, range?.to]);
+  }, [range?.from, range?.to, dataVersion]);
 
   const remove = async (entry: IncomeEntry) => {
     try {

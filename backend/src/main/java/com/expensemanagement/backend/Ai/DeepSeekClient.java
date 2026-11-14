@@ -1,4 +1,4 @@
-package com.expensemanagement.backend.ReceiptManagement.Ai;
+package com.expensemanagement.backend.Ai;
 
 import com.expensemanagement.backend.Exceptions.AiUnavailableException;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,18 +17,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The outbound half of the receipt reader: one call to DeepSeek's vision model.
+ * The only outbound door to the AI provider.
  *
- * <p>The API key lives here, on the server, and never travels to the app. It is read from
+ * <p>The API key lives here, on the server, and never travels to an app. It is read from
  * {@code app.ai.deepseek.api-key}, which {@code application.properties} fills from the
  * {@code DEEPSEEK_API_KEY} environment variable, so the value is not committed.
  *
- * <p>Images are sent as a {@code data:} URL inside the OpenAI-compatible chat payload. Nothing
- * is written to disk: the bytes are decoded, encoded once into that URL, posted, and dropped
- * with the request.
+ * <p>Two shapes are offered because the product has two readers: {@link #readImage} for a
+ * photograph (the picture travels as a {@code data:} URL inside the OpenAI-compatible payload)
+ * and {@link #readText} for pasted text such as a mobile money message. Neither stores anything:
+ * the bytes and the text are posted and dropped with the request.
  */
 @Component
-public class DeepSeekVisionClient
+public class DeepSeekClient
 {
     /** The value the shipped template carries, so a forgotten key fails loudly instead of 401ing. */
     private static final String PLACEHOLDER = "PASTE_YOUR_DEEPSEEK_API_KEY_HERE";
@@ -38,7 +39,7 @@ public class DeepSeekVisionClient
     private final String apiKey;
     private final String model;
 
-    public DeepSeekVisionClient(
+    public DeepSeekClient(
             @Value("${app.ai.deepseek.base-url:https://api.deepseek.com}") String baseUrl,
             @Value("${app.ai.deepseek.api-key:}") String apiKey,
             @Value("${app.ai.deepseek.model:deepseek-flash}") String model,
@@ -49,8 +50,8 @@ public class DeepSeekVisionClient
         this.model = model;
         this.objectMapper = objectMapper;
 
-        // Generated images are large and the model is chatty; the default read timeout would
-        // cut a legitimate answer short.
+        // A dense receipt and a long message both take longer than a default read timeout would
+        // allow, and the provider can be slow at peak times.
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(10));
         factory.setReadTimeout(Duration.ofSeconds(Math.max(10, timeoutSeconds)));
@@ -61,38 +62,50 @@ public class DeepSeekVisionClient
                 .build();
     }
 
-    /** Whether a key has been configured; the service turns "no" into a clear 503. */
+    /** Whether a key has been configured; the services turn "no" into a clear 503. */
     public boolean isConfigured()
     {
         return !apiKey.isBlank() && !PLACEHOLDER.equals(apiKey);
     }
 
     /**
-     * Sends the prompt and the picture, and returns the assistant's raw text.
+     * Sends a prompt together with a picture and returns the assistant's raw text.
      *
-     * @param prompt       the instruction, including the caller's category list
+     * @param prompt       the instruction
      * @param imageDataUrl {@code data:image/...;base64,...} - already canonical
-     * @throws AiUnavailableException when the call cannot be made or does not come back usable
      */
-    public String readReceipt(String prompt, String imageDataUrl)
+    public String readImage(String prompt, String imageDataUrl)
+    {
+        return chat(List.of(
+                Map.of("type", "text", "text", prompt),
+                Map.of("type", "image_url", "image_url", Map.of(
+                        "url", imageDataUrl,
+                        // A receipt is dense small print: keep the resolution.
+                        "detail", "high"))));
+    }
+
+    /**
+     * Sends a prompt with no picture and returns the assistant's raw text.
+     *
+     * @param prompt the instruction, including any text to read
+     */
+    public String readText(String prompt)
+    {
+        return chat(List.of(Map.of("type", "text", "text", prompt)));
+    }
+
+    private String chat(List<Map<String, Object>> content)
     {
         if (!isConfigured())
         {
             throw new AiUnavailableException(
-                    "Receipt reading is not configured on the server. Set DEEPSEEK_API_KEY "
+                    "The AI reader is not configured on the server. Set DEEPSEEK_API_KEY "
                             + "and restart the backend.");
         }
 
         Map<String, Object> body = Map.of(
                 "model", model,
-                "messages", List.of(Map.of(
-                        "role", "user",
-                        "content", List.of(
-                                Map.of("type", "text", "text", prompt),
-                                Map.of("type", "image_url", "image_url", Map.of(
-                                        "url", imageDataUrl,
-                                        // A receipt is dense small print: keep the resolution.
-                                        "detail", "high"))))),
+                "messages", List.of(Map.of("role", "user", "content", content)),
                 "temperature", 0,
                 "max_tokens", 1500);
 
@@ -129,14 +142,14 @@ public class DeepSeekVisionClient
 
         try
         {
-            JsonNode content = objectMapper.readTree(raw)
+            JsonNode contentNode = objectMapper.readTree(raw)
                     .path("choices").path(0).path("message").path("content");
 
-            if (!content.isTextual() || content.asText().isBlank())
+            if (!contentNode.isTextual() || contentNode.asText().isBlank())
             {
                 throw new AiUnavailableException("The AI service returned an empty answer.");
             }
-            return content.asText();
+            return contentNode.asText();
         }
         catch (AiUnavailableException e)
         {

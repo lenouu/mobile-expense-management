@@ -25,6 +25,7 @@ import { CategoryBadge } from '@/features/finances/components/category-badge';
 import { formatLongDate, formatMoney } from '@/features/finances/components/finance-ui';
 import { WindowControl, type WindowValue } from '@/features/finances/components/window-control';
 import { fetchCurrentPeriod, type FinancialPeriod } from '@/features/finances/lib/finances-api';
+import { useDataVersion } from '@/features/finances/lib/data-events';
 import { useTheme } from '@/hooks/use-theme';
 import { useSession } from '@/providers';
 import type { Session } from '@/types/api';
@@ -98,6 +99,8 @@ function Analytics({
   const [window, setWindow] = useState<WindowValue>({ key: 'period' });
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Re-reads the figures when money is added elsewhere (receipt scan, SMS review). */
+  const dataVersion = useDataVersion();
   const [error, setError] = useState<string | null>(null);
 
   const [mode, setMode] = useState<Mode>('cumulative');
@@ -168,7 +171,7 @@ function Analytics({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, range?.from, range?.to, handleError]);
+  }, [session, range?.from, range?.to, handleError, dataVersion]);
 
   /** The lines the chart draws: cumulative running totals, or the buckets on their own. */
   const { chartSeries, labels } = useMemo(() => {

@@ -5,7 +5,8 @@ import com.expensemanagement.backend.CategoryManagement.Repositories.UserCategor
 import com.expensemanagement.backend.Exceptions.AiUnavailableException;
 import com.expensemanagement.backend.Exceptions.InvalidRequestException;
 import com.expensemanagement.backend.Exceptions.ResourceNotFoundException;
-import com.expensemanagement.backend.ReceiptManagement.Ai.DeepSeekVisionClient;
+import com.expensemanagement.backend.Ai.AiVocabulary;
+import com.expensemanagement.backend.Ai.DeepSeekClient;
 import com.expensemanagement.backend.ReceiptManagement.Dtos.DtoRequests.ReceiptScanRequests;
 import com.expensemanagement.backend.ReceiptManagement.Dtos.DtoResponses.ReceiptScanResponses;
 import com.expensemanagement.backend.ReceiptManagement.Services.ServiceInterface.ReceiptScanService;
@@ -54,18 +55,18 @@ public class ReceiptScanServiceImpl implements ReceiptScanService
 
     private final UserCategoryRepository categoryRepository;
     private final UserRepository userRepository;
-    private final DeepSeekVisionClient visionClient;
+    private final DeepSeekClient aiClient;
     private final ObjectMapper objectMapper;
 
     public ReceiptScanServiceImpl(
             UserCategoryRepository categoryRepository,
             UserRepository userRepository,
-            DeepSeekVisionClient visionClient,
+            DeepSeekClient aiClient,
             ObjectMapper objectMapper)
     {
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
-        this.visionClient = visionClient;
+        this.aiClient = aiClient;
         this.objectMapper = objectMapper;
     }
 
@@ -97,9 +98,11 @@ public class ReceiptScanServiceImpl implements ReceiptScanService
                 : owner.getBaseCurrency();
 
         String prompt = buildPrompt(categories, currency);
-        String answer = visionClient.readReceipt(prompt, toDataUrl(mimeType, bytes));
+        String answer = aiClient.readImage(prompt, toDataUrl(mimeType, bytes));
 
-        return new ReceiptScanResponses.Scan(parseExpenses(answer));
+        List<String> categoryNames = categories.stream().map(UserCategory::getName).toList();
+
+        return new ReceiptScanResponses.Scan(parseExpenses(answer, categoryNames));
     }
 
     // ------------------------------------------------------------------
@@ -241,7 +244,7 @@ public class ReceiptScanServiceImpl implements ReceiptScanService
                 - The currency is %s. Amounts are numbers in that currency, without symbols or separators.
                 - Today is %s. Use it as the date when the receipt does not show one.
                 - Put one object per distinct charge. A single receipt with several lines may produce several expenses; do not merge different items into one total.
-                - "category" MUST be exactly one of the category names above. If none fits, use the closest one; never invent a name.
+                - "category" MUST be exactly one of the category names above. If none fits, use the closest one; never invent a name and never use null unless the list is empty.
                 - "description" is a short label such as the shop name or the item, at most 60 characters.
                 - Amounts are positive numbers. Ignore totals, subtotals, tax lines and change due.
 
@@ -256,7 +259,7 @@ public class ReceiptScanServiceImpl implements ReceiptScanService
     // The answer
     // ------------------------------------------------------------------
 
-    private List<ReceiptScanResponses.Expense> parseExpenses(String answer)
+    private List<ReceiptScanResponses.Expense> parseExpenses(String answer, List<String> categoryNames)
     {
         JsonNode root = readJsonObject(answer);
         JsonNode array = root.path("expenses");
@@ -282,13 +285,16 @@ public class ReceiptScanServiceImpl implements ReceiptScanService
                 description = description.substring(0, 255);
             }
 
-            String category = node.path("category").asText("").trim();
+            // Resolved against the caller's own list, so a near miss or a null still arrives as
+            // a real choice and the review opens with a category already selected.
+            String category = AiVocabulary.resolveCategory(
+                    node.path("category").asText("").trim(), categoryNames);
 
             expenses.add(new ReceiptScanResponses.Expense(
                     description,
                     amount,
                     asDate(node.path("date").asText("")),
-                    category.isEmpty() ? null : category));
+                    category));
         }
 
         return expenses;
