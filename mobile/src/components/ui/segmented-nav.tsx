@@ -77,6 +77,12 @@ export function SegmentedNav({
               style={({ pressed }) => [styles.tab, pressed && styles.pressed]}>
               <ThemedText
                 type={active ? 'smallBold' : 'small'}
+                // Never wrap: the tabs split the width evenly, so a long label like
+                // "Transactions" is wider than its column and used to break onto a second line,
+                // orphaning the final "s". One line plus auto-shrink keeps every label intact.
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
                 style={[styles.label, { color: active ? Brand.green : theme.textSecondary }]}>
                 {item.label}
               </ThemedText>
@@ -111,9 +117,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.two,
+    paddingHorizontal: Spacing.one,
   },
   label: {
+    // The four tabs split the width evenly, so each one only has ~a quarter of the screen. At the
+    // shared 14px step "Transactions" measures ~90px, which does not fit a ~74px tab and broke the
+    // final "s" onto its own line. 12px (the type scale's caption/label size) measures ~77px, and
+    // dropping the side padding to Spacing.one leaves ~82px of room - enough with margin to spare.
+    fontSize: 12,
+    // A definite width gives auto-shrink something to measure against, and keeps the label
+    // centred on its own tab.
+    width: '100%',
     textAlign: 'center',
   },
   indicator: {

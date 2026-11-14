@@ -22,11 +22,24 @@ export type Receipt = {
   uri: string;
   /** The bytes, so a future upload does not have to re-read the file. Absent if unreadable. */
   base64: string | null;
+  /** The picture's format, e.g. `image/jpeg`. Sent with the bytes so the server can label them. */
+  mimeType: string;
   width: number;
   height: number;
   capturedAt: string;
   source: 'camera' | 'library';
 };
+
+/** The picker usually reports the type; when it does not, the file extension is a fair guess. */
+function mimeTypeOf(asset: { mimeType?: string | null; uri: string }): string {
+  if (asset.mimeType && asset.mimeType.startsWith('image/')) return asset.mimeType;
+
+  const lower = asset.uri.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
+  return 'image/jpeg';
+}
 
 /** What the form gets back: a receipt, a message to show, or nothing (the user backed out). */
 export type CaptureResult =
@@ -87,6 +100,7 @@ export async function captureReceipt(source: 'camera' | 'library'): Promise<Capt
         id: nextId(),
         uri: asset.uri,
         base64: asset.base64 ?? null,
+        mimeType: mimeTypeOf(asset),
         width: asset.width,
         height: asset.height,
         capturedAt: new Date().toISOString(),

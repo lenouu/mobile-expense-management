@@ -11,6 +11,7 @@ import { CategoryBadge } from '@/features/finances/components/category-badge';
 import { formatLongDate, formatMoney } from '@/features/finances/components/finance-ui';
 import { IncomeOverview } from '@/features/finances/components/income-overview';
 import { WindowControl, type WindowValue } from '@/features/finances/components/window-control';
+import { useDataVersion } from '@/features/finances/lib/data-events';
 import {
   type ExpenseOverview,
   fetchCurrentPeriod,
@@ -50,6 +51,8 @@ export function OverviewSegment({
   const [overview, setOverview] = useState<ExpenseOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** Re-reads the window when an expense is added from elsewhere (e.g. the receipt preview). */
+  const dataVersion = useDataVersion();
 
   const handleError = useCallback(
     (e: unknown) => {
@@ -103,7 +106,7 @@ export function OverviewSegment({
     return () => {
       cancelled = true;
     };
-  }, [session, range, handleError]);
+  }, [session, range, handleError, dataVersion]);
 
   const total = overview?.total.amount ?? 0;
   const changePercent = overview?.changePercent;

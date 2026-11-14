@@ -1,110 +1,77 @@
-# ---------------------------------------------------------------------
-# TEMPLATE - copy this file to `application.properties` and fill it in.
-#
-#   cp application.properties.example application.properties
-#
-# `application.properties` itself is NOT committed (it is in backend/.gitignore) because it
-# holds this machine's real database password and JWT signing key. This template is what a
-# fresh clone, a teammate or a Jenkins job starts from.
-# ---------------------------------------------------------------------
 spring.application.name=expense-management-backend
-
-# ---------------------------------------------------------------------
-# Database
-# ---------------------------------------------------------------------
-# Hibernate creates the tables, not the database. Create it once:
-#   CREATE DATABASE expense_management;
 spring.datasource.url=jdbc:postgresql://localhost:5432/expense_management
 spring.datasource.username=postgres
-# <-- PUT YOUR POSTGRES PASSWORD HERE
-spring.datasource.password=CHANGE_ME
+spring.datasource.password=root
 # Fail fast when the database is down (default 30s), so GET /api/admin/health answers quickly.
 spring.datasource.hikari.connection-timeout=5000
 server.port=8083
-# DANGER: 'create' drops and recreates every table on each start, so all data is lost on
-# restart. It is what makes the development seeds run every boot. Replace with 'validate'
-# once Flyway migrations exist.
 spring.jpa.hibernate.ddl-auto=create
-spring.jpa.show-sql=true
 
-# ---------------------------------------------------------------------
-# JWT (stateless authentication)
-# ---------------------------------------------------------------------
-# HS256 is symmetric: this one secret both signs and verifies tokens. Anyone holding it can mint
-# a token for any user id and any role, so it must stay server-side.
-#
-# Must be at least 32 bytes, or the app refuses to start. Generate one with:
-#   openssl rand -base64 48
-app.security.jwt.secret=CHANGE_ME_AT_LEAST_32_BYTES_OF_RANDOM_MATERIAL
+
+
+spring.jpa.show-sql=true
+app.security.jwt.secret=dev-only-secret-change-me-0123456789abcdef
 app.security.jwt.expiration-minutes=60
 app.security.jwt.issuer=expense-management-backend
 
-# ---------------------------------------------------------------------
-# CORS
-# ---------------------------------------------------------------------
-# Only matters for a browser client (web build, Swagger UI); a native app ignores it.
-# http://localhost:8081 is the Expo web dev server.
 app.cors.allowed-origins=http://localhost:3000,http://localhost:5173,http://localhost:8081
 
-# ---------------------------------------------------------------------
-# Password reset email (US06)
-# ---------------------------------------------------------------------
-# No SMTP is declared here on purpose. Spring Boot binds SPRING_MAIL_HOST, SPRING_MAIL_PORT,
-# SPRING_MAIL_USERNAME and SPRING_MAIL_PASSWORD from the environment automatically, and creates
-# the mail sender only when SPRING_MAIL_HOST is set.
-#
-# With no host configured the application still starts: the reset flow runs, but the link is
-# written to the log instead of being emailed, which keeps local development testable.
-app.auth.password-reset.link-base-url=http://localhost:8081/reset-password
-app.auth.password-reset.from=no-reply@finflow.local
+app.auth.password-reset.link-base-url=${PASSWORD_RESET_LINK_BASE_URL:http://localhost:8081/reset-password}
+app.auth.password-reset.from=${PASSWORD_RESET_FROM:no-reply@finflow.local}
 
-# ---------------------------------------------------------------------
-# Error responses
-# ---------------------------------------------------------------------
-# Never leak a stack trace or the internal exception message to a client.
-#
-# NOTE the property names. Spring Boot 4 RENAMED these from server.error.* to
-# spring.web.error.*. The old names still appear in Boot's metadata, but only
-# as a "replacement" alias - they are ignored, so using them silently leaves
-# stack traces switched on.
+
 spring.web.error.include-stacktrace=never
 spring.web.error.include-message=never
-
-# ---------------------------------------------------------------------
-# OpenAPI / Swagger UI
-# ---------------------------------------------------------------------
-#   UI:   http://localhost:8083/swagger-ui.html
-#   JSON: http://localhost:8083/v3/api-docs
-# Both are permitted anonymously in SecurityConfig, so anyone who can reach the app can read the
-# whole API surface. Before deploying, set springdoc.api-docs.enabled=false and
-# springdoc.swagger-ui.enabled=false and remove the doc paths from
-# SecurityConfig.PUBLIC_GET_ENDPOINTS.
 springdoc.api-docs.enabled=true
 springdoc.api-docs.path=/v3/api-docs
 springdoc.swagger-ui.enabled=true
 springdoc.swagger-ui.path=/swagger-ui.html
+# Keep the operation list in a predictable order rather than the order the
+# scanner happened to find the controllers.
 springdoc.swagger-ui.operations-sorter=method
 springdoc.swagger-ui.tags-sorter=alpha
+# Lets "Try it out" actually fire requests, and shows how long each took.
 springdoc.swagger-ui.try-it-out-enabled=true
 springdoc.swagger-ui.display-request-duration=true
 
-# ---------------------------------------------------------------------
-# Development seed data
-# ---------------------------------------------------------------------
-# On startup inserts 22 test accounts - 20 USER and 2 ADMIN - every one ACTIVE with the shared
-# password: Password123!
-#
-#   Admin logins: admin.amina / admin.youssef    (all other seeds are USER)
-#
-# DEVELOPMENT ONLY. These are known credentials written straight into the database; set this to
-# false (or delete the line) before deploying. The class is @ConditionalOnProperty, so an absent
-# property means no seeding.
+
 app.seed.enabled=true
 
 # ---------------------------------------------------------------------
 # Pagination limits
 # ---------------------------------------------------------------------
-# Caps the ?size= parameter on every Pageable endpoint. Without it a client can request the
-# entire users table in one call, which is a cheap denial of service and a memory spike.
+# Caps the ?size= parameter on every Pageable endpoint. Without it a client
+# can request the entire users table in one call, which is a cheap denial of
+# service and a memory spike on the heap.
 spring.data.web.pageable.default-page-size=20
 spring.data.web.pageable.max-page-size=100
+
+# ---------------------------------------------------------------------
+# Profile picture uploads
+# ---------------------------------------------------------------------
+# Where avatars are written. Outside src/main/resources on purpose: that directory is packaged
+# into the jar, so anything saved there is part of the build output and lost on the next rebuild.
+# This path is on the VPS disk and must be in the backup procedure.
+app.uploads.dir=${UPLOADS_DIR:./uploads}
+
+# Spring's multipart default is 1 MB, below a phone photo. The service re-checks the size itself;
+# these limits stop an oversized body from being buffered at all.
+spring.servlet.multipart.max-file-size=5MB
+spring.servlet.multipart.max-request-size=6MB
+
+# ---------------------------------------------------------------------
+# Receipt reading (AI)
+# ---------------------------------------------------------------------
+# The key lives HERE, on the server, and is never sent to the app. Set DEEPSEEK_API_KEY
+# in the environment (or paste the key after the colon) and restart the backend.
+#
+#   PowerShell:  $env:DEEPSEEK_API_KEY = "sk-..."
+#
+# With no key the backend still starts; POST /api/receipts/scan answers 503 with a
+# message saying the key is missing. The photo itself is never stored.
+app.ai.deepseek.api-key=${DEEPSEEK_API_KEY:}
+app.ai.deepseek.base-url=https://api.deepseek.com
+# DeepSeek-V4.1-Flash is the id the vision-capable model answers to.
+app.ai.deepseek.model=deepseek-flash
+# A hard-to-read receipt takes a while; this bounds the wait.
+app.ai.deepseek.timeout-seconds=120

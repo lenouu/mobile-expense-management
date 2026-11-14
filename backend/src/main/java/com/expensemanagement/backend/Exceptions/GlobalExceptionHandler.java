@@ -236,6 +236,23 @@ public class GlobalExceptionHandler
     }
 
     /**
+     * The AI reader could not answer: no key configured, the provider refused the call, or the
+     * server could not reach it.
+     *
+     * <p>503 rather than 500 because nothing is broken here - a dependency is unavailable and
+     * trying again later is exactly right. The message is safe to show: it names the cause,
+     * never the key and never any part of the picture.
+     */
+    @ExceptionHandler(AiUnavailableException.class)
+    public ResponseEntity<ApiError> handleAiUnavailable(AiUnavailableException ex)
+    {
+        log.warn("AI receipt scan unavailable: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiError.of("ai_unavailable", ex.getMessage()));
+    }
+
+    /**
      * Last resort for anything no handler above claims.
      *
      * <p>Spring MVC's own exceptions (405 method not allowed, 415 unsupported media type, ...)

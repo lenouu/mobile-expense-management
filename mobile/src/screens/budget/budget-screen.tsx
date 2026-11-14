@@ -22,6 +22,7 @@ import {
   fetchBudget,
   fetchBudgets,
 } from '@/features/finances/lib/budget-api';
+import { useDataVersion } from '@/features/finances/lib/data-events';
 import { useTheme } from '@/hooks/use-theme';
 import type { Session } from '@/types/api';
 import { describeError } from '@/utils/errors';
@@ -74,6 +75,8 @@ export function BudgetScreen({
   const [formOpen, setFormOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  /** Re-reads the plan when an expense lands somewhere else (e.g. the receipt preview). */
+  const dataVersion = useDataVersion();
 
   const handleError = useCallback(
     (e: unknown) => {
@@ -104,7 +107,7 @@ export function BudgetScreen({
     } finally {
       setLoading(false);
     }
-  }, [session, handleError]);
+  }, [session, handleError, dataVersion]);
 
   useEffect(() => {
     load();

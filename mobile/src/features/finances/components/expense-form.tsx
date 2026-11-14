@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -22,12 +21,6 @@ import { ApiRequestError } from '@/features/auth/lib/api-client';
 import type { Expense, MyCategory, SaveExpense } from '@/features/finances/lib/finances-api';
 import { createExpense, updateExpense } from '@/features/finances/lib/finances-api';
 import { fetchBudgets } from '@/features/finances/lib/budget-api';
-import {
-  captureReceipt,
-  linkReceipt,
-  type Receipt,
-  receiptsFor,
-} from '@/features/finances/lib/receipts';
 import { useTheme } from '@/hooks/use-theme';
 import { DEFAULT_CURRENCY, type Session } from '@/types/api';
 import { describeError } from '@/utils/errors';
@@ -55,6 +48,7 @@ export function ExpenseForm({
   onDelete,
   deleting = false,
   onImportCsv,
+  onScanReceipt,
 }: {
   session: Session;
   categories: MyCategory[];
@@ -68,6 +62,13 @@ export function ExpenseForm({
   deleting?: boolean;
   /** Adding many at once is an alternative to this form, so it is offered from here. */
   onImportCsv?: () => void;
+  /**
+   * The picture route: hands over to the camera/gallery chooser.
+   *
+   * It is one affordance rather than two because "take a photo" and "choose a photo" are the
+   * same intention - add an expense from a picture - and the how is answered in its own pop-up.
+   */
+  onScanReceipt?: () => void;
 }) {
   const theme = useTheme();
 
@@ -106,30 +107,8 @@ export function ExpenseForm({
     };
   }, [session]);
 
-  // Always an array: a receipt may cover several expenses, so the link is a list even though the
-  // form offers one photo per expense today. Editing an expense shows the photo attached earlier.
-  const [receipts, setReceipts] = useState<Receipt[]>(expense ? receiptsFor(expense.id) : []);
-  const [receiptError, setReceiptError] = useState<string | null>(null);
-  const [capturing, setCapturing] = useState(false);
-
   const selected = categories.find((category) => category.id === categoryId) ?? null;
   const isEdit = Boolean(expense);
-
-  const snap = async (source: 'camera' | 'library') => {
-    setCapturing(true);
-    setReceiptError(null);
-    try {
-      const result = await captureReceipt(source);
-      if ('receipt' in result) {
-        // Replace rather than append: one photo per expense, and a retake should not leave two.
-        setReceipts([result.receipt]);
-      } else if ('error' in result) {
-        setReceiptError(result.error);
-      }
-    } finally {
-      setCapturing(false);
-    }
-  };
 
   const save = async () => {
     // Same rules as the backend, checked first so the user gets instant feedback.
@@ -152,10 +131,6 @@ export function ExpenseForm({
       const saved = expense
         ? await updateExpense(session, expense.id, body)
         : await createExpense(session, body);
-
-      // Attached after saving, because the link needs the expense's id. Session-only for now:
-      // see the note in lib/receipts.ts - the photo becomes durable when uploads exist.
-      receipts.forEach((receipt) => linkReceipt(saved.id, receipt));
 
       onSaved(saved, !expense);
     } catch (e) {
@@ -473,92 +448,36 @@ export function ExpenseForm({
         ) : null}
       </View>
 
-      {/* The receipt: optional, and evidence rather than a field. It is captured here so a walk
-          through the shop does not have to end at the phone's photo app. */}
-      <View style={styles.block}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Receipt (optional)
-        </ThemedText>
-
-        {receipts.length > 0 ? (
-          <View style={styles.receiptCard}>
-            <Image
-              source={{ uri: receipts[0].uri }}
-              style={styles.receiptThumb}
-              contentFit="cover"
-              accessibilityLabel="The photographed receipt"
-            />
-
-            <View style={styles.receiptCopy}>
-              <ThemedText type="small">
-                {receipts[0].source === 'camera' ? 'Photographed' : 'From your library'}
-              </ThemedText>
-              <ThemedText type="caption" themeColor="textMuted">
-                Preview only — not uploaded yet
-              </ThemedText>
-
-              <View style={styles.receiptActions}>
-                <Button
-                  label="Retake"
-                  secondary
-                  onCard
-                  disabled={capturing}
-                  onPress={() => snap('camera')}
-                  style={styles.receiptAction}
-                />
-                <Button
-                  label="Remove"
-                  secondary
-                  onCard
-                  disabled={capturing}
-                  onPress={() => setReceipts([])}
-                  style={styles.receiptAction}
-                />
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.receiptActions}>
-            <Pressable
-              onPress={() => snap('camera')}
-              disabled={capturing}
-              accessibilityRole="button"
-              accessibilityLabel="Take a photo of the receipt"
-              style={({ pressed }) => [
-                styles.receiptTile,
-                { borderColor: theme.border, backgroundColor: theme.inputBackground },
-                (pressed || capturing) && styles.pressed,
-              ]}>
-              <Icon name="camera" size={22} color={theme.textSecondary} />
-              <ThemedText type="small" themeColor="textSecondary">
-                {capturing ? 'Opening…' : 'Take a photo'}
-              </ThemedText>
-            </Pressable>
-
-            <Pressable
-              onPress={() => snap('library')}
-              disabled={capturing}
-              accessibilityRole="button"
-              accessibilityLabel="Choose a receipt from the photo library"
-              style={({ pressed }) => [
-                styles.receiptTile,
-                { borderColor: theme.border, backgroundColor: theme.inputBackground },
-                (pressed || capturing) && styles.pressed,
-              ]}>
-              <Icon name="upload" size={22} color={theme.textSecondary} />
-              <ThemedText type="small" themeColor="textSecondary">
-                Choose a photo
-              </ThemedText>
-            </Pressable>
-          </View>
-        )}
-
-        {receiptError ? (
-          <ThemedText type="small" style={financeStyles.errorText}>
-            {receiptError}
+      {/* One picture entry, not two. "Take a photo" and "Choose a photo" were the same
+          intention asked twice; the how is now answered in its own pop-up. */}
+      {!isEdit && onScanReceipt ? (
+        <View style={styles.block}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Or add it from a picture
           </ThemedText>
-        ) : null}
-      </View>
+
+          <Pressable
+            onPress={onScanReceipt}
+            accessibilityRole="button"
+            accessibilityLabel="Add an expense with a picture"
+            style={({ pressed }) => [
+              styles.scanTile,
+              { borderColor: theme.border, backgroundColor: theme.inputBackground },
+              pressed && styles.pressed,
+            ]}>
+            <Icon name="camera" size={22} color={Brand.green} />
+
+            <View style={styles.scanCopy}>
+              <ThemedText type="smallBold">Add an expense with a picture</ThemedText>
+              <ThemedText type="caption" themeColor="textMuted">
+                Take a photo or upload one — we will read the expenses from it.
+              </ThemedText>
+            </View>
+
+            <Icon name="chevronRight" size={18} color={theme.textSecondary} />
+          </Pressable>
+        </View>
+      ) : null}
 
       {error ? <ThemedText style={financeStyles.errorText}>{error}</ThemedText> : null}
 
@@ -634,39 +553,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
-  /** Two equal tiles when there is no photo: take one, or pick one. */
-  receiptActions: {
+  /** The single picture entry: an icon, what it does, and a chevron into the chooser. */
+  scanTile: {
     flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  receiptTile: {
-    flex: 1,
-    gap: Spacing.one,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing.two,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: Radius.field,
+    paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
-    minHeight: 88,
   },
-  /** The captured photo, at receipt proportions so the row does not jump between shots. */
-  receiptCard: {
-    flexDirection: 'row',
-    gap: Spacing.three,
-    alignItems: 'flex-start',
-  },
-  receiptThumb: {
-    width: 72,
-    height: 96,
-    borderRadius: Radius.field,
-  },
-  receiptCopy: {
+  scanCopy: {
     flex: 1,
     gap: Spacing.half,
-  },
-  receiptAction: {
-    flex: 1,
   },
   amountInput: {
     flex: 1,

@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -14,6 +22,7 @@ import { CategoryBadge } from '@/features/finances/components/category-badge';
 import { CsvImportPopup } from '@/features/finances/components/csv-import-popup';
 import { ExpenseForm } from '@/features/finances/components/expense-form';
 import { IncomeSegment } from '@/features/finances/components/income-segment';
+import { PhotoSourcePopup, type PhotoSource } from '@/features/finances/components/photo-source-popup';
 import {
   daysBetween,
   describeDuration,
@@ -36,7 +45,10 @@ import {
   type FinancialPeriod,
   type MyCategory,
 } from '@/features/finances/lib/finances-api';
+import { useDataVersion } from '@/features/finances/lib/data-events';
+import { captureReceipt } from '@/features/finances/lib/receipts';
 import { useTheme } from '@/hooks/use-theme';
+import { useReceiptScan } from '@/providers';
 import type { Session } from '@/types/api';
 import { describeError } from '@/utils/errors';
 
@@ -136,6 +148,13 @@ export function TransactionsSegment({
   const [editing, setEditing] = useState<Editing>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  /** The camera-or-gallery question that the picture entry hands over to. */
+  const [sourceOpen, setSourceOpen] = useState(false);
+
+  /** Starts the background read; the banner and the review pop-up live at the app root. */
+  const { startScan } = useReceiptScan();
+  /** Bumped whenever an expense is created anywhere, so the list and total re-read themselves. */
+  const dataVersion = useDataVersion();
 
   const handleError = useCallback(
     (e: unknown) => {
@@ -221,7 +240,7 @@ export function TransactionsSegment({
     } finally {
       setLoading(false);
     }
-  }, [session, filters, page, handleError]);
+  }, [session, filters, page, handleError, dataVersion]);
   const loadTotal = useCallback(async () => {
     setTotalLoading(true);
     try {
@@ -231,7 +250,7 @@ export function TransactionsSegment({
     } finally {
       setTotalLoading(false);
     }
-  }, [session, filters, handleError]);
+  }, [session, filters, handleError, dataVersion]);
 
   // The "This period" preset needs the period's dates before either number means anything. Asking
   // for the list without them would answer with every expense, while the total would answer for
@@ -267,6 +286,27 @@ export function TransactionsSegment({
   const openForm = (target: Editing) => {
     setEditing(target);
     setFormOpen(true);
+  };
+
+  /**
+   * The picture route replaces the form, the way the CSV importer does: adding one by hand and
+   * adding one from a photo are alternatives, so they are asked one at a time.
+   */
+  const openPictureSource = () => {
+    setFormOpen(false);
+    setSourceOpen(true);
+  };
+
+  /** Captures the chosen picture, then hands it to the scan that runs above the screens. */
+  const scanFrom = async (source: PhotoSource) => {
+    setSourceOpen(false);
+    const result = await captureReceipt(source);
+
+    if ('receipt' in result) {
+      startScan(result.receipt, categories);
+    } else if ('error' in result) {
+      Alert.alert('Could not open the picture', result.error);
+    }
   };
 
   const changeWindow = (key: WindowKey) => {
@@ -832,6 +872,7 @@ export function TransactionsSegment({
             onAuthError={handleError}
             onDelete={editing === 'new' ? undefined : () => remove(editing)}
             deleting={deleting}
+            onScanReceipt={editing === 'new' ? openPictureSource : undefined}
             onImportCsv={
               editing === 'new'
                 ? () => {
@@ -845,6 +886,13 @@ export function TransactionsSegment({
           />
         ) : null}
       </Popup>
+
+      {/* Where should the picture come from: the camera, or the gallery? */}
+      <PhotoSourcePopup
+        visible={sourceOpen}
+        onClose={() => setSourceOpen(false)}
+        onPick={scanFrom}
+      />
 
       {/* Importing a file: the rules first, then what was found in the file that was chosen. */}
       <CsvImportPopup
